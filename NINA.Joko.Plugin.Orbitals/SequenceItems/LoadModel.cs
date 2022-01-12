@@ -12,7 +12,7 @@
 
 using Newtonsoft.Json;
 using NINA.Core.Model;
-using NINA.Joko.Plugin.TenMicron.Interfaces;
+using NINA.Joko.Plugin.Orbitals.Interfaces;
 using NINA.Sequencer.SequenceItem;
 using NINA.Sequencer.Validations;
 using System;
@@ -22,8 +22,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace NINA.Joko.Plugin.TenMicron.SequenceItems {
-
+namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
+    /*
     [ExportMetadata("Name", "Load Model")]
     [ExportMetadata("Description", "Loads a pointing model already saved to the mount")]
     [ExportMetadata("Icon", "LoadSVG")]
@@ -31,7 +31,6 @@ namespace NINA.Joko.Plugin.TenMicron.SequenceItems {
     [Export(typeof(ISequenceItem))]
     [JsonObject(MemberSerialization.OptIn)]
     public class LoadModel : SequenceItem, IValidatable {
-
         [ImportingConstructor]
         public LoadModel() : this(TenMicronPlugin.MountModelMediator) {
         }
@@ -103,4 +102,5 @@ namespace NINA.Joko.Plugin.TenMicron.SequenceItems {
             return $"Category: {Category}, Item: {nameof(LoadModel)}, ModelName: {ModelName}";
         }
     }
+    */
 }

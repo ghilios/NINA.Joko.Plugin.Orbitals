@@ -10,17 +10,13 @@
 
 #endregion "copyright"
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.ComponentModel;
 
-namespace NINA.Joko.Plugin.TenMicron.Exceptions {
+namespace NINA.Joko.Plugin.Orbitals.Interfaces {
 
-    public class CommandFailedException : Exception {
+    public interface IOrbitalsOptions : INotifyPropertyChanged {
+        int GoldenSpiralStarCount { get; set; }
 
-        public CommandFailedException(string command) : base($"Command {command} failed") {
-        }
+        void ResetDefaults();
     }
 }

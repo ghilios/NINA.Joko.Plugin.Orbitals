@@ -25,7 +25,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
-namespace NINA.Joko.Plugin.TenMicron.Resources {
+namespace NINA.Joko.Plugin.Orbitals.Resources {
 
     /// <summary>
     /// Interaction logic for DataTemplates.xaml

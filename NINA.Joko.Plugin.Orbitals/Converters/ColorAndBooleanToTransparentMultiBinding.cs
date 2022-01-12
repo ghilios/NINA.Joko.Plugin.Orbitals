@@ -16,7 +16,7 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 
-namespace NINA.Joko.Plugin.TenMicron.Converters {
+namespace NINA.Joko.Plugin.Orbitals.Converters {
 
     public class ColorAndBooleanToTransparentMultiBinding : IMultiValueConverter {
 

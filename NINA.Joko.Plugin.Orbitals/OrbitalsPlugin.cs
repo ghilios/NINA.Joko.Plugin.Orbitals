@@ -10,8 +10,8 @@
 
 #endregion "copyright"
 
-using NINA.Joko.Plugin.TenMicron.Interfaces;
-using NINA.Joko.Plugin.TenMicron.Properties;
+using NINA.Joko.Plugin.Orbitals.Interfaces;
+using NINA.Joko.Plugin.Orbitals.Properties;
 using NINA.Core.Utility;
 using NINA.Equipment.Interfaces.Mediator;
 using NINA.Plugin;
@@ -19,74 +19,32 @@ using NINA.Plugin.Interfaces;
 using NINA.Profile.Interfaces;
 using System.ComponentModel.Composition;
 using System.Windows.Input;
-using NINA.Joko.Plugin.TenMicron.Equipment;
 using NINA.WPF.Base.Interfaces.Mediator;
 using NINA.Equipment.Interfaces;
-using NINA.Joko.Plugin.TenMicron.ModelManagement;
 using NINA.PlateSolving.Interfaces;
 
-namespace NINA.Joko.Plugin.TenMicron {
+namespace NINA.Joko.Plugin.Orbitals {
 
-    /// <summary>
-    /// Longer term consideration TODO list:
-    ///  1. Split download time from exposure to avoid waiting for download before slewing to the next point
-    ///  2. Minimize distance between points instead of going purely based on azimuth
-    ///  3. Use AltAz slew on the mount instead of calculating our own refaction-adjusted RA/DEC
-    ///  4. Option to save failed points and images used to plate solve
-    ///
-    /// Short term TODO list:
-    ///  1. Plugins to trigger model build
-    /// </summary>
     [Export(typeof(IPluginManifest))]
-    public class TenMicronPlugin : PluginBase {
+    public class OrbitalsPlugin : PluginBase {
 
         [ImportingConstructor]
-        public TenMicronPlugin(
-            IProfileService profileService, ITelescopeMediator telescopeMediator, IApplicationStatusMediator applicationStatusMediator, IDomeMediator domeMediator, IDomeSynchronization domeSynchronization,
-            IPlateSolverFactory plateSolverFactory, IImagingMediator imagingMediator, IFilterWheelMediator filterWheelMediator, IWeatherDataMediator weatherDataMediator, ICameraMediator cameraMediator) {
+        public OrbitalsPlugin(IProfileService profileService) {
             if (Settings.Default.UpdateSettings) {
                 Settings.Default.Upgrade();
                 Settings.Default.UpdateSettings = false;
                 Settings.Default.Save();
             }
 
-            if (TenMicronOptions == null) {
-                TenMicronOptions = new TenMicronOptions(profileService);
+            if (OrbitalsOptions == null) {
+                OrbitalsOptions = new OrbitalsOptions(profileService);
             }
 
-            ResetModelBuilderDefaultsCommand = new RelayCommand((object o) => TenMicronOptions.ResetDefaults());
-
-            MountCommander = new TelescopeMediatorMountCommander(telescopeMediator, TenMicronOptions);
-            Mount = new Mount(MountCommander);
-            MountMediator = new MountMediator();
-            MountModelMediator = new MountModelMediator();
-            DateTime = new SystemDateTime();
-            ModelAccessor = new ModelAccessor(telescopeMediator, MountModelMediator, DateTime);
-            ModelPointGenerator = new ModelPointGenerator(profileService, DateTime, telescopeMediator, weatherDataMediator, TenMicronOptions, MountMediator);
-            ModelBuilder = new ModelBuilder(profileService, MountModelMediator, Mount, telescopeMediator, domeMediator, cameraMediator, domeSynchronization, plateSolverFactory, imagingMediator, filterWheelMediator, weatherDataMediator);
-            MountModelBuilderMediator = new MountModelBuilderMediator();
+            ResetOptionDefaultsCommand = new RelayCommand((object o) => OrbitalsOptions.ResetDefaults());
         }
 
-        public static TenMicronOptions TenMicronOptions { get; private set; }
+        public static OrbitalsOptions OrbitalsOptions { get; private set; }
 
-        public ICommand ResetModelBuilderDefaultsCommand { get; private set; }
-
-        public static IMountCommander MountCommander { get; private set; }
-
-        public static IMount Mount { get; private set; }
-
-        public static IModelAccessor ModelAccessor { get; private set; }
-
-        public static IModelBuilder ModelBuilder { get; private set; }
-
-        public static ICustomDateTime DateTime { get; private set; }
-
-        public static IMountMediator MountMediator { get; private set; }
-
-        public static IMountModelMediator MountModelMediator { get; private set; }
-
-        public static IModelPointGenerator ModelPointGenerator { get; private set; }
-
-        public static IMountModelBuilderMediator MountModelBuilderMediator { get; private set; }
+        public ICommand ResetOptionDefaultsCommand { get; private set; }
     }
 }

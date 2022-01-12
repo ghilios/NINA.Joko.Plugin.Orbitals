@@ -38,14 +38,6 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <!--
-    <Reference Include="nikoncswrapper, Version=1.8.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NINA.Equipment.2.0.0.2001-beta\lib\net48\nikoncswrapper.dll</HintPath>
-    </Reference>
-    <Reference Include="NINA.Equipment, Version=2.0.0.2001, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NINA.Equipment.2.0.0.2001-beta\lib\net48\NINA.Equipment.dll</HintPath>
-    </Reference>
-    -->
     <Reference Include="Accord, Version=3.8.0.0, Culture=neutral, PublicKeyToken=fa1a88e29555ccf7, processorArchitecture=MSIL">
       <HintPath>..\packages\Accord.3.8.0\lib\net462\Accord.dll</HintPath>
       <Private>True</Private>
@@ -387,90 +379,17 @@
     <Compile Include="Converters\IntNegativeToVisibilityConverter.cs" />
     <Compile Include="Converters\IntZeroBooleanMultiConverter.cs" />
     <Compile Include="Converters\InverseDoubleZeroToVisibilityConverter.cs" />
-    <Compile Include="Converters\ModelPointStateToColorConverter.cs" />
     <Compile Include="Converters\NumericToHalfConverter.cs" />
     <Compile Include="Converters\PositiveToBooleanConverter.cs" />
     <Compile Include="Converters\ZeroToDisabledConverter.cs" />
     <Compile Include="Converters\ZeroToInfinityConverter.cs" />
-    <Compile Include="Equipment\Mediator.cs" />
-    <Compile Include="Equipment\MountInfo.cs" />
-    <Compile Include="Equipment\MountModelBuilderMediator.cs" />
-    <Compile Include="Equipment\MountModelInfo.cs" />
-    <Compile Include="Equipment\MountModelMediator.cs" />
-    <Compile Include="Exceptions\CommandFailedException.cs" />
-    <Compile Include="Exceptions\ModelBuildException.cs" />
-    <Compile Include="Exceptions\ParseCancellationException.cs" />
-    <Compile Include="Extensions\OxyPlot\ModelPointStateColorAxis.cs" />
-    <Compile Include="Extensions\OxyPlot\Wpf\ModelPointStateColorAxis.cs" />
-    <Compile Include="Grammars\AlignmentModelInfo.g4.lexer.cs">
-      <DependentUpon>AlignmentModelInfo.g4</DependentUpon>
-    </Compile>
-    <Compile Include="Grammars\AlignmentModelInfo.g4.parser.cs">
-      <DependentUpon>AlignmentModelInfo.g4</DependentUpon>
-    </Compile>
-    <Compile Include="Grammars\AlignmentStarInfo.g4.lexer.cs">
-      <DependentUpon>AlignmentStarInfo.g4</DependentUpon>
-    </Compile>
-    <Compile Include="Grammars\AlignmentStarInfo.g4.parser.cs">
-      <DependentUpon>AlignmentStarInfo.g4</DependentUpon>
-    </Compile>
-    <Compile Include="Grammars\Angle.g4.lexer.cs">
-      <DependentUpon>Angle.g4</DependentUpon>
-    </Compile>
-    <Compile Include="Grammars\Angle.g4.parser.cs">
-      <DependentUpon>Angle.g4</DependentUpon>
-    </Compile>
-    <Compile Include="Grammars\MountDateTime.g4.lexer.cs">
-      <DependentUpon>MountDateTime.g4</DependentUpon>
-    </Compile>
-    <Compile Include="Grammars\MountDateTime.g4.parser.cs">
-      <DependentUpon>MountDateTime.g4</DependentUpon>
-    </Compile>
-    <Compile Include="Grammars\Time.g4.lexer.cs">
-      <DependentUpon>Time.g4</DependentUpon>
-    </Compile>
-    <Compile Include="Grammars\Time.g4.parser.cs">
-      <DependentUpon>Time.g4</DependentUpon>
-    </Compile>
-    <Compile Include="Interfaces\IModelAccessor.cs" />
-    <Compile Include="Interfaces\IModelBuilder.cs" />
-    <Compile Include="Interfaces\IMountModelBuilderMediator.cs" />
-    <Compile Include="Interfaces\IMountModelConsumer.cs" />
-    <Compile Include="Interfaces\IMountModelMediator.cs" />
-    <Compile Include="Interfaces\IMountModelBuilderVM.cs" />
-    <Compile Include="Interfaces\IMountModelVM.cs" />
-    <Compile Include="Interfaces\ITenMicronOptions.cs" />
-    <Compile Include="Interfaces\IModelPointGenerator.cs" />
-    <Compile Include="Interfaces\IMount.cs" />
-    <Compile Include="Interfaces\IMountCommander.cs" />
-    <Compile Include="Interfaces\IMountConsumer.cs" />
-    <Compile Include="Interfaces\IMountMediator.cs" />
-    <Compile Include="Interfaces\IMountVM.cs" />
-    <Compile Include="Equipment\AscomMountCommander.cs" />
-    <Compile Include="Equipment\ModelAccessor.cs" />
+    <Compile Include="Interfaces\IOrbitalsOptions.cs" />
     <Compile Include="SequenceItems\DataTemplates.xaml.cs">
       <DependentUpon>DataTemplates.xaml</DependentUpon>
     </Compile>
-    <Compile Include="SequenceItems\BuildSiderealPathModel.cs" />
-    <Compile Include="SequenceItems\SetTrackingRate.cs" />
-    <Compile Include="SequenceItems\SaveModel.cs" />
     <Compile Include="SequenceItems\LoadModel.cs" />
-    <Compile Include="Utility\DomeUtility.cs" />
-    <Compile Include="Utility\NowDateTimeProvider.cs" />
     <Compile Include="ValidationRules\PositiveIntegerOrInfiniteRule.cs" />
-    <Compile Include="TenMicronOptions.cs" />
-    <Compile Include="Model\ModelPoint.cs" />
-    <Compile Include="ModelManagement\ModelPointGenerator.cs" />
-    <Compile Include="ModelManagement\ModelBuilder.cs" />
-    <Compile Include="Equipment\Mount.cs" />
-    <Compile Include="Equipment\MountAscomConfig.cs" />
-    <Compile Include="Model\MountCommandResponses.cs" />
-    <Compile Include="Equipment\MountMediator.cs" />
-    <Compile Include="Equipment\TelescopeMediatorMountCommander.cs" />
-    <Compile Include="Model\AlignmentStarPoint.cs" />
-    <Compile Include="Model\DomeShutterOpeningDataPoint.cs" />
-    <Compile Include="Model\LoadedAlignmentModel.cs" />
-    <Compile Include="Model\ModelPointGenerationTypeEnum.cs" />
+    <Compile Include="OrbitalsOptions.cs" />
     <Compile Include="Options.xaml.cs">
       <DependentUpon>Options.xaml</DependentUpon>
     </Compile>
@@ -489,49 +408,15 @@
     <Compile Include="Resources\SVGDataTemplates.xaml.cs">
       <DependentUpon>SVGDataTemplates.xaml</DependentUpon>
     </Compile>
-    <Compile Include="TenMicronPlugin.cs" />
+    <Compile Include="OrbitalsPlugin.cs" />
     <Compile Include="Utility\ConstantDateTime.cs" />
-    <Compile Include="Utility\MountUtility.cs" />
-    <Compile Include="Utility\ThrowingErrorListener.cs" />
-    <Compile Include="ViewModels\MountModelBuilderVM.cs" />
-    <Compile Include="ViewModels\MountModelVM.cs" />
-    <Compile Include="ViewModels\MountVM.cs" />
     <Compile Include="ViewModels\MyInputBox.cs" />
-    <Compile Include="View\MountModelBuilderView.xaml.cs">
-      <DependentUpon>MountModelBuilderView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="View\MountModelView.xaml.cs">
-      <DependentUpon>MountModelView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="View\MountView.xaml.cs">
-      <DependentUpon>MountView.xaml</DependentUpon>
-    </Compile>
     <Compile Include="View\MyInputBoxView.xaml.cs">
       <DependentUpon>MyInputBoxView.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <Antlr4 Include="Grammars\Angle.g4">
-      <Generator>MSBuild:Compile</Generator>
-      <CustomToolNamespace>NINA.Joko.Plugin.TenMicron.Grammars</CustomToolNamespace>
-    </Antlr4>
-    <Antlr4 Include="Grammars\Time.g4">
-      <Generator>MSBuild:Compile</Generator>
-      <CustomToolNamespace>NINA.Joko.Plugin.TenMicron.Grammars</CustomToolNamespace>
-    </Antlr4>
-    <Antlr4 Include="Grammars\AlignmentStarInfo.g4">
-      <Generator>MSBuild:Compile</Generator>
-      <CustomToolNamespace>NINA.Joko.Plugin.TenMicron.Grammars</CustomToolNamespace>
-    </Antlr4>
-    <Antlr4 Include="Grammars\AlignmentModelInfo.g4">
-      <Generator>MSBuild:Compile</Generator>
-      <CustomToolNamespace>NINA.Joko.Plugin.TenMicron.Grammars</CustomToolNamespace>
-    </Antlr4>
-    <Antlr4 Include="Grammars\MountDateTime.g4">
-      <Generator>MSBuild:Compile</Generator>
-      <CustomToolNamespace>NINA.Joko.Plugin.TenMicron.Grammars</CustomToolNamespace>
-    </Antlr4>
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -561,18 +446,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="SequenceItems\DataTemplates.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="View\MountModelBuilderView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="View\MountModelView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="View\MountView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

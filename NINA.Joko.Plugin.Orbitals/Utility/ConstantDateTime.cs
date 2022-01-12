@@ -13,7 +13,7 @@
 using NINA.Core.Utility;
 using System;
 
-namespace NINA.Joko.Plugin.TenMicron.Utility {
+namespace NINA.Joko.Plugin.Orbitals.Utility {
 
     public class ConstantDateTime : ICustomDateTime {
         private readonly DateTime constant;

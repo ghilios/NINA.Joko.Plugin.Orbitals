@@ -13,7 +13,7 @@
 using System.ComponentModel.Composition;
 using System.Windows;
 
-namespace NINA.Joko.Plugin.TenMicron {
+namespace NINA.Joko.Plugin.Orbitals {
 
     [Export(typeof(ResourceDictionary))]
     public partial class Options : ResourceDictionary {

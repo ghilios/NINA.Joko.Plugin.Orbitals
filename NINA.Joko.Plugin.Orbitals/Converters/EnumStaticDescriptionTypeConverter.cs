@@ -14,7 +14,7 @@ using System;
 using System.ComponentModel;
 using System.Reflection;
 
-namespace NINA.Joko.Plugin.TenMicron.Converters {
+namespace NINA.Joko.Plugin.Orbitals.Converters {
 
     public class EnumStaticDescriptionTypeConverter : EnumConverter {
 

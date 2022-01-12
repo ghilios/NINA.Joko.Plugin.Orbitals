@@ -13,7 +13,7 @@
 using System.Globalization;
 using System.Windows.Controls;
 
-namespace NINA.Joko.Plugin.TenMicron.ValidationRules {
+namespace NINA.Joko.Plugin.Orbitals.ValidationRules {
 
     public class PositiveIntegerOrInfiniteRule : ValidationRule {
 

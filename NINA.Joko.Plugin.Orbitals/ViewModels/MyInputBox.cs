@@ -10,8 +10,8 @@
 
 #endregion "copyright"
 
-using NINA.Joko.Plugin.TenMicron.Utility;
-using NINA.Joko.Plugin.TenMicron.View;
+using NINA.Joko.Plugin.Orbitals.Utility;
+using NINA.Joko.Plugin.Orbitals.View;
 using NINA.Core.Utility;
 using System;
 using System.Collections.Generic;
@@ -21,7 +21,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using NINA.Core.Utility.Extensions;
 
-namespace NINA.Joko.Plugin.TenMicron.ViewModels {
+namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
     public class MyInputBoxResult {
 

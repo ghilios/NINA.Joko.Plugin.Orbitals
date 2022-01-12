@@ -12,7 +12,7 @@
 
 using System.Windows;
 
-namespace NINA.Joko.Plugin.TenMicron.Resources {
+namespace NINA.Joko.Plugin.Orbitals.Resources {
 
     /// <summary>
     /// Interaction logic for OptionsDataTemplates.xaml

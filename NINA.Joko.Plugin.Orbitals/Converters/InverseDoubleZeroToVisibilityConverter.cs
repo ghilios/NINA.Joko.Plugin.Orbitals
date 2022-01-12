@@ -14,7 +14,7 @@ using System;
 using System.Globalization;
 using System.Windows.Data;
 
-namespace NINA.Joko.Plugin.TenMicron.Converters {
+namespace NINA.Joko.Plugin.Orbitals.Converters {
 
     public class InverseDoubleZeroToVisibilityConverter : IValueConverter {
 

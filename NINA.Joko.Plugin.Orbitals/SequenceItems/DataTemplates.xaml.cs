@@ -13,7 +13,7 @@
 using System.ComponentModel.Composition;
 using System.Windows;
 
-namespace NINA.Joko.Plugin.TenMicron.SequenceItems {
+namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
 
     /// <summary>
     /// Interaction logic for DataTemplates.xaml

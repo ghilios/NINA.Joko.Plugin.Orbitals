@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace NINA.Joko.Plugin.TenMicron.Properties {
+namespace NINA.Joko.Plugin.Orbitals.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]

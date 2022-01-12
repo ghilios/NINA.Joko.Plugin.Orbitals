@@ -1,11 +1,11 @@
 ﻿<Window
-    x:Class="NINA.Joko.Plugin.TenMicron.View.MyInputBoxView"
+    x:Class="NINA.Joko.Plugin.Orbitals.View.MyInputBoxView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ns="clr-namespace:NINA.Core.Locale;assembly=NINA.Core"
-    xmlns:local="clr-namespace:NINA.Joko.Plugin.TenMicron.View"
+    xmlns:local="clr-namespace:NINA.Joko.Plugin.Orbitals.View"
     xmlns:util="clr-namespace:NINA.Core.Utility;assembly=NINA.Core"
     mc:Ignorable="d"
     Title="{Binding Title}"

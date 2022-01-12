@@ -305,9 +305,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\NINA.Joko.Plugin.TenMicron\NINA.Joko.Plugin.TenMicron.csproj">
-      <Project>{41449fe6-34b8-4d77-ab21-6d264b76e03b}</Project>
-      <Name>NINA.Joko.Plugin.TenMicron</Name>
+    <ProjectReference Include="..\NINA.Joko.Plugin.Orbitals\NINA.Joko.Plugin.Orbitals.csproj">
+      <Project>{210929C6-FDC3-4AB5-8539-34D0D12CE308}</Project>
+      <Name>NINA.Joko.Plugin.Orbitals</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

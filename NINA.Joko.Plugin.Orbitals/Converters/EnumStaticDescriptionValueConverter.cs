@@ -16,7 +16,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Windows.Data;
 
-namespace NINA.Joko.Plugin.TenMicron.Converters {
+namespace NINA.Joko.Plugin.Orbitals.Converters {
 
     public class EnumStaticDescriptionValueConverter : IValueConverter {
 
