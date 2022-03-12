@@ -1,8 +1,8 @@
 ﻿<ResourceDictionary
     x:Class="NINA.Joko.Plugin.Orbitals.Resources.DataTemplates"
-    xmlns:view="clr-namespace:NINA.Joko.Plugin.Orbitals.View"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:view="clr-namespace:NINA.Joko.Plugin.Orbitals.View">
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="OptionsDataTemplates.xaml" />
     </ResourceDictionary.MergedDictionaries>
