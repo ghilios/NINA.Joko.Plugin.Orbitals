@@ -51,7 +51,7 @@ namespace TestApp {
             public double Period_sec { get; set; } // Sidereal orbit period
         }
 
-        private static void Main(string[] args) {
+        private static void Main2(string[] args) {
             // var result = AephemDll.ae_ctime_to_jd(10.0);
             // var result2 = AephemDll.ae_coord_to_constel_index(10.0, 10.0, 10.0);
 
