@@ -1,20 +1,33 @@
-﻿using NINA.Astrometry;
+﻿#region "copyright"
+
+/*
+    Copyright © 2021 - 2021 George Hilios <ghilios+NINA@googlemail.com>
+
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this
+    file, You can obtain one at http://mozilla.org/MPL/2.0/.
+*/
+
+#endregion "copyright"
+
+using NINA.Astrometry;
+using ProtoBuf;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace TestApp {
+namespace NINA.Joko.Plugin.Orbitals.Calculations {
+
     public static class Kepler {
-        private const int MAX_ECCENTRIC_ANOMALY_ITERATIONS = 10;
+        private const int MAX_ECCENTRIC_ANOMALY_ITERATIONS = 20;
 
+        [ProtoContract(SkipConstructor = true)]
         public class GravitationalParameter {
             public static readonly GravitationalParameter Zero = Create(0.0);
             public static readonly GravitationalParameter Sun = Create(1.32712440018e20);
             public static readonly GravitationalParameter Earth = Create(3.986004418e14);
 
+            [ProtoMember(1)]
             private readonly double parameter_m3_s2; // Units in m^3/s^2
+
             private GravitationalParameter(double parameter) {
                 this.parameter_m3_s2 = parameter;
             }
@@ -30,27 +43,61 @@ namespace TestApp {
             public static GravitationalParameter Create(double parameter_m3_s2) {
                 return new GravitationalParameter(parameter_m3_s2);
             }
+
+            public static explicit operator GravitationalParameter(double b) => Create(b);
+
+            public override string ToString() {
+                return $"{{Parameter={Parameter_m3_s2} m³/s²}}";
+            }
         }
 
+        [ProtoContract(SkipConstructor = true)]
         public class OrbitalElements {
+
             public OrbitalElements(string name) {
                 this.Name = name;
             }
 
+            private OrbitalElements() {
+            }
+
+            [ProtoMember(1)]
             public string Name { get; private set; }
+
+            [ProtoMember(2)]
             public GravitationalParameter PrimaryGravitationalParameter { get; set; } = GravitationalParameter.Zero;
+
+            [ProtoMember(3)]
             public GravitationalParameter SecondaryGravitationalParameter { get; set; } = GravitationalParameter.Zero;
+
+            [ProtoMember(4)]
             public double Epoch_jd { get; set; } = double.NaN;
+
+            [ProtoMember(5)]
             public double q_Perihelion_au { get; set; } = double.NaN;
+
+            [ProtoMember(6)]
             public double e_Eccentricity { get; set; } = double.NaN;
+
+            [ProtoMember(7)]
             public double i_Inclination_rad { get; set; } = double.NaN;
+
+            [ProtoMember(8)]
             public double w_ArgOfPerihelion_rad { get; set; } = double.NaN;
+
+            [ProtoMember(9)]
             public double node_LongitudeOfAscending_rad { get; set; } = double.NaN;
+
+            [ProtoMember(10)]
             public double tp_PeriapsisTime_jd { get; set; } = double.NaN;
-            public double M_MeanAnomaly_rad { get; set; } = double.NaN;
+
+            public override string ToString() {
+                return $"{{{nameof(Name)}={Name}, {nameof(PrimaryGravitationalParameter)}={PrimaryGravitationalParameter}, {nameof(SecondaryGravitationalParameter)}={SecondaryGravitationalParameter}, {nameof(Epoch_jd)}={Epoch_jd.ToString()}, {nameof(q_Perihelion_au)}={q_Perihelion_au.ToString()}, {nameof(e_Eccentricity)}={e_Eccentricity.ToString()}, {nameof(i_Inclination_rad)}={i_Inclination_rad.ToString()}, {nameof(w_ArgOfPerihelion_rad)}={w_ArgOfPerihelion_rad.ToString()}, {nameof(node_LongitudeOfAscending_rad)}={node_LongitudeOfAscending_rad.ToString()}, {nameof(tp_PeriapsisTime_jd)}={tp_PeriapsisTime_jd.ToString()}}}";
+            }
         }
 
         public class OrbitalPosition {
+
             public OrbitalPosition(string name, double asof_jd) {
                 this.Name = name;
                 this.AsOf_jd = asof_jd;
@@ -63,6 +110,18 @@ namespace TestApp {
             public double v0_TrueAnomaly_rad { get; set; } = double.NaN;
             public double Distance_au { get; set; } = double.NaN;
             public RectangularCoordinates EclipticCoordinates { get; set; }
+        }
+
+        public static Coordinates GetApparentCoordinates(
+            OrbitalPosition orbitalPosition,
+            NOVAS.Body orbitalCenterBody) {
+            var centerPosition = NOVAS.BodyPositionAndVelocity(orbitalPosition.AsOf_jd, orbitalCenterBody, NOVAS.SolarSystemOrigin.SolarCenterOfMass);
+            // NOVAS returns ecliptic coordinates. Reverse the ecliptic rotation to get to equatorial so we can subtract from the orbital position
+            var earthPositionEquatorial = centerPosition.Position.RotateEcliptic(-AstrometricConstants.J2000MeanObliquity);
+
+            var earthCenteredPosition = orbitalPosition.EclipticCoordinates - earthPositionEquatorial;
+            earthCenteredPosition = earthCenteredPosition.RotateEcliptic(AstrometricConstants.J2000MeanObliquity);
+            return earthCenteredPosition.ToPolar();
         }
 
         public static OrbitalPosition CalculateOrbitalElements(
@@ -93,7 +152,7 @@ namespace TestApp {
                 // TODO: What do I need h for? Consider removing
                 // h^2 = mu * a * (1 - e^2)
                 var h = Math.Sqrt(gravParam * semiMajorAxis * Math.Abs(1.0d - ecc * ecc));
-                
+
                 // n^2 * a^3 = mu
                 var n2 = gravParam / (semiMajorAxis * semiMajorAxis * semiMajorAxis);
                 var n = Math.Sqrt(n2);
@@ -153,7 +212,7 @@ namespace TestApp {
         }
 
         public static Coordinates SunOrbitalPositionToICRF(OrbitalPosition orbitalPosition) {
-            return orbitalPosition.EclipticCoordinates.RotateEcliptic(SOFAEx.J2000MeanObliquity).ToPolar();
+            return orbitalPosition.EclipticCoordinates.RotateEcliptic(AstrometricConstants.J2000MeanObliquity).ToPolar();
         }
     }
 }

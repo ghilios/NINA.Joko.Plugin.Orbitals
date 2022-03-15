@@ -1,16 +1,17 @@
 ﻿using FlatFiles;
 using FlatFiles.TypeMapping;
 using NINA.Astrometry;
+using NINA.Joko.Plugin.Orbitals.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using static TestApp.Kepler;
+using static NINA.Joko.Plugin.Orbitals.Calculations.Kepler;
 
-namespace TestApp {
-    public class JPLCometElements {
+namespace NINA.Joko.Plugin.Orbitals.Calculations {
+    public class JPLCometElements : IOrbitalElementsSource {
         public string name { get; set; }
         public int epoch { get; set; }
         public double q { get; set; }
@@ -20,6 +21,7 @@ namespace TestApp {
         public double node { get; set; }
         public double tp { get; set; }
         public string ref_ { get; set; }
+        public string Name => name;
 
         public override string ToString() {
             return $"{{{nameof(name)}={name}, {nameof(epoch)}={epoch.ToString()}, {nameof(q)}={q.ToString()}, {nameof(e)}={e.ToString()}, {nameof(i)}={i.ToString()}, {nameof(w)}={w.ToString()}, {nameof(node)}={node.ToString()}, {nameof(tp)}={tp.ToString()}, {nameof(ref_)}={ref_}}}";
@@ -127,7 +129,7 @@ namespace TestApp {
         }
     }
 
-    public class JPLAccessor {
+    public class JPLAccessor : IJPLAccessor {
         // Small bodies can be downloaded at https://ssd.jpl.nasa.gov/sb/elem_tables.html
         public const string comets_url = "https://ssd.jpl.nasa.gov/dat/ELEMENTS.COMET";
         public const string unnumbered_asteroids_url = "https://ssd.jpl.nasa.gov/dat/ELEMENTS.UNNUM.gz";

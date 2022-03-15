@@ -10,23 +10,21 @@
 
 #endregion "copyright"
 
-using NINA.Joko.Plugin.Orbitals.Interfaces;
 using NINA.Joko.Plugin.Orbitals.Properties;
 using NINA.Core.Utility;
-using NINA.Equipment.Interfaces.Mediator;
 using NINA.Plugin;
 using NINA.Plugin.Interfaces;
 using NINA.Profile.Interfaces;
 using System.ComponentModel.Composition;
 using System.Windows.Input;
-using NINA.WPF.Base.Interfaces.Mediator;
-using NINA.Equipment.Interfaces;
-using NINA.PlateSolving.Interfaces;
+using System.IO;
+using NINA.Joko.Plugin.Orbitals.Calculations;
 
 namespace NINA.Joko.Plugin.Orbitals {
 
     [Export(typeof(IPluginManifest))]
     public class OrbitalsPlugin : PluginBase {
+        public static readonly string OrbitalElementsDirectory = Path.Combine(CoreUtil.APPLICATIONTEMPPATH, "OrbitalElements");
 
         [ImportingConstructor]
         public OrbitalsPlugin(IProfileService profileService) {
@@ -40,10 +38,22 @@ namespace NINA.Joko.Plugin.Orbitals {
                 OrbitalsOptions = new OrbitalsOptions(profileService);
             }
 
+            if (OrbitalElementsAccessor == null) {
+                OrbitalElementsAccessor = new OrbitalElementsAccessor();
+            }
+
+            if (JPLAccessor == null) {
+                JPLAccessor = new JPLAccessor();
+            }
+
             ResetOptionDefaultsCommand = new RelayCommand((object o) => OrbitalsOptions.ResetDefaults());
         }
 
         public static OrbitalsOptions OrbitalsOptions { get; private set; }
+
+        public static OrbitalElementsAccessor OrbitalElementsAccessor { get; private set; }
+
+        public static JPLAccessor JPLAccessor { get; private set; }
 
         public ICommand ResetOptionDefaultsCommand { get; private set; }
     }

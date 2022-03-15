@@ -11,12 +11,9 @@
 #endregion "copyright"
 
 using NINA.Astrometry;
+using NINA.Joko.Plugin.Orbitals.Calculations;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TestApp {
 
@@ -186,7 +183,7 @@ namespace TestApp {
             var earthPositionCoordinates = SolveKeplerAt(earth_OE, now);
 
             // Convert to J2000 ecliptic - https://ssd.jpl.nasa.gov/planets/approx_pos.html
-            var geometricPositionCoordinates = (eclipticPositionCoordinates - earthPositionCoordinates).RotateEcliptic(SOFAEx.J2000MeanObliquity);
+            var geometricPositionCoordinates = (eclipticPositionCoordinates - earthPositionCoordinates).RotateEcliptic(AstrometricConstants.J2000MeanObliquity);
             var distance_km = geometricPositionCoordinates.Distance;
             var distance_au = distance_km / AE_AU;
             var geometricPolarCoordinates = geometricPositionCoordinates.ToPolar();
@@ -512,7 +509,7 @@ namespace TestApp {
             SOFA.TaiTt(j2000Tai1, j2000Tai2, ref j2000Tt1, ref j2000Tt2);
 
             var equatorialPositionVector = new double[3];
-            var meanObliquity = SOFAEx.SOFA_iauObl80(j2000Tt1, j2000Tt2);
+            var meanObliquity = AstrometricConstants.J2000MeanObliquity.Radians;
 
             equatorialPositionVector[0] = eclipticPositionVector[0];
             equatorialPositionVector[1] = eclipticPositionVector[1] * Math.Cos(meanObliquity) - eclipticPositionVector[2] * Math.Sin(meanObliquity);

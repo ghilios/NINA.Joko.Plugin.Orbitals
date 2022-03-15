@@ -10,13 +10,16 @@
 
 #endregion "copyright"
 
+using Gma.DataStructures.StringSearch;
 using NINA.Astrometry;
+using NINA.Joko.Plugin.Orbitals.Calculations;
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using static TestApp.Kepler;
 
 namespace TestApp {
+
     internal class Program {
 
         private static async Task Main(string[] args) {
@@ -27,25 +30,41 @@ namespace TestApp {
                 Console.WriteLine($"Error parsing comets: {e.ErrorMessage}");
             };
 
-            var cometsByName = response.Response.ToDictionary(r => r.name, r => r);
-            var comet = cometsByName["C/2021 O3 (PANSTARRS)"];
-            var cometOrbitalElement = comet.ToOrbitalElements();
+            var cometsByName = new SuffixTrie<JPLCometElements>(3);
+            using (var ms = new MemoryStream()) {
+                foreach (var cometElements in response.Response) {
+                    var cometNameLower = cometElements.name.ToLowerInvariant();
+                    cometsByName.Add(cometNameLower, cometElements);
+
+                    var orbitalElements = cometElements.ToOrbitalElements();
+                    ProtoBuf.Serializer.SerializeWithLengthPrefix(ms, orbitalElements, ProtoBuf.PrefixStyle.Base128, 1);
+                }
+
+                ms.Position = 0;
+                var allElements = ProtoBuf.Serializer.DeserializeItems<Kepler.OrbitalElements>(ms, ProtoBuf.PrefixStyle.Base128, 1).ToList();
+                Console.WriteLine();
+            }
+
+            var searchFor = "(PANSTARRS)".ToLowerInvariant();
+            // var comet = cometsByName.ValueBy("C/2021 O3 (PANSTARRS)");
+            var comet = cometsByName.Retrieve(searchFor).ToList();
+            var cometOrbitalElement = comet.First().ToOrbitalElements();
             var now = DateTime.UtcNow;
             var nowJd = AstroUtil.GetJulianDate(now);
             var cometOrbitalPosition = Kepler.CalculateOrbitalElements(cometOrbitalElement, nowJd);
 
-            var earthPosition = NOVASEx.SolarSystemBodyPV(nowJd, NOVASEx.SolarSystemBody.Earth, NOVASEx.SolarSystemOrigin.SolarCenterOfMass);
+            var earthPosition = NOVAS.BodyPositionAndVelocity(nowJd, NOVAS.Body.Earth, NOVAS.SolarSystemOrigin.SolarCenterOfMass);
             // NOVAS returns ecliptic coordinates. Reverse the ecliptic rotation to get to equatorial so we can subtract from the orbital position
-            var earthPositionEquatorial = earthPosition.Position.RotateEcliptic(Angle.ByRadians(-SOFAEx.J2000MeanObliquity.Radians));
-            
+            var earthPositionEquatorial = earthPosition.Position.RotateEcliptic(-AstrometricConstants.J2000MeanObliquity);
+
             var earthCenteredPosition = cometOrbitalPosition.EclipticCoordinates - earthPositionEquatorial;
-            earthCenteredPosition = earthCenteredPosition.RotateEcliptic(SOFAEx.J2000MeanObliquity);
+            earthCenteredPosition = earthCenteredPosition.RotateEcliptic(AstrometricConstants.J2000MeanObliquity);
             var cometCoordinates = earthCenteredPosition.ToPolar();
             var cometCoordinatesJNow = cometCoordinates.Transform(Epoch.JNOW);
-            var marsPosition = NOVASEx.GetApparentCoordinates(nowJd, NOVASEx.SolarSystemBody.Mars);
+            var marsPosition = NOVAS.PlanetApparentCoordinates(nowJd, NOVAS.Body.Mars);
 
             var tenSeconds = 1.0 / AstrometricConstants.SEC_PER_DAY;
-            var marsPosition2 = NOVASEx.GetApparentCoordinates(nowJd + tenSeconds, NOVASEx.SolarSystemBody.Mars);
+            var marsPosition2 = NOVAS.PlanetApparentCoordinates(nowJd + tenSeconds, NOVAS.Body.Mars);
             var raPerSec = AstroUtil.DegreeToArcsec((marsPosition2.RADegrees - marsPosition.RADegrees));
             var decPerSec = AstroUtil.DegreeToArcsec((marsPosition2.Dec - marsPosition.Dec));
 
