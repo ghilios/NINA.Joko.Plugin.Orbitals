@@ -25,7 +25,7 @@ using System.Runtime.InteropServices;
 // [MANDATORY] The name of your plugin
 [assembly: AssemblyTitle("Orbitals")]
 // [MANDATORY] A short description of your plugin
-[assembly: AssemblyDescription("Downloads publically available orbital data for near-earth objects to target and track Comets, Asteroids, and other objects")]
+[assembly: AssemblyDescription("Downloads publically available orbital data to target and track Comets, Asteroids, and other objects")]
 
 // The following attributes are not required for the plugin per se, but are required by the official manifest meta data
 

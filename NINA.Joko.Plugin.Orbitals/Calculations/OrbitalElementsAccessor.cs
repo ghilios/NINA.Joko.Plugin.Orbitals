@@ -3,11 +3,13 @@ using NINA.Astrometry;
 using NINA.Core.Model;
 using NINA.Core.Utility;
 using NINA.Core.Utility.Notification;
+using NINA.Joko.Plugin.Orbitals.Enums;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -57,18 +59,21 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                         var path = GetObjectTypeSavePath(objectType);
                         if (!File.Exists(path)) {
                             Logger.Info($"No {objectType} orbital elements loaded since no file was found at {path}");
+                            continue;
                         }
 
-                        progress.Report(new ApplicationStatus() { Source = "Orbitals", Status = $"Loading {objectType}" });
+                        progress?.Report(new ApplicationStatus() { Source = "Orbitals", Status = $"Loading {objectType}" });
                         try {
                             ct.ThrowIfCancellationRequested();
                             var lastModified = File.GetLastWriteTime(path);
-                            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read)) {
-                                var orbitalElements = ProtoBuf.Serializer.DeserializeItems<OrbitalElements>(fs, ProtoBuf.PrefixStyle.Base128, 1);
+                            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read)) 
+                            using (var gs = new GZipStream(fs, CompressionMode.Decompress)) {
+                                var orbitalElements = ProtoBuf.Serializer.DeserializeItems<OrbitalElements>(gs, ProtoBuf.PrefixStyle.Base128, 1);
                                 var backend = OrbitalElementsBackend.Create(objectType, lastModified, orbitalElements, ct);
                                 lock (backendLock) {
                                     backendsByType[objectType] = backend;
                                 }
+                                OnUpdated(objectType, backend);
                             }
                         } catch (OperationCanceledException) {
                             return;
@@ -78,7 +83,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                         }
                     }
                 } finally {
-                    progress.Report(new ApplicationStatus() { Source = "Orbitals" });
+                    progress?.Report(new ApplicationStatus() { Source = "Orbitals" });
                 }
             });
         }
@@ -115,34 +120,44 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             return backend.Objects.Count;
         }
 
-        public Task Update(OrbitalObjectType objectType, IEnumerable<IOrbitalElementsSource> elements, CancellationToken ct) {
+        public Task Update(OrbitalObjectType objectType, IEnumerable<IOrbitalElementsSource> elements, IProgress<ApplicationStatus> progress, CancellationToken ct) {
             return Task.Run(() => {
                 var path = GetObjectTypeSavePath(objectType);
                 var tmpPath = path + ".temp";
                 try {
-                    var backend = OrbitalElementsBackend.Create(objectType, DateTime.UtcNow, elements.Select(e => e.ToOrbitalElements()), ct);
-                    using (var fs = new FileStream(tmpPath, FileMode.Create, FileAccess.Write, FileShare.None)) {
+                    progress?.Report(new ApplicationStatus() {
+                        Status = $"Updating {objectType} Elements"
+                    });
+                    var backend = OrbitalElementsBackend.Create(objectType, DateTime.Now, elements.Select(e => e.ToOrbitalElements()), ct);
+                    using (var fs = new FileStream(tmpPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                    using (var gs = new GZipStream(fs, CompressionLevel.Optimal)) {
                         foreach (var element in backend.Objects) {
                             ct.ThrowIfCancellationRequested();
-                            ProtoBuf.Serializer.SerializeWithLengthPrefix<OrbitalElements>(fs, element, ProtoBuf.PrefixStyle.Base128, 1);
+                            ProtoBuf.Serializer.SerializeWithLengthPrefix<OrbitalElements>(gs, element, ProtoBuf.PrefixStyle.Base128, 1);
                         }
                     }
                     if (File.Exists(path)) {
                         File.Delete(path);
                     }
                     File.Move(tmpPath, path);
-                    this.Updated?.Invoke(this, new OrbitalElementsObjectTypeUpdatedEventArgs() {
-                        ObjectType = objectType,
-                        Count = backend.Objects.Count,
-                        LastUpdated = backend.LastModified
-                    });
+                    OnUpdated(objectType, backend);
                 } catch (OperationCanceledException) {
                     Logger.Warning($"Updating {objectType} orbital elements cancelled");
                     return;
                 } catch (Exception e) {
                     Logger.Error($"Failed to update {objectType} orbital elements", e);
-                    Notification.ShowError($"Failed to update {objectType} orbital elements");
+                    Notification.ShowError($"Failed to update {objectType} orbital elements. {e.Message}");
+                } finally {
+                    progress?.Report(new ApplicationStatus());
                 }
+            });
+        }
+
+        private void OnUpdated(OrbitalObjectType objectType, OrbitalElementsBackend backend) {
+            this.Updated?.Invoke(this, new OrbitalElementsObjectTypeUpdatedEventArgs() {
+                ObjectType = objectType,
+                Count = backend.Objects.Count,
+                LastUpdated = backend.LastModified
             });
         }
 
@@ -165,7 +180,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         }
 
         private static string GetObjectTypeSavePath(OrbitalObjectType objectType) {
-            return Path.Combine(OrbitalsPlugin.OrbitalElementsDirectory, $"{objectType}Elements.bin");
+            return Path.Combine(OrbitalsPlugin.OrbitalElementsDirectory, $"{objectType}Elements.bin.gz");
         }
 
         public event EventHandler<OrbitalElementsObjectTypeUpdatedEventArgs> Updated;

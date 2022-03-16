@@ -16,15 +16,17 @@ using System.Windows.Data;
 
 namespace NINA.Joko.Plugin.Orbitals.Converters {
 
-    public class DateTimeNullToNeverConverter : IValueConverter {
+    public class DateTimeMinToNeverConverter : IValueConverter {
 
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
-            var maybeDateTime = (DateTime?)value;
-            if (maybeDateTime == null || !maybeDateTime.HasValue) {
+            if (value == null) {
                 return "Never";
             }
 
-            var dateTime = maybeDateTime.Value;
+            var dateTime = (DateTime)value;
+            if (dateTime <= DateTime.MinValue) {
+                return "Never";
+            }
             return dateTime.ToString(culture);
         }
 

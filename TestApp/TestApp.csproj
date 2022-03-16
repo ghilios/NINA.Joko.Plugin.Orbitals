@@ -348,9 +348,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AstrometricConstants.cs" />
-    <Compile Include="JPLAccessor.cs" />
-    <Compile Include="Kepler.cs" />
     <Compile Include="OrbitalExample.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

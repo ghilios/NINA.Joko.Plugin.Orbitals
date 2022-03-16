@@ -26,9 +26,10 @@
     <oconverters:CollectionContainsItemsToBooleanConverterNoCheck x:Key="O_CollectionContainsItemsToBooleanConverterNoCheck" />
     <oconverters:ColorAndBooleanToTransparentMultiBinding x:Key="O_ColorAndBooleanToTransparentMultiBinding" />
     <oconverters:IntZeroBooleanMultiConverter x:Key="O_IntZeroBooleanMultiConverter" />
-    <oconverters:DateTimeNullToNeverConverter x:Key="O_DateTimeNullToNeverConverter" />
+    <oconverters:DateTimeMinToNeverConverter x:Key="O_DateTimeMinToNeverConverter" />
 
     <TextBlock x:Key="Placeholder_Tooltip" Text="Placeholder text" />
+    <TextBlock x:Key="SelectedObjectName_Hint" Text="Name of the object (eg, C/2020 O3 (PANSTARRS))" />
     <DataTemplate x:Key="Orbitals_Options">
         <Grid d:DataContext="{d:DesignInstance local:OrbitalsOptions, IsDesignTimeCreatable=False}">
             <Grid.ColumnDefinitions>

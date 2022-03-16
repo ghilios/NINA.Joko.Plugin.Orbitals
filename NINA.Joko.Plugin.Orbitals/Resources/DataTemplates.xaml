@@ -6,4 +6,8 @@
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="OptionsDataTemplates.xaml" />
     </ResourceDictionary.MergedDictionaries>
+
+    <DataTemplate x:Key="NINA.Joko.Plugin.Orbitals.ViewModels.OrbitalsVM_Dockable">
+        <view:OrbitalsView />
+    </DataTemplate>
 </ResourceDictionary>

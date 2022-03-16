@@ -34,6 +34,10 @@ namespace NINA.Joko.Plugin.Orbitals {
                 Settings.Default.Save();
             }
 
+            if (!Directory.Exists(OrbitalElementsDirectory)) {
+                Directory.CreateDirectory(OrbitalElementsDirectory);
+            }
+
             if (OrbitalsOptions == null) {
                 OrbitalsOptions = new OrbitalsOptions(profileService);
             }
@@ -51,7 +55,7 @@ namespace NINA.Joko.Plugin.Orbitals {
 
         public static OrbitalsOptions OrbitalsOptions { get; private set; }
 
-        public static OrbitalElementsAccessor OrbitalElementsAccessor { get; private set; }
+        public static OrbitalElementsAccessor OrbitalElementsAccessor { get; private set; } 
 
         public static JPLAccessor JPLAccessor { get; private set; }
 

@@ -1,31 +1,16 @@
 ﻿using NINA.Astrometry;
 using NINA.Core.Model;
+using NINA.Joko.Plugin.Orbitals.Calculations;
+using NINA.Joko.Plugin.Orbitals.Converters;
+using NINA.Joko.Plugin.Orbitals.Enums;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using static NINA.Joko.Plugin.Orbitals.Calculations.Kepler;
 
 namespace NINA.Joko.Plugin.Orbitals.Interfaces {
-    public static class Extensions {
-        public static NOVAS.Body ToNOVAS(this SolarSystemBody body) {
-            return (NOVAS.Body)body;
-        }
-    }
-
-    public enum SolarSystemBody : short {
-        Mercury = 1,
-        Venus = 2,
-        Earth = 3,
-        Mars = 4,
-        Jupiter = 5,
-        Saturn = 6,
-        Uranus = 7,
-        Neptune = 8,
-        Pluto = 9,
-        Sun = 10,
-        Moon = 11
-    }
 
     public enum OrbitalObjectType {
         Comet
@@ -66,7 +51,7 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
 
         int GetCount(OrbitalObjectType objectType);
 
-        Task Update(OrbitalObjectType objectType, IEnumerable<IOrbitalElementsSource> elements, CancellationToken ct);
+        Task Update(OrbitalObjectType objectType, IEnumerable<IOrbitalElementsSource> elements, IProgress<ApplicationStatus> progress, CancellationToken ct);
 
         OrbitalPositionVelocity GetSolarSystemBodyPV(DateTime asof, SolarSystemBody solarSystemBody);
 

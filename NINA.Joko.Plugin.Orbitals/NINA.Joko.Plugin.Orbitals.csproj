@@ -195,7 +195,7 @@
       <HintPath>..\packages\NINA.Astrometry.2.0.0.2050-preview\lib\net48\NINA.Astrometry.dll</HintPath>
     </Reference>
     -->
-    <Reference Include="NINA.Astrometry, Version=2.0.0.2049-beta, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="NINA.Astrometry, Version=2.0.0.2050-beta, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\..\nina\NINA\bin\x64\Debug\NINA.Astrometry.dll</HintPath>
     </Reference>
     <Reference Include="NINA.Core, Version=2.0.0.2050, Culture=neutral, processorArchitecture=MSIL">
@@ -222,8 +222,13 @@
     <Reference Include="NINA.Sequencer, Version=2.0.0.2050, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\NINA.Sequencer.2.0.0.2050-preview\lib\net48\NINA.Sequencer.dll</HintPath>
     </Reference>
+    <!--
     <Reference Include="NINA.WPF.Base, Version=2.0.0.2050, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\NINA.WPF.Base.2.0.0.2050-preview\lib\net48\NINA.WPF.Base.dll</HintPath>
+    </Reference>
+    -->
+    <Reference Include="NINA.WPF.Base, Version=2.0.0.2050-beta, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\nina\NINA\bin\x64\Debug\NINA.WPF.Base.dll</HintPath>
     </Reference>
     <Reference Include="NINACustomControlLibrary, Version=2.0.0.2050, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\NINACustomControlLibrary.2.0.0.2050-preview\lib\net48\NINACustomControlLibrary.dll</HintPath>
@@ -392,7 +397,7 @@
     <Compile Include="Calculations\OrbitalElementsAccessor.cs" />
     <Compile Include="Converters\CollectionContainsItemsToBooleanConverterNoCheck.cs" />
     <Compile Include="Converters\ColorAndBooleanToTransparentMultiBinding.cs" />
-    <Compile Include="Converters\DateTimeNullToNeverConverter.cs" />
+    <Compile Include="Converters\DateTimeMinToNeverConverter.cs" />
     <Compile Include="Converters\DecimalDegreesToArcsecDoubleDashConverter.cs" />
     <Compile Include="Converters\DecimalMinToDoubleDashConverter.cs" />
     <Compile Include="Converters\DoubleZeroToVisibilityConverter.cs" />
@@ -405,9 +410,12 @@
     <Compile Include="Converters\PositiveToBooleanConverter.cs" />
     <Compile Include="Converters\ZeroToDisabledConverter.cs" />
     <Compile Include="Converters\ZeroToInfinityConverter.cs" />
+    <Compile Include="Enums\SearchObjectTypeEnum.cs" />
+    <Compile Include="Enums\SolarSystemBody.cs" />
     <Compile Include="Interfaces\IJPLAccessor.cs" />
     <Compile Include="Interfaces\IOrbitalElementsAccessor.cs" />
     <Compile Include="Interfaces\IOrbitalElementsSource.cs" />
+    <Compile Include="Interfaces\IOrbitalSearchVM.cs" />
     <Compile Include="Interfaces\IOrbitalsOptions.cs" />
     <Compile Include="SequenceItems\DataTemplates.xaml.cs">
       <DependentUpon>DataTemplates.xaml</DependentUpon>
@@ -435,11 +443,8 @@
     </Compile>
     <Compile Include="OrbitalsPlugin.cs" />
     <Compile Include="Utility\ConstantDateTime.cs" />
-    <Compile Include="ViewModels\MyInputBox.cs" />
+    <Compile Include="ViewModels\OrbitalSearchVM.cs" />
     <Compile Include="ViewModels\OrbitalsVM.cs" />
-    <Compile Include="View\MyInputBoxView.xaml.cs">
-      <DependentUpon>MyInputBoxView.xaml</DependentUpon>
-    </Compile>
     <Compile Include="View\OrbitalsView.xaml.cs">
       <DependentUpon>OrbitalsView.xaml</DependentUpon>
     </Compile>
@@ -478,10 +483,6 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="View\MyInputBoxView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="View\OrbitalsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -501,18 +502,17 @@
       if not exist "%25localappdata%25\NINA\Plugin\Orbitals" (
       echo "Creating $(PlatformName) Plugins Orbitals folder"
       mkdir  "%25localappdata%25\NINA\Plugins\Orbitals"
-      )
-      if not exist "%25localappdata%25\NINA\Plugin\Orbitals\$(TargetName)" (
-      echo "Creating $(PlatformName) Plugins Orbitals\$(TargetName) folder"
-      mkdir  "%25localappdata%25\NINA\Plugins\Orbitals\$(TargetName)"
+      mkdir  "%25localappdata%25\NINA\Plugins\Orbitals\dll"
       )
 
       echo "Copying $(PlatformName) $(TargetFileName)"
-      xcopy "$(TargetPath)" "%25localappdata%25\NINA\Plugins\Orbitals\$(TargetName)" /h/k/r/y
-      xcopy "$(TargetDir)$(TargetName).pdb" "%25localappdata%25\NINA\Plugins\Orbitals\$(TargetName)" /h/k/r/y
+      xcopy "$(TargetPath)" "%25localappdata%25\NINA\Plugins\Orbitals\" /h/k/r/y
+      xcopy "$(TargetDir)$(TargetName).pdb" "%25localappdata%25\NINA\Plugins\Orbitals\" /h/k/r/y
 
       echo "Copying $(PlatformName) $(TargetFileName) Dependencies"
-      xcopy "$(TargetDir)Antlr4.Runtime.dll" "%25localappdata%25\NINA\Plugins\Orbitals\$(TargetName)" /h/k/r/y</PostBuildEvent>
+      xcopy "$(TargetDir)protobuf-net*.dll" "%25localappdata%25\NINA\Plugins\Orbitals\dll" /h/k/r/y
+      xcopy "$(TargetDir)TrieNet*.dll" "%25localappdata%25\NINA\Plugins\Orbitals\dll" /h/k/r/y
+      xcopy "$(TargetDir)FlatFiles*.dll" "%25localappdata%25\NINA\Plugins\Orbitals\dll" /h/k/r/y</PostBuildEvent>
   </PropertyGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
