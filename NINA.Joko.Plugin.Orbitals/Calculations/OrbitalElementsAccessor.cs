@@ -177,20 +177,25 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
         public OrbitalPositionVelocity GetSolarSystemBodyPV(DateTime asof, SolarSystemBody solarSystemBody) {
             var jdtt = AstroUtil.GetJulianDate(asof);
+            var startPosition = NOVAS.BodyPositionAndVelocity(jdtt, solarSystemBody.ToNOVAS(), NOVAS.SolarSystemOrigin.SolarCenterOfMass);
+            var earthPosition = NOVAS.BodyPositionAndVelocity(jdtt, NOVAS.Body.Earth, NOVAS.SolarSystemOrigin.SolarCenterOfMass);
+            var earthCenteredPosition = startPosition.Position - earthPosition.Position;
             var startCoordinates = NOVAS.PlanetApparentCoordinates(jdtt, solarSystemBody.ToNOVAS());
             var nextCoordinates = NOVAS.PlanetApparentCoordinates(jdtt + AstrometricConstants.JD_SEC, solarSystemBody.ToNOVAS());
             var trackingRate = SiderealShiftTrackingRate.Create(startCoordinates, nextCoordinates, TimeSpan.FromSeconds(1));
-            return new OrbitalPositionVelocity(asof, startCoordinates, trackingRate);
+            return new OrbitalPositionVelocity(asof, earthCenteredPosition, startCoordinates, trackingRate);
         }
 
         public OrbitalPositionVelocity GetObjectPV(DateTime asof, OrbitalElements orbitalElements) {
             var jdtt = AstroUtil.GetJulianDate(asof);
             var startPosition = Kepler.CalculateOrbitalElements(orbitalElements, jdtt);
             var nextPosition = Kepler.CalculateOrbitalElements(orbitalElements, jdtt + AstrometricConstants.JD_SEC);
-            var startCoordinates = Kepler.GetApparentCoordinates(startPosition, NOVAS.Body.Earth);
-            var nextCoordinates = Kepler.GetApparentCoordinates(nextPosition, NOVAS.Body.Earth);
+            var startApparentPosition = Kepler.GetApparentPosition(startPosition, NOVAS.Body.Earth);
+            var startCoordinates = startApparentPosition.ToPolar();
+            var nextApparentPosition = Kepler.GetApparentPosition(nextPosition, NOVAS.Body.Earth);
+            var nextCoordinates = nextApparentPosition.ToPolar();
             var trackingRate = SiderealShiftTrackingRate.Create(startCoordinates, nextCoordinates, TimeSpan.FromSeconds(1));
-            return new OrbitalPositionVelocity(asof, startCoordinates, trackingRate);
+            return new OrbitalPositionVelocity(asof, startApparentPosition, startCoordinates, trackingRate);
         }
 
         private static string GetObjectTypeSavePath(OrbitalObjectTypeEnum objectType) {

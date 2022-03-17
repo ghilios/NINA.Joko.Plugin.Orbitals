@@ -31,16 +31,24 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
 
         public static readonly OrbitalPositionVelocity NotSet = new OrbitalPositionVelocity(
             DateTime.MinValue,
+            new RectangularCoordinates(0, 0, 0),
             new Coordinates(Angle.Zero, Angle.Zero, Epoch.J2000),
             SiderealShiftTrackingRate.Disabled);
 
-        public OrbitalPositionVelocity(DateTime asof, Coordinates coordinates, SiderealShiftTrackingRate trackingRate) {
+        public OrbitalPositionVelocity(
+            DateTime asof,
+            RectangularCoordinates position,
+            Coordinates coordinates,
+            SiderealShiftTrackingRate trackingRate) {
             this.Asof = asof;
+            this.Position = position;
             this.Coordinates = coordinates;
             this.TrackingRate = trackingRate;
         }
 
         public DateTime Asof { get; private set; }
+
+        public RectangularCoordinates Position { get; private set; }
 
         public Coordinates Coordinates { get; private set; }
 

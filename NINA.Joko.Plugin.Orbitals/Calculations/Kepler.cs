@@ -112,7 +112,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             public RectangularCoordinates EclipticCoordinates { get; set; }
         }
 
-        public static Coordinates GetApparentCoordinates(
+        public static RectangularCoordinates GetApparentPosition(
             OrbitalPosition orbitalPosition,
             NOVAS.Body orbitalCenterBody) {
             var centerPosition = NOVAS.BodyPositionAndVelocity(orbitalPosition.AsOf_jd, orbitalCenterBody, NOVAS.SolarSystemOrigin.SolarCenterOfMass);
@@ -120,8 +120,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             var earthPositionEquatorial = centerPosition.Position.RotateEcliptic(-AstrometricConstants.J2000MeanObliquity);
 
             var earthCenteredPosition = orbitalPosition.EclipticCoordinates - earthPositionEquatorial;
-            earthCenteredPosition = earthCenteredPosition.RotateEcliptic(AstrometricConstants.J2000MeanObliquity);
-            return earthCenteredPosition.ToPolar();
+            return earthCenteredPosition.RotateEcliptic(AstrometricConstants.J2000MeanObliquity);
         }
 
         public static OrbitalPosition CalculateOrbitalElements(

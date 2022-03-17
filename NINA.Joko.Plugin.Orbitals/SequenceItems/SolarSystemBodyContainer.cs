@@ -108,6 +108,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         private void RefreshCoordinates() {
             Target.InputCoordinates.Coordinates = Target.DeepSkyObject.Coordinates;
             ShiftTrackingRate = Target.DeepSkyObject.ShiftTrackingRate;
+            DistanceAU = TargetObject.Position.Distance;
             AfterParentChanged();
         }
 
@@ -117,6 +118,16 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             get => shiftTrackingRate;
             private set {
                 shiftTrackingRate = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        private double distanceAU = 0.0;
+
+        public double DistanceAU {
+            get => distanceAU;
+            private set {
+                distanceAU = value;
                 RaisePropertyChanged();
             }
         }

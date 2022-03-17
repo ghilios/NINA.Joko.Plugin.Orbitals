@@ -50,6 +50,15 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             return pv.TrackingRate;
         }
 
+        public RectangularCoordinates Position {
+            get => PositionAt(DateTime.Now);
+        }
+
+        public RectangularCoordinates PositionAt(DateTime at) {
+            var pv = GetObjectPosition(at);
+            return pv.Position;
+        }
+
         private DateTime lastObjectCalculationDateTime = DateTime.MinValue;
         private OrbitalPositionVelocity lastObjectCalculation = null;
 

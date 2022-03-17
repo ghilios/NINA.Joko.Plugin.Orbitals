@@ -425,7 +425,6 @@
     <Compile Include="SequenceItems\DataTemplates.xaml.cs">
       <DependentUpon>DataTemplates.xaml</DependentUpon>
     </Compile>
-    <Compile Include="SequenceItems\LoadModel.cs" />
     <Compile Include="SequenceItems\OrbitalObjectContainer.cs" />
     <Compile Include="ValidationRules\PositiveIntegerOrInfiniteRule.cs" />
     <Compile Include="OrbitalsOptions.cs" />
