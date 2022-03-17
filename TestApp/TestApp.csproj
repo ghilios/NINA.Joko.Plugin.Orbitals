@@ -183,8 +183,13 @@
     <Reference Include="NINA.Core, Version=2.0.0.2050, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\NINA.Core.2.0.0.2050-preview\lib\net48\NINA.Core.dll</HintPath>
     </Reference>
+    <!--
     <Reference Include="NINA.Equipment, Version=2.0.0.2050, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\NINA.Equipment.2.0.0.2050-preview\lib\net48\NINA.Equipment.dll</HintPath>
+    </Reference>
+    -->
+    <Reference Include="NINA.Equipment, Version=2.0.0.2050-beta, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\nina\NINA\bin\x64\Debug\NINA.Equipment.dll</HintPath>
     </Reference>
     <Reference Include="NINA.Image, Version=2.0.0.2050, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\NINA.Image.2.0.0.2050-preview\lib\net48\NINA.Image.dll</HintPath>
