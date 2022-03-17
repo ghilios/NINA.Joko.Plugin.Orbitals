@@ -395,6 +395,9 @@
     <Compile Include="Calculations\JPLAccessor.cs" />
     <Compile Include="Calculations\Kepler.cs" />
     <Compile Include="Calculations\OrbitalElementsAccessor.cs" />
+    <Compile Include="Calculations\OrbitalElementsObject.cs" />
+    <Compile Include="Calculations\OrbitalsObjectBase.cs" />
+    <Compile Include="Calculations\SolarSystemBodyObject.cs" />
     <Compile Include="Converters\CollectionContainsItemsToBooleanConverterNoCheck.cs" />
     <Compile Include="Converters\ColorAndBooleanToTransparentMultiBinding.cs" />
     <Compile Include="Converters\DateTimeMinToNeverConverter.cs" />
@@ -410,6 +413,7 @@
     <Compile Include="Converters\PositiveToBooleanConverter.cs" />
     <Compile Include="Converters\ZeroToDisabledConverter.cs" />
     <Compile Include="Converters\ZeroToInfinityConverter.cs" />
+    <Compile Include="Enums\OrbitalObjectTypeEnum.cs" />
     <Compile Include="Enums\SearchObjectTypeEnum.cs" />
     <Compile Include="Enums\SolarSystemBody.cs" />
     <Compile Include="Interfaces\IJPLAccessor.cs" />
@@ -417,10 +421,12 @@
     <Compile Include="Interfaces\IOrbitalElementsSource.cs" />
     <Compile Include="Interfaces\IOrbitalSearchVM.cs" />
     <Compile Include="Interfaces\IOrbitalsOptions.cs" />
+    <Compile Include="SequenceItems\SolarSystemBodyContainer.cs" />
     <Compile Include="SequenceItems\DataTemplates.xaml.cs">
       <DependentUpon>DataTemplates.xaml</DependentUpon>
     </Compile>
     <Compile Include="SequenceItems\LoadModel.cs" />
+    <Compile Include="SequenceItems\OrbitalObjectContainer.cs" />
     <Compile Include="ValidationRules\PositiveIntegerOrInfiniteRule.cs" />
     <Compile Include="OrbitalsOptions.cs" />
     <Compile Include="Options.xaml.cs">

@@ -1,28 +1,39 @@
-﻿using NINA.Astrometry;
+﻿#region "copyright"
+
+/*
+    Copyright © 2021 - 2021 George Hilios <ghilios+NINA@googlemail.com>
+
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this
+    file, You can obtain one at http://mozilla.org/MPL/2.0/.
+*/
+
+#endregion "copyright"
+
+using NINA.Astrometry;
 using NINA.Core.Model;
-using NINA.Joko.Plugin.Orbitals.Calculations;
-using NINA.Joko.Plugin.Orbitals.Converters;
 using NINA.Joko.Plugin.Orbitals.Enums;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using static NINA.Joko.Plugin.Orbitals.Calculations.Kepler;
 
 namespace NINA.Joko.Plugin.Orbitals.Interfaces {
 
-    public enum OrbitalObjectType {
-        Comet
-    }
-
     public class OrbitalElementsObjectTypeUpdatedEventArgs : EventArgs {
-        public OrbitalObjectType ObjectType { get; set; }
+        public OrbitalObjectTypeEnum ObjectType { get; set; }
         public int Count { get; set; }
         public DateTime LastUpdated { get; set; }
     }
 
     public class OrbitalPositionVelocity {
+
+        public static readonly OrbitalPositionVelocity NotSet = new OrbitalPositionVelocity(
+            DateTime.MinValue,
+            new Coordinates(Angle.Zero, Angle.Zero, Epoch.J2000),
+            SiderealShiftTrackingRate.Disabled);
+
         public OrbitalPositionVelocity(DateTime asof, Coordinates coordinates, SiderealShiftTrackingRate trackingRate) {
             this.Asof = asof;
             this.Coordinates = coordinates;
@@ -32,7 +43,7 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
         public DateTime Asof { get; private set; }
 
         public Coordinates Coordinates { get; private set; }
-        
+
         public SiderealShiftTrackingRate TrackingRate { get; private set; }
 
         public override string ToString() {
@@ -41,17 +52,18 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
     }
 
     public interface IOrbitalElementsAccessor {
+
         Task Load(IProgress<ApplicationStatus> progress, CancellationToken ct);
 
-        IEnumerable<OrbitalElements> Search(OrbitalObjectType objectType, string searchString);
+        IEnumerable<OrbitalElements> Search(OrbitalObjectTypeEnum objectType, string searchString);
 
-        OrbitalElements Get(OrbitalObjectType objectType, string objectName);
+        OrbitalElements Get(OrbitalObjectTypeEnum objectType, string objectName);
 
-        DateTime GetLastUpdated(OrbitalObjectType objectType);
+        DateTime GetLastUpdated(OrbitalObjectTypeEnum objectType);
 
-        int GetCount(OrbitalObjectType objectType);
+        int GetCount(OrbitalObjectTypeEnum objectType);
 
-        Task Update(OrbitalObjectType objectType, IEnumerable<IOrbitalElementsSource> elements, IProgress<ApplicationStatus> progress, CancellationToken ct);
+        Task Update(OrbitalObjectTypeEnum objectType, IEnumerable<IOrbitalElementsSource> elements, IProgress<ApplicationStatus> progress, CancellationToken ct);
 
         OrbitalPositionVelocity GetSolarSystemBodyPV(DateTime asof, SolarSystemBody solarSystemBody);
 

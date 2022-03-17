@@ -1,5 +1,18 @@
-﻿using NINA.Core.Interfaces;
+﻿#region "copyright"
+
+/*
+    Copyright © 2021 - 2021 George Hilios <ghilios+NINA@googlemail.com>
+
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this
+    file, You can obtain one at http://mozilla.org/MPL/2.0/.
+*/
+
+#endregion "copyright"
+
+using NINA.Core.Interfaces;
 using NINA.Core.Utility;
+using NINA.Joko.Plugin.Orbitals.Enums;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
 using Nito.Mvvm;
 using System.Collections.Generic;
@@ -11,9 +24,9 @@ using static NINA.Joko.Plugin.Orbitals.Calculations.Kepler;
 namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
     public class OrbitalSearchVM : BaseINPC, IOrbitalSearchVM {
-
         private CancellationTokenSource targetSearchCts;
         private readonly IOrbitalElementsAccessor orbitalElementsAccessor;
+
         public OrbitalSearchVM(IOrbitalElementsAccessor orbitalElementsAccessor) {
             this.orbitalElementsAccessor = orbitalElementsAccessor;
         }
@@ -34,8 +47,9 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
         private bool SkipSearch { get; set; } = false;
 
-        private OrbitalObjectType objectType;
-        public OrbitalObjectType ObjectType {
+        private OrbitalObjectTypeEnum objectType;
+
+        public OrbitalObjectTypeEnum ObjectType {
             get => objectType;
             set {
                 objectType = value;
@@ -132,7 +146,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             public OrbitalElements Object { get; set; }
         }
 
-        private Task<List<IAutoCompleteItem>> SearchObjects(OrbitalObjectType objectType, string searchString, CancellationToken ct) {
+        private Task<List<IAutoCompleteItem>> SearchObjects(OrbitalObjectTypeEnum objectType, string searchString, CancellationToken ct) {
             return Task.Run(async () => {
                 await Task.Delay(100, ct);
                 var results = this.orbitalElementsAccessor.Search(objectType, searchString).Take(Limit).ToList();

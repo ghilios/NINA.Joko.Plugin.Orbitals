@@ -4,14 +4,384 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="clr-namespace:NINA.Joko.Plugin.Orbitals.SequenceItems"
+    xmlns:alt="clr-namespace:NINA.WPF.Base.View;assembly=NINA.WPF.Base"
+    xmlns:enums="clr-namespace:NINA.Joko.Plugin.Orbitals.Enums"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:mini="clr-namespace:NINA.View.Sequencer.MiniSequencer;assembly=NINA.Sequencer"
     xmlns:ninactrl="clr-namespace:NINACustomControlLibrary;assembly=NINACustomControlLibrary"
     xmlns:ns="clr-namespace:NINA.Core.Locale;assembly=NINA.Core"
     xmlns:rules="clr-namespace:NINA.Core.Utility.ValidationRules;assembly=NINA.Core"
     xmlns:view="clr-namespace:NINA.View.Sequencer;assembly=NINA.Sequencer"
+    xmlns:util="clr-namespace:NINA.Core.Utility;assembly=NINA.Core"
     mc:Ignorable="d">
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="../Resources/OptionsDataTemplates.xaml" />
     </ResourceDictionary.MergedDictionaries>
+    <Style x:Key="OrbitalObjectExpander" TargetType="ninactrl:DetachingExpander">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ninactrl:DetachingExpander">
+                    <Border
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        Focusable="False"
+                        SnapsToDevicePixels="true">
+                        <DockPanel>
+                            <ToggleButton
+                                x:Name="HeaderSite"
+                                MinWidth="0"
+                                MinHeight="0"
+                                Padding="{TemplateBinding Padding}"
+                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                Content="{TemplateBinding Header}"
+                                ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}"
+                                DockPanel.Dock="Top"
+                                FocusVisualStyle="{StaticResource ExpanderHeaderFocusVisual}"
+                                FontFamily="{TemplateBinding FontFamily}"
+                                FontSize="{TemplateBinding FontSize}"
+                                FontStretch="{TemplateBinding FontStretch}"
+                                FontStyle="{TemplateBinding FontStyle}"
+                                FontWeight="{TemplateBinding FontWeight}"
+                                Foreground="{TemplateBinding Foreground}"
+                                IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                Style="{StaticResource DSOHeaderExpanderStyle}" />
+                            <StackPanel DockPanel.Dock="Bottom">
+                                <Border
+                                    Height="10"
+                                    Margin="0,0,0,0"
+                                    HorizontalAlignment="{Binding HorizontalAlignment, RelativeSource={RelativeSource AncestorType=ContentPresenter}, Mode=OneWayToSource}"
+                                    Background="Transparent" />
+                            </StackPanel>
+                            <ContentPresenter
+                                x:Name="ExpandSite"
+                                Margin="{TemplateBinding Padding}"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                Focusable="false"
+                                Visibility="Collapsed" />
+                        </DockPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsExpanded" Value="true">
+                            <Setter TargetName="ExpandSite" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="false">
+                            <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <DataTemplate DataType="{x:Type local:OrbitalObjectContainer}">
+        <view:SequenceContainerView>
+            <view:SequenceContainerView.SequenceContainerContent>
+                <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,2">
+                    <ninactrl:DetachingExpander IsExpanded="{Binding Target.Expanded}" Style="{StaticResource OrbitalObjectExpander}">
+                        <ninactrl:DetachingExpander.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <Border MinHeight="25">
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource ButtonForegroundBrush}"
+                                        Text="{ns:Loc LblTarget}" />
+                                </Border>
+                                <StackPanel Margin="5,0,0,0" Orientation="Horizontal">
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource ButtonForegroundBrush}"
+                                        Text="{Binding Target.TargetName}" />
+                                    <TextBlock
+                                        Margin="5,0,5,0"
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource ButtonForegroundBrush}"
+                                        Text="|" />
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource ButtonForegroundBrush}"
+                                        Text="{Binding Target.DeepSkyObject.Coordinates.RAString}" />
+                                    <TextBlock
+                                        Margin="5,0,5,0"
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource ButtonForegroundBrush}"
+                                        Text="|" />
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource ButtonForegroundBrush}"
+                                        Text="{Binding Target.DeepSkyObject.Coordinates.DecString}" />
+                                    <TextBlock
+                                        Margin="5,0,5,0"
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource ButtonForegroundBrush}"
+                                        Text="|" />
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource ButtonForegroundBrush}"
+                                        Text="{Binding Target.Rotation}" />
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource ButtonForegroundBrush}"
+                                        Text="°" />
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ninactrl:DetachingExpander}, Path=IsExpanded}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                </StackPanel>
+                            </StackPanel>
+                        </ninactrl:DetachingExpander.Header>
+                        <Grid>
+                            <Grid.Resources>
+                                <util:BindingProxy x:Key="nighttimeProxy" Data="{Binding NighttimeData}" />
+                            </Grid.Resources>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <ComboBox
+                                Grid.Row="0" Grid.Column="0"
+                                MinWidth="80"
+                                Margin="10,5,0,5"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center"
+                                ItemsSource="{Binding Source={util:EnumBindingSource {x:Type enums:OrbitalObjectTypeEnum}}}"
+                                SelectedItem="{Binding ObjectType}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Converter={StaticResource O_EnumStaticDescriptionValueConverter}}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <ninactrl:AutoCompleteBox
+                                Grid.Row="0" Grid.Column="1"
+                                Margin="10,5,0,5"
+                                MinWidth="200"
+                                VerticalAlignment="Center"
+                                VerticalContentAlignment="Center"
+                                Foreground="{StaticResource PrimaryBrush}"
+                                HintText="{Binding Text, Source={StaticResource SelectedObjectName_Hint}}"
+                                PopupBackground="{StaticResource TertiaryBackgroundBrush}"
+                                SearchResult="{Binding OrbitalSearchVM.TargetSearchResult.Result}"
+                                SelectedSearchResult="{Binding OrbitalSearchVM.SelectedTargetSearchResult, Mode=TwoWay}"
+                                ShowPopup="{Binding OrbitalSearchVM.ShowPopup, Mode=TwoWay}"
+                                Text="{Binding OrbitalSearchVM.TargetName, UpdateSourceTrigger=PropertyChanged}">
+                                <ninactrl:AutoCompleteBox.Background>
+                                    <SolidColorBrush Opacity="0.05" Color="{Binding Color, Source={StaticResource PrimaryBrush}}" />
+                                </ninactrl:AutoCompleteBox.Background>
+                            </ninactrl:AutoCompleteBox>
+                            <TextBlock
+                                Grid.Row="1" Grid.Column="0"
+                                Margin="5" VerticalAlignment="Center"
+                                Text="RA" />
+                            <TextBlock
+                                Grid.Row="1" Grid.Column="1"
+                                Margin="5" VerticalAlignment="Center"
+                                Text="{Binding Target.InputCoordinates.Coordinates.RAString, Mode=OneWay}" />
+                            <TextBlock
+                                Grid.Row="2" Grid.Column="0"
+                                Margin="5" VerticalAlignment="Center"
+                                Text="Dec" />
+                            <TextBlock
+                                Grid.Row="2" Grid.Column="1"
+                                Margin="5" VerticalAlignment="Center"
+                                Text="{Binding Target.InputCoordinates.Coordinates.DecString, Mode=OneWay}" />
+                            <TextBlock
+                                Grid.Row="3" Grid.Column="0"
+                                Margin="5" VerticalAlignment="Center"
+                                Text="RA Shift Rate" />
+                            <TextBlock
+                                Grid.Row="3" Grid.Column="1"
+                                Margin="5" VerticalAlignment="Center">
+                                <Run Text="{Binding ShiftTrackingRate.RAArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
+                            </TextBlock>
+                            <TextBlock
+                                Grid.Row="4" Grid.Column="0"
+                                Margin="5" VerticalAlignment="Center"
+                                Text="Dec Shift Rate" />
+                            <TextBlock
+                                Grid.Row="4" Grid.Column="1"
+                                Margin="5" VerticalAlignment="Center">
+                                <Run Text="{Binding ShiftTrackingRate.DecArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
+                            </TextBlock>
+                            <alt:AltitudeChart
+                                Grid.Row="0"
+                                Grid.RowSpan="5"
+                                Grid.Column="2"
+                                MinWidth="400"
+                                MinHeight="120"
+                                Margin="10,0,0,0"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                AnnotateAltitudeAxis="False"
+                                DataContext="{Binding Target.DeepSkyObject}"
+                                NighttimeData="{Binding Source={StaticResource nighttimeProxy}, Path=Data}" />
+                        </Grid>
+                    </ninactrl:DetachingExpander>
+                </Border>
+            </view:SequenceContainerView.SequenceContainerContent>
+        </view:SequenceContainerView>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type local:SolarSystemBodyContainer}">
+        <view:SequenceContainerView>
+            <view:SequenceContainerView.SequenceContainerContent>
+                <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,2">
+                    <ninactrl:DetachingExpander IsExpanded="{Binding Target.Expanded}" Style="{StaticResource OrbitalObjectExpander}">
+                        <ninactrl:DetachingExpander.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <Border MinHeight="25">
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource ButtonForegroundBrush}"
+                                        Text="{ns:Loc LblTarget}" />
+                                </Border>
+                                <StackPanel Margin="5,0,0,0" Orientation="Horizontal">
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource ButtonForegroundBrush}"
+                                        Text="{Binding Target.TargetName}" />
+                                    <TextBlock
+                                        Margin="5,0,5,0"
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource ButtonForegroundBrush}"
+                                        Text="|" />
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource ButtonForegroundBrush}"
+                                        Text="{Binding Target.DeepSkyObject.Coordinates.RAString}" />
+                                    <TextBlock
+                                        Margin="5,0,5,0"
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource ButtonForegroundBrush}"
+                                        Text="|" />
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource ButtonForegroundBrush}"
+                                        Text="{Binding Target.DeepSkyObject.Coordinates.DecString}" />
+                                    <TextBlock
+                                        Margin="5,0,5,0"
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource ButtonForegroundBrush}"
+                                        Text="|" />
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource ButtonForegroundBrush}"
+                                        Text="{Binding Target.Rotation}" />
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource ButtonForegroundBrush}"
+                                        Text="°" />
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ninactrl:DetachingExpander}, Path=IsExpanded}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                </StackPanel>
+                            </StackPanel>
+                        </ninactrl:DetachingExpander.Header>
+                        <Grid>
+                            <Grid.Resources>
+                                <util:BindingProxy x:Key="nighttimeProxy" Data="{Binding NighttimeData}" />
+                            </Grid.Resources>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <TextBlock
+                                Grid.Row="0" Grid.Column="0"
+                                Margin="5" VerticalAlignment="Center"
+                                Text="Body" />
+                            <ComboBox
+                                Grid.Row="0" Grid.Column="1"
+                                MinWidth="80"
+                                Margin="5"
+                                VerticalAlignment="Center"
+                                ItemsSource="{Binding Source={util:EnumBindingSource {x:Type enums:SolarSystemBody}}}"
+                                SelectedItem="{Binding SelectedSolarSystemBody}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Converter={StaticResource O_EnumStaticDescriptionValueConverter}}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock
+                                Grid.Row="1" Grid.Column="0"
+                                Margin="5" VerticalAlignment="Center"
+                                Text="RA" />
+                            <TextBlock
+                                Grid.Row="1" Grid.Column="1"
+                                Margin="5" VerticalAlignment="Center"
+                                Text="{Binding Target.InputCoordinates.Coordinates.RAString, Mode=OneWay}" />
+                            <TextBlock
+                                Grid.Row="2" Grid.Column="0"
+                                Margin="5" VerticalAlignment="Center"
+                                Text="Dec" />
+                            <TextBlock
+                                Grid.Row="2" Grid.Column="1"
+                                Margin="5" VerticalAlignment="Center"
+                                Text="{Binding Target.InputCoordinates.Coordinates.DecString, Mode=OneWay}" />
+                            <TextBlock
+                                Grid.Row="3" Grid.Column="0"
+                                Margin="5" VerticalAlignment="Center"
+                                Text="RA Shift Rate" />
+                            <TextBlock
+                                Grid.Row="3" Grid.Column="1"
+                                Margin="5" VerticalAlignment="Center">
+                                <Run Text="{Binding ShiftTrackingRate.RAArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
+                            </TextBlock>
+                            <TextBlock
+                                Grid.Row="4" Grid.Column="0"
+                                Margin="5" VerticalAlignment="Center"
+                                Text="Dec Shift Rate" />
+                            <TextBlock
+                                Grid.Row="4" Grid.Column="1"
+                                Margin="5" VerticalAlignment="Center">
+                                <Run Text="{Binding ShiftTrackingRate.DecArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
+                            </TextBlock>
+                            <alt:AltitudeChart
+                                Grid.Row="0"
+                                Grid.RowSpan="5"
+                                Grid.Column="2"
+                                MinWidth="400"
+                                MinHeight="120"
+                                Margin="10,0,0,0"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                AnnotateAltitudeAxis="False"
+                                DataContext="{Binding Target.DeepSkyObject}"
+                                NighttimeData="{Binding Source={StaticResource nighttimeProxy}, Path=Data}" />
+                        </Grid>
+                    </ninactrl:DetachingExpander>
+                </Border>
+            </view:SequenceContainerView.SequenceContainerContent>
+        </view:SequenceContainerView>
+    </DataTemplate>
 </ResourceDictionary>

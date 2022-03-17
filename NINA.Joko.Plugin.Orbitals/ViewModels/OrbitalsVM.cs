@@ -53,12 +53,10 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             IOrbitalSearchVM orbitalSearchVM) : base(profileService) {
             this.Title = "Orbitals";
 
-            /*
             var dict = new ResourceDictionary();
             dict.Source = new Uri("NINA.Joko.Plugin.Orbitals;component/Resources/SVGDataTemplates.xaml", UriKind.RelativeOrAbsolute);
-            ImageGeometry = (System.Windows.Media.GeometryGroup)dict["TenMicronSVG"];
+            ImageGeometry = (System.Windows.Media.GeometryGroup)dict["OrbitSVG"];
             ImageGeometry.Freeze();
-            */
 
             this.applicationStatusMediator = applicationStatusMediator;
             this.orbitalsOptions = orbitalsOptions;
@@ -82,13 +80,14 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         }
 
         private void OrbitalElementsAccessor_Updated(object sender, OrbitalElementsObjectTypeUpdatedEventArgs e) {
-            if (e.ObjectType == OrbitalObjectType.Comet) {
+            if (e.ObjectType == OrbitalObjectTypeEnum.Comet) {
                 CometCount = e.Count;
                 CometLastUpdated = e.LastUpdated;
             }
         }
 
         private DateTime cometLastUpdated;
+
         public DateTime CometLastUpdated {
             get => cometLastUpdated;
             private set {
@@ -98,6 +97,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         }
 
         private int cometCount;
+
         public int CometCount {
             get => cometCount;
             private set {
@@ -107,6 +107,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         }
 
         private SearchObjectTypeEnum searchObjectType = SearchObjectTypeEnum.SolarSystemBody;
+
         public SearchObjectTypeEnum SearchObjectType {
             get => searchObjectType;
             set {
@@ -116,6 +117,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         }
 
         private SolarSystemBody selectedSolarSystemBody = SolarSystemBody.Moon;
+
         public SolarSystemBody SelectedSolarSystemBody {
             get => selectedSolarSystemBody;
             set {
@@ -134,6 +136,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
         private Task<bool> updateCometElementsTask;
         private CancellationTokenSource updateCometElementsCts;
+
         public Task<bool> UpdateCometElements(object o) {
             if (updateCometElementsCts != null) {
                 Logger.Error("Update already in progress");
@@ -146,14 +149,14 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             var task = Task.Run(async () => {
                 try {
                     var availableModifiedDate = await jplAccessor.GetCometElementsLastModified();
-                    var localModifiedDate = orbitalElementsAccessor.GetLastUpdated(OrbitalObjectType.Comet);
+                    var localModifiedDate = orbitalElementsAccessor.GetLastUpdated(OrbitalObjectTypeEnum.Comet);
                     if (availableModifiedDate < localModifiedDate) {
-                        Notification.ShowInformation($"{OrbitalObjectType.Comet} elements already up to date");
+                        Notification.ShowInformation($"{OrbitalObjectTypeEnum.Comet} elements already up to date");
                         return true;
                     }
 
                     var elements = await jplAccessor.GetCometElements();
-                    await orbitalElementsAccessor.Update(OrbitalObjectType.Comet, elements.Response, progress, cts.Token);
+                    await orbitalElementsAccessor.Update(OrbitalObjectTypeEnum.Comet, elements.Response, progress, cts.Token);
                     return true;
                 } catch (OperationCanceledException) {
                     return false;
