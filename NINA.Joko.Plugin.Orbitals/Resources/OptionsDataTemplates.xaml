@@ -13,51 +13,43 @@
     xmlns:util="clr-namespace:NINA.Core.Utility;assembly=NINA.Core"
     xmlns:xceed="http://schemas.xceed.com/wpf/xaml/toolkit"
     mc:Ignorable="d">
-    <oconverters:DoubleZeroToVisibilityConverter x:Key="O_DoubleZeroToVisibilityConverter" />
-    <oconverters:IntNegativeToVisibilityConverter x:Key="O_IntNegativeToVisibilityConverter" />
-    <oconverters:InverseDoubleZeroToVisibilityConverter x:Key="O_InverseDoubleZeroToVisibilityConverter" />
-    <oconverters:ZeroToInfinityConverter x:Key="O_ZeroToInfinityConverter" />
-    <oconverters:DecimalMinToDoubleDashConverter x:Key="O_DecimalMinToDoubleDashConverter" />
-    <oconverters:DecimalDegreesToArcsecDoubleDashConverter x:Key="O_DecimalDegreesToArcsecDoubleDashConverter" />
-    <oconverters:PositiveToBooleanConverter x:Key="O_PositiveToBooleanConverter" />
     <oconverters:EnumStaticDescriptionValueConverter x:Key="O_EnumStaticDescriptionValueConverter" />
-    <oconverters:ZeroToDisabledConverter x:Key="O_ZeroToDisabledConverter" />
-    <oconverters:NumericToHalfConverter x:Key="O_NumericToHalfConverter" />
-    <oconverters:CollectionContainsItemsToBooleanConverterNoCheck x:Key="O_CollectionContainsItemsToBooleanConverterNoCheck" />
-    <oconverters:ColorAndBooleanToTransparentMultiBinding x:Key="O_ColorAndBooleanToTransparentMultiBinding" />
-    <oconverters:IntZeroBooleanMultiConverter x:Key="O_IntZeroBooleanMultiConverter" />
     <oconverters:DateTimeMinToNeverConverter x:Key="O_DateTimeMinToNeverConverter" />
 
-    <TextBlock x:Key="Placeholder_Tooltip" Text="Placeholder text" />
     <TextBlock x:Key="SelectedObjectName_Hint" Text="Name of the object (eg, C/2020 O3 (PANSTARRS))" />
     <DataTemplate x:Key="Orbitals_Options">
         <Grid d:DataContext="{d:DesignInstance local:OrbitalsOptions, IsDesignTimeCreatable=False}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition />
-                <ColumnDefinition />
-                <ColumnDefinition />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
                 <RowDefinition />
             </Grid.RowDefinitions>
             <Grid.Resources>
-                <TextBlock x:Key="LogCommands_Tooltip" Text="If enabled, every 10u command sent and response received will be logged at INFO level in the NINA log" />
+                <TextBlock x:Key="OrbitalRefreshTime_Tooltip" Text="How frequently, in seconds, the coordinates for an orbital object in the sequencer is updated. Setting this too low can negatively impact machine performance." />
             </Grid.Resources>
             <TextBlock
-                Grid.Row="0"
-                Grid.Column="0"
+                Grid.Row="0" Grid.Column="0"
+                Margin="5,5,0,0"
                 VerticalAlignment="Center"
                 Text="Log Commands"
-                ToolTip="{StaticResource LogCommands_Tooltip}" />
-            <CheckBox
-                Grid.Row="0"
-                Grid.Column="1"
+                ToolTip="{StaticResource OrbitalRefreshTime_Tooltip}" />
+            <ninactrl:UnitTextBox
+                Grid.Row="0" Grid.Column="1"
                 MinWidth="80"
                 Margin="5,5,0,0"
                 HorizontalAlignment="Left"
-                VerticalAlignment="Center"
-                IsChecked="{Binding LogCommands}"
-                ToolTip="{StaticResource LogCommands_Tooltip}" />
+                ToolTip="{StaticResource OrbitalRefreshTime_Tooltip}"
+                Unit="secs">
+                <Binding
+                    Path="OrbitalPositionRefreshTime_sec"
+                    UpdateSourceTrigger="LostFocus">
+                    <Binding.ValidationRules>
+                        <orules:PositiveIntegerRule />
+                    </Binding.ValidationRules>
+                </Binding>
+            </ninactrl:UnitTextBox>
         </Grid>
     </DataTemplate>
 </ResourceDictionary>

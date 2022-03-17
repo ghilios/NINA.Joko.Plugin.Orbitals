@@ -47,7 +47,8 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         private readonly IProfileService profileService;
         private readonly IApplicationMediator applicationMediator;
         private readonly IOrbitalElementsAccessor orbitalElementsAccessor;
-        private INighttimeCalculator nighttimeCalculator;
+        private readonly IOrbitalsOptions orbitalsOptions;
+        private readonly INighttimeCalculator nighttimeCalculator;
         private readonly Task coordinateUpdateTask;
         private readonly CancellationTokenSource coordinateUpdateCts;
         private InputTarget target;
@@ -56,17 +57,19 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         public OrbitalObjectContainer(
             IProfileService profileService,
             INighttimeCalculator nighttimeCalculator,
-            IApplicationMediator applicationMediator) : this(profileService, nighttimeCalculator, applicationMediator, OrbitalsPlugin.OrbitalElementsAccessor) {
+            IApplicationMediator applicationMediator) : this(profileService, nighttimeCalculator, applicationMediator, OrbitalsPlugin.OrbitalElementsAccessor, OrbitalsPlugin.OrbitalsOptions) {
         }
 
         public OrbitalObjectContainer(
             IProfileService profileService,
             INighttimeCalculator nighttimeCalculator,
             IApplicationMediator applicationMediator,
-            IOrbitalElementsAccessor orbitalElementsAccessor) : base(new SequentialStrategy()) {
+            IOrbitalElementsAccessor orbitalElementsAccessor,
+            IOrbitalsOptions orbitalsOptions) : base(new SequentialStrategy()) {
             this.profileService = profileService;
             this.nighttimeCalculator = nighttimeCalculator;
             this.applicationMediator = applicationMediator;
+            this.orbitalsOptions = orbitalsOptions;
             _ = Task.Run(() => NighttimeData = nighttimeCalculator.Calculate());
             this.OrbitalSearchVM = new OrbitalSearchVM(orbitalElementsAccessor);
             OrbitalSearchVM.PropertyChanged += OrbitalSearchVM_PropertyChanged;
@@ -148,8 +151,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             while (!ct.IsCancellationRequested) {
                 RefreshCoordinates();
 
-                // TODO: Make this configurable
-                await Task.Delay(TimeSpan.FromSeconds(10), ct);
+                await Task.Delay(TimeSpan.FromSeconds(this.orbitalsOptions.OrbitalPositionRefreshTime_sec), ct);
             }
         }
 

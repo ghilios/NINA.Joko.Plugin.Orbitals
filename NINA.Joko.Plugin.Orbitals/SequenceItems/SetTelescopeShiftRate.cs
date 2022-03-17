@@ -33,7 +33,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
     [Export(typeof(ISequenceItem))]
     [JsonObject(MemberSerialization.OptIn)]
     public class SetTelescopeShiftRate : SequenceItem, IValidatable {
-        private ITelescopeMediator telescopeMediator;
+        private readonly ITelescopeMediator telescopeMediator;
 
         [ImportingConstructor]
         public SetTelescopeShiftRate(ITelescopeMediator telescopeMediator) {

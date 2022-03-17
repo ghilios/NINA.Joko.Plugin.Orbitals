@@ -32,21 +32,21 @@ namespace NINA.Joko.Plugin.Orbitals {
         }
 
         private void InitializeOptions() {
-            goldenSpiralStarCount = optionsAccessor.GetValueInt32("GoldenSpiralStarCount", 9);
+            orbitalPositionRefreshTime_sec = optionsAccessor.GetValueInt32("OrbitalPositionRefreshTime_sec", 20);
         }
 
         public void ResetDefaults() {
-            GoldenSpiralStarCount = 9;
+            OrbitalPositionRefreshTime_sec = 20;
         }
 
-        private int goldenSpiralStarCount;
+        private int orbitalPositionRefreshTime_sec;
 
-        public int GoldenSpiralStarCount {
-            get => goldenSpiralStarCount;
+        public int OrbitalPositionRefreshTime_sec {
+            get => orbitalPositionRefreshTime_sec;
             set {
-                if (goldenSpiralStarCount != value) {
-                    goldenSpiralStarCount = value;
-                    optionsAccessor.SetValueInt32("GoldenSpiralStarCount", goldenSpiralStarCount);
+                if (orbitalPositionRefreshTime_sec != value) {
+                    orbitalPositionRefreshTime_sec = value;
+                    optionsAccessor.SetValueInt32("OrbitalPositionRefreshTime_sec", orbitalPositionRefreshTime_sec);
                     RaisePropertyChanged();
                 }
             }

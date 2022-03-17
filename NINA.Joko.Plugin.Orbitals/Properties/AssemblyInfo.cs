@@ -25,7 +25,7 @@ using System.Runtime.InteropServices;
 // [MANDATORY] The name of your plugin
 [assembly: AssemblyTitle("Orbitals")]
 // [MANDATORY] A short description of your plugin
-[assembly: AssemblyDescription("Downloads publically available orbital data to target and track Comets, Asteroids, and other objects")]
+[assembly: AssemblyDescription("Downloads publically available orbital data to target and track Comets, Asteroids, Planets, the Moon, the Sun, and other objects")]
 
 // The following attributes are not required for the plugin per se, but are required by the official manifest meta data
 
@@ -33,7 +33,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCompany("George Hilios (jokogeo)")]
 // The product name that this plugin is part of
 [assembly: AssemblyProduct("Orbitals")]
-[assembly: AssemblyCopyright("Copyright ©  2021")]
+[assembly: AssemblyCopyright("Copyright ©  2022")]
 
 // The minimum Version of N.I.N.A. that this plugin is compatible with
 [assembly: AssemblyMetadata("MinimumApplicationVersion", "2.0.0.2050")]
@@ -51,21 +51,39 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyMetadata("Homepage", "")]
 
 //[Optional] Common tags that quickly describe your plugin
-[assembly: AssemblyMetadata("Tags", "Asteroids,Comets,Orbital")]
+[assembly: AssemblyMetadata("Tags", "Asteroid,Comet,Orbital,Planet,Moon,Sun")]
 
 //[Optional] A link that will show a log of all changes in between your plugin's versions
 [assembly: AssemblyMetadata("ChangelogURL", "https://github.com/ghilios/NINA.Joko.Plugin.Orbitals/commits/develop")]
 
 //[Optional] The url to a featured logo that will be displayed in the plugin list next to the name
-/*
-[assembly: AssemblyMetadata("FeaturedImageURL", "https://github.com/ghilios/NINA.Joko.Plugin.Orbitals/releases/download/resources/GM1000HPS.jpg")]
+[assembly: AssemblyMetadata("FeaturedImageURL", "https://github.com/ghilios/NINA.Joko.Plugin.Orbitals/releases/download/resources/orbit_path.png")]
 //[Optional] A url to an example screenshot of your plugin in action
+/*
 [assembly: AssemblyMetadata("ScreenshotURL", "https://github.com/ghilios/NINA.Joko.Plugin.Orbitals/releases/download/resources/TenMicronToolsScreenshot.JPG")]
 //[Optional] An additional url to an example example screenshot of your plugin in action
 [assembly: AssemblyMetadata("AltScreenshotURL", "https://github.com/ghilios/NINA.Joko.Plugin.Orbitals/releases/download/resources/TenMicronToolsAltScreenshot.JPG")]
 //[Optional] An in-depth description of your plugin
 */
-[assembly: AssemblyMetadata("LongDescription", @"TODO: Description
+[assembly: AssemblyMetadata("LongDescription", @"This plugin enables slewing and tracking for planets, the sun, the moon, comets, asteroids, and other bodies that are close enough to the solar system that they don't move at the sidereal tracking rate in the sky.
+
+To get started, go to the Orbitals pane in the Imaging tab and click ""Update"" for each type of orbital object you're interested in working with. I don't recommend downloading more than you need, because they will all be loaded when NINA starts up. An internet connection is required when you download the data, but not again until you want to do another update for the latest data.
+
+Solar system bodies - such as the planets, the Sun, and the Moon - don't require updating as they use the JPL Ephemeris that is already included with NINA.
+
+# Features #
+
+* Solar System Object Sequencer container for setting a solar system body as an Advanced Sequencer target
+* Orbital Object Sequencer container for setting any orbital object found in the downloaded elements data as an Advanced Sequencer target
+* Setting and regularly updating the track shift rate in PHD2 to match the custom tracking rate for the parent target. PHD2 does this by moving the expected position for the lock star at the specified rate, thereby relying on guiding to follow the non-sidereal object.
+* Setting and regularly updating the tracking rate of your telescope to match the custom tracking rate for the parent target. This works only if your mount supports it. If it does, you can use it together with PHD2 track shifting
+
+# Object Types #
+
+* Planets, the Sun, and the Moon. No internet data are required for this.
+* Comets. Data are provided by JPL Horizon
+* Numbered Asteroids. Data are provided by JPL Horizon
+* Un-numbered Asteroids. Data are provided by JPL Horizon
 
 # Getting Help #
 

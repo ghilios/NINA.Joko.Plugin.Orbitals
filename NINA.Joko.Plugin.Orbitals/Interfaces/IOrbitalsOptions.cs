@@ -15,7 +15,7 @@ using System.ComponentModel;
 namespace NINA.Joko.Plugin.Orbitals.Interfaces {
 
     public interface IOrbitalsOptions : INotifyPropertyChanged {
-        int GoldenSpiralStarCount { get; set; }
+        int OrbitalPositionRefreshTime_sec { get; set; }
 
         void ResetDefaults();
     }

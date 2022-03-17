@@ -16,7 +16,7 @@
                 <RowDefinition />
                 <RowDefinition />
             </Grid.RowDefinitions>
-            <StackPanel Orientation="Vertical" Grid.Column="0">
+            <StackPanel Grid.Column="0" Orientation="Vertical">
                 <ContentControl Content="{Binding OrbitalsOptions}" ContentTemplate="{StaticResource Orbitals_Options}" />
                 <Button
                     Margin="5"

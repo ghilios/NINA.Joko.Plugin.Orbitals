@@ -27,27 +27,27 @@ using System.Threading.Tasks;
 
 namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
 
-    [ExportMetadata("Name", "Set Guider Shift Rate")]
-    [ExportMetadata("Description", "Automatically updates the shift rate for tracking a target that does not use the sidereal tracking rate. The shift rate changes over time, so this trigger keeps it updated between exposures.")]
+    [ExportMetadata("Name", "Set Telescope Tracking Rate")]
+    [ExportMetadata("Description", "Automatically updates the rate for tracking a target that does not use the sidereal tracking rate. The shift rate changes over time, so this trigger keeps it updated between exposures.")]
     [ExportMetadata("Icon", "OrbitSVG")]
-    [ExportMetadata("Category", "Lbl_SequenceCategory_Guider")]
+    [ExportMetadata("Category", "Lbl_SequenceCategory_Telescope")]
     [Export(typeof(ISequenceTrigger))]
     [JsonObject(MemberSerialization.OptIn)]
-    public class SetGuiderShiftRateTrigger : SequenceTrigger, IValidatable {
-        private readonly IGuiderMediator guiderMediator;
+    public class SetTelescopeShiftRateTrigger : SequenceTrigger, IValidatable {
+        private readonly ITelescopeMediator telescopeMediator;
 
         [ImportingConstructor]
-        public SetGuiderShiftRateTrigger(IGuiderMediator guiderMediator) : base() {
-            this.guiderMediator = guiderMediator;
-            TriggerRunner.Add(new SetGuiderShiftRate(guiderMediator));
+        public SetTelescopeShiftRateTrigger(ITelescopeMediator telescopeMediator) : base() {
+            this.telescopeMediator = telescopeMediator;
+            TriggerRunner.Add(new SetTelescopeShiftRate(telescopeMediator));
         }
 
-        private SetGuiderShiftRateTrigger(SetGuiderShiftRateTrigger cloneMe) : this(cloneMe.guiderMediator) {
+        private SetTelescopeShiftRateTrigger(SetTelescopeShiftRateTrigger cloneMe) : this(cloneMe.telescopeMediator) {
             CopyMetaData(cloneMe);
         }
 
         public override object Clone() {
-            return new SetGuiderShiftRateTrigger(this) {
+            return new SetTelescopeShiftRateTrigger(this) {
                 TriggerRunner = (SequentialContainer)TriggerRunner.Clone()
             };
         }
@@ -75,7 +75,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         }
 
         public override string ToString() {
-            return $"Trigger: {nameof(SetGuiderShiftRateTrigger)}";
+            return $"Trigger: {nameof(SetTelescopeShiftRateTrigger)}";
         }
 
         public bool Validate() {
