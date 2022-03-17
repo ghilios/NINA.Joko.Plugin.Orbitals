@@ -148,6 +148,9 @@
       <HintPath>..\packages\Fastenshtein.1.0.0.8\lib\net452\Fastenshtein.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="FlatFiles, Version=5.0.1.0, Culture=neutral, PublicKeyToken=6de75c8785df4020, processorArchitecture=MSIL">
+      <HintPath>..\packages\FlatFiles.5.0.1\lib\net451\FlatFiles.dll</HintPath>
+    </Reference>
     <Reference Include="Google.Protobuf, Version=3.18.1.0, Culture=neutral, PublicKeyToken=a7d26565bac4d604, processorArchitecture=MSIL">
       <HintPath>..\packages\Google.Protobuf.3.18.1\lib\net45\Google.Protobuf.dll</HintPath>
       <Private>True</Private>
@@ -185,40 +188,55 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="nikoncswrapper, Version=1.8.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NINA.Equipment.2.0.0.2021-beta\lib\net48\nikoncswrapper.dll</HintPath>
+      <HintPath>..\packages\NINA.Equipment.2.0.0.2050-preview\lib\net48\nikoncswrapper.dll</HintPath>
     </Reference>
-    <Reference Include="NINA.Astrometry, Version=2.0.0.2021, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NINA.Astrometry.2.0.0.2021-beta\lib\net48\NINA.Astrometry.dll</HintPath>
+    <!--
+    <Reference Include="NINA.Astrometry, Version=2.0.0.2050, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NINA.Astrometry.2.0.0.2050-preview\lib\net48\NINA.Astrometry.dll</HintPath>
     </Reference>
-    <Reference Include="NINA.Core, Version=2.0.0.2021, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NINA.Core.2.0.0.2021-beta\lib\net48\NINA.Core.dll</HintPath>
+    -->
+    <Reference Include="NINA.Astrometry, Version=2.0.0.2050-beta, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\nina\NINA\bin\x64\Debug\NINA.Astrometry.dll</HintPath>
     </Reference>
-    <Reference Include="NINA.Equipment, Version=2.0.0.2021, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NINA.Equipment.2.0.0.2021-beta\lib\net48\NINA.Equipment.dll</HintPath>
+    <Reference Include="NINA.Core, Version=2.0.0.2050, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NINA.Core.2.0.0.2050-preview\lib\net48\NINA.Core.dll</HintPath>
     </Reference>
-    <Reference Include="NINA.Image, Version=2.0.0.2021, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NINA.Image.2.0.0.2021-beta\lib\net48\NINA.Image.dll</HintPath>
+    <!--
+    <Reference Include="NINA.Equipment, Version=2.0.0.2050, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NINA.Equipment.2.0.0.2050-preview\lib\net48\NINA.Equipment.dll</HintPath>
     </Reference>
-    <Reference Include="NINA.MGEN, Version=2.0.0.2021, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NINA.MGEN.2.0.0.2021-beta\lib\net48\NINA.MGEN.dll</HintPath>
+    -->
+    <Reference Include="NINA.Equipment, Version=2.0.0.2050-beta, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\nina\NINA\bin\x64\Debug\NINA.Equipment.dll</HintPath>
     </Reference>
-    <Reference Include="NINA.PlateSolving, Version=2.0.0.2021, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NINA.PlateSolving.2.0.0.2021-beta\lib\net48\NINA.PlateSolving.dll</HintPath>
+    <Reference Include="NINA.Image, Version=2.0.0.2050, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NINA.Image.2.0.0.2050-preview\lib\net48\NINA.Image.dll</HintPath>
     </Reference>
-    <Reference Include="NINA.Plugin, Version=2.0.0.2021, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NINA.Plugin.2.0.0.2021-beta\lib\net48\NINA.Plugin.dll</HintPath>
+    <Reference Include="NINA.MGEN, Version=2.0.0.2050, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NINA.MGEN.2.0.0.2050-preview\lib\net48\NINA.MGEN.dll</HintPath>
     </Reference>
-    <Reference Include="NINA.Profile, Version=2.0.0.2021, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NINA.Profile.2.0.0.2021-beta\lib\net48\NINA.Profile.dll</HintPath>
+    <Reference Include="NINA.PlateSolving, Version=2.0.0.2050, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NINA.PlateSolving.2.0.0.2050-preview\lib\net48\NINA.PlateSolving.dll</HintPath>
     </Reference>
-    <Reference Include="NINA.Sequencer, Version=2.0.0.2021, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NINA.Sequencer.2.0.0.2021-beta\lib\net48\NINA.Sequencer.dll</HintPath>
+    <Reference Include="NINA.Plugin, Version=2.0.0.2050, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NINA.Plugin.2.0.0.2050-preview\lib\net48\NINA.Plugin.dll</HintPath>
     </Reference>
-    <Reference Include="NINA.WPF.Base, Version=2.0.0.2021, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NINA.WPF.Base.2.0.0.2021-beta\lib\net48\NINA.WPF.Base.dll</HintPath>
+    <Reference Include="NINA.Profile, Version=2.0.0.2050, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NINA.Profile.2.0.0.2050-preview\lib\net48\NINA.Profile.dll</HintPath>
     </Reference>
-    <Reference Include="NINACustomControlLibrary, Version=2.0.0.2021, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NINACustomControlLibrary.2.0.0.2021-beta\lib\net48\NINACustomControlLibrary.dll</HintPath>
+    <Reference Include="NINA.Sequencer, Version=2.0.0.2050, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NINA.Sequencer.2.0.0.2050-preview\lib\net48\NINA.Sequencer.dll</HintPath>
+    </Reference>
+    <!--
+    <Reference Include="NINA.WPF.Base, Version=2.0.0.2050, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NINA.WPF.Base.2.0.0.2050-preview\lib\net48\NINA.WPF.Base.dll</HintPath>
+    </Reference>
+    -->
+    <Reference Include="NINA.WPF.Base, Version=2.0.0.2050-beta, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\nina\NINA\bin\x64\Debug\NINA.WPF.Base.dll</HintPath>
+    </Reference>
+    <Reference Include="NINACustomControlLibrary, Version=2.0.0.2050, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NINACustomControlLibrary.2.0.0.2050-preview\lib\net48\NINACustomControlLibrary.dll</HintPath>
     </Reference>
     <Reference Include="Nito.AsyncEx.Context, Version=5.1.2.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Nito.AsyncEx.Context.5.1.2\lib\net461\Nito.AsyncEx.Context.dll</HintPath>
@@ -277,6 +295,12 @@
     </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
+    <Reference Include="protobuf-net, Version=3.0.0.0, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
+      <HintPath>..\packages\protobuf-net.3.0.101\lib\net461\protobuf-net.dll</HintPath>
+    </Reference>
+    <Reference Include="protobuf-net.Core, Version=3.0.0.0, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
+      <HintPath>..\packages\protobuf-net.Core.3.0.101\lib\net461\protobuf-net.Core.dll</HintPath>
+    </Reference>
     <Reference Include="ReachFramework" />
     <Reference Include="SHA3, Version=0.9.2.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\SHA3.0.9.2\lib\net40\SHA3.dll</HintPath>
@@ -301,14 +325,14 @@
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Data.SQLite, Version=1.0.115.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=MSIL">
-      <HintPath>..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.115.0\lib\net46\System.Data.SQLite.dll</HintPath>
+    <Reference Include="System.Data.SQLite, Version=1.0.115.5, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=MSIL">
+      <HintPath>..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.115.5\lib\net46\System.Data.SQLite.dll</HintPath>
     </Reference>
-    <Reference Include="System.Data.SQLite.EF6, Version=1.0.115.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Data.SQLite.EF6.1.0.115.0\lib\net46\System.Data.SQLite.EF6.dll</HintPath>
+    <Reference Include="System.Data.SQLite.EF6, Version=1.0.115.5, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Data.SQLite.EF6.1.0.115.5\lib\net46\System.Data.SQLite.EF6.dll</HintPath>
     </Reference>
-    <Reference Include="System.Data.SQLite.Linq, Version=1.0.115.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Data.SQLite.Linq.1.0.115.0\lib\net46\System.Data.SQLite.Linq.dll</HintPath>
+    <Reference Include="System.Data.SQLite.Linq, Version=1.0.115.5, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Data.SQLite.Linq.1.0.115.5\lib\net46\System.Data.SQLite.Linq.dll</HintPath>
     </Reference>
     <Reference Include="System.Drawing" />
     <Reference Include="System.Drawing.Common, Version=4.0.0.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
@@ -358,6 +382,9 @@
       <HintPath>..\packages\ToggleSwitch.1.2.0\lib\net46\ToggleSwitch.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="TrieNet, Version=1.0.3.26316, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\TrieNet.1.0.3.26316\lib\net461\TrieNet.dll</HintPath>
+    </Reference>
     <Reference Include="Trinet.Core.IO.Ntfs, Version=4.1.1.0, Culture=neutral, PublicKeyToken=0aeaaa20a328a46c, processorArchitecture=MSIL">
       <HintPath>..\packages\Trinet.Core.IO.Ntfs.4.1.1\lib\net462\Trinet.Core.IO.Ntfs.dll</HintPath>
       <Private>True</Private>
@@ -369,8 +396,16 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Calculations\AstrometricConstants.cs" />
+    <Compile Include="Calculations\JPLAccessor.cs" />
+    <Compile Include="Calculations\Kepler.cs" />
+    <Compile Include="Calculations\OrbitalElementsAccessor.cs" />
+    <Compile Include="Calculations\OrbitalElementsObject.cs" />
+    <Compile Include="Calculations\OrbitalsObjectBase.cs" />
+    <Compile Include="Calculations\SolarSystemBodyObject.cs" />
     <Compile Include="Converters\CollectionContainsItemsToBooleanConverterNoCheck.cs" />
     <Compile Include="Converters\ColorAndBooleanToTransparentMultiBinding.cs" />
+    <Compile Include="Converters\DateTimeMinToNeverConverter.cs" />
     <Compile Include="Converters\DecimalDegreesToArcsecDoubleDashConverter.cs" />
     <Compile Include="Converters\DecimalMinToDoubleDashConverter.cs" />
     <Compile Include="Converters\DoubleZeroToVisibilityConverter.cs" />
@@ -383,11 +418,24 @@
     <Compile Include="Converters\PositiveToBooleanConverter.cs" />
     <Compile Include="Converters\ZeroToDisabledConverter.cs" />
     <Compile Include="Converters\ZeroToInfinityConverter.cs" />
+    <Compile Include="Enums\OrbitalObjectTypeEnum.cs" />
+    <Compile Include="Enums\SearchObjectTypeEnum.cs" />
+    <Compile Include="Enums\SolarSystemBody.cs" />
+    <Compile Include="Interfaces\IJPLAccessor.cs" />
+    <Compile Include="Interfaces\IOrbitalElementsAccessor.cs" />
+    <Compile Include="Interfaces\IOrbitalElementsSource.cs" />
+    <Compile Include="Interfaces\IOrbitalSearchVM.cs" />
     <Compile Include="Interfaces\IOrbitalsOptions.cs" />
+    <Compile Include="SequenceItems\SetTelescopeShiftRateTrigger.cs" />
+    <Compile Include="SequenceItems\SetTelescopeShiftRate.cs" />
+    <Compile Include="SequenceItems\StopGuiderShift.cs" />
+    <Compile Include="SequenceItems\SetGuiderShiftRate.cs" />
+    <Compile Include="SequenceItems\SetGuiderShiftRateTrigger.cs" />
+    <Compile Include="SequenceItems\SolarSystemBodyContainer.cs" />
     <Compile Include="SequenceItems\DataTemplates.xaml.cs">
       <DependentUpon>DataTemplates.xaml</DependentUpon>
     </Compile>
-    <Compile Include="SequenceItems\LoadModel.cs" />
+    <Compile Include="SequenceItems\OrbitalObjectContainer.cs" />
     <Compile Include="ValidationRules\PositiveIntegerOrInfiniteRule.cs" />
     <Compile Include="OrbitalsOptions.cs" />
     <Compile Include="Options.xaml.cs">
@@ -410,9 +458,10 @@
     </Compile>
     <Compile Include="OrbitalsPlugin.cs" />
     <Compile Include="Utility\ConstantDateTime.cs" />
-    <Compile Include="ViewModels\MyInputBox.cs" />
-    <Compile Include="View\MyInputBoxView.xaml.cs">
-      <DependentUpon>MyInputBoxView.xaml</DependentUpon>
+    <Compile Include="ViewModels\OrbitalSearchVM.cs" />
+    <Compile Include="ViewModels\OrbitalsVM.cs" />
+    <Compile Include="View\OrbitalsView.xaml.cs">
+      <DependentUpon>OrbitalsView.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>
@@ -449,7 +498,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="View\MyInputBoxView.xaml">
+    <Page Include="View\OrbitalsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -468,18 +517,17 @@
       if not exist "%25localappdata%25\NINA\Plugin\Orbitals" (
       echo "Creating $(PlatformName) Plugins Orbitals folder"
       mkdir  "%25localappdata%25\NINA\Plugins\Orbitals"
-      )
-      if not exist "%25localappdata%25\NINA\Plugin\Orbitals\$(TargetName)" (
-      echo "Creating $(PlatformName) Plugins Orbitals\$(TargetName) folder"
-      mkdir  "%25localappdata%25\NINA\Plugins\Orbitals\$(TargetName)"
+      mkdir  "%25localappdata%25\NINA\Plugins\Orbitals\dll"
       )
 
       echo "Copying $(PlatformName) $(TargetFileName)"
-      xcopy "$(TargetPath)" "%25localappdata%25\NINA\Plugins\Orbitals\$(TargetName)" /h/k/r/y
-      xcopy "$(TargetDir)$(TargetName).pdb" "%25localappdata%25\NINA\Plugins\Orbitals\$(TargetName)" /h/k/r/y
+      xcopy "$(TargetPath)" "%25localappdata%25\NINA\Plugins\Orbitals\" /h/k/r/y
+      xcopy "$(TargetDir)$(TargetName).pdb" "%25localappdata%25\NINA\Plugins\Orbitals\" /h/k/r/y
 
       echo "Copying $(PlatformName) $(TargetFileName) Dependencies"
-      xcopy "$(TargetDir)Antlr4.Runtime.dll" "%25localappdata%25\NINA\Plugins\Orbitals\$(TargetName)" /h/k/r/y</PostBuildEvent>
+      xcopy "$(TargetDir)protobuf-net*.dll" "%25localappdata%25\NINA\Plugins\Orbitals\dll" /h/k/r/y
+      xcopy "$(TargetDir)TrieNet*.dll" "%25localappdata%25\NINA\Plugins\Orbitals\dll" /h/k/r/y
+      xcopy "$(TargetDir)FlatFiles*.dll" "%25localappdata%25\NINA\Plugins\Orbitals\dll" /h/k/r/y</PostBuildEvent>
   </PropertyGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
@@ -492,14 +540,14 @@
     <Error Condition="!Exists('..\packages\EntityFramework.6.4.4\build\EntityFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\EntityFramework.6.4.4\build\EntityFramework.targets'))" />
     <Error Condition="!Exists('..\packages\Google.Protobuf.Tools.3.18.1\build\Google.Protobuf.Tools.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Google.Protobuf.Tools.3.18.1\build\Google.Protobuf.Tools.targets'))" />
     <Error Condition="!Exists('..\packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.0\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.0\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets'))" />
-    <Error Condition="!Exists('..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.115.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.115.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets'))" />
     <Error Condition="!Exists('..\packages\VVVV.FreeImage.3.15.1.1\build\net40\VVVV.FreeImage.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\VVVV.FreeImage.3.15.1.1\build\net40\VVVV.FreeImage.targets'))" />
+    <Error Condition="!Exists('..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.115.5\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.115.5\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets'))" />
   </Target>
-  <Import Project="..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.115.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets" Condition="Exists('..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.115.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets')" />
   <Import Project="..\packages\Accord.3.8.0\build\Accord.targets" Condition="Exists('..\packages\Accord.3.8.0\build\Accord.targets')" />
   <Import Project="..\packages\Antlr4.CodeGenerator.4.6.6\build\Antlr4.CodeGenerator.targets" Condition="Exists('..\packages\Antlr4.CodeGenerator.4.6.6\build\Antlr4.CodeGenerator.targets')" />
   <Import Project="..\packages\EntityFramework.6.4.4\build\EntityFramework.targets" Condition="Exists('..\packages\EntityFramework.6.4.4\build\EntityFramework.targets')" />
   <Import Project="..\packages\Google.Protobuf.Tools.3.18.1\build\Google.Protobuf.Tools.targets" Condition="Exists('..\packages\Google.Protobuf.Tools.3.18.1\build\Google.Protobuf.Tools.targets')" />
   <Import Project="..\packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.0\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets" Condition="Exists('..\packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.0\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets')" />
   <Import Project="..\packages\VVVV.FreeImage.3.15.1.1\build\net40\VVVV.FreeImage.targets" Condition="Exists('..\packages\VVVV.FreeImage.3.15.1.1\build\net40\VVVV.FreeImage.targets')" />
+  <Import Project="..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.115.5\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets" Condition="Exists('..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.115.5\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets')" />
 </Project>
