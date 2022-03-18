@@ -92,7 +92,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             // a call here 8 or more times for each Coordinates object (RA hours, minutes, seconds; Dec hours, minutes, seconds;
             // rotation; and more)!  It's unclear how to do that, so I leave it to others
 
-            if (Coordinates == null || (Coordinates.RA == 0 && Coordinates.Dec == 0 && Coordinates.Epoch == Epoch.J2000)) {
+            if (Coordinates == null || (Coordinates.RA == 0 && Coordinates.Dec == 0 && Coordinates.Epoch == Epoch.J2000) || double.IsNaN(Coordinates.Dec)) {
                 return;
             }
 

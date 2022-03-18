@@ -30,21 +30,21 @@
                 <TextBlock x:Key="OrbitalRefreshTime_Tooltip" Text="How frequently, in seconds, the coordinates for an orbital object in the sequencer is updated. Setting this too low can negatively impact machine performance." />
             </Grid.Resources>
             <TextBlock
-                Grid.Row="0" Grid.Column="0"
+                Grid.Row="0"
+                Grid.Column="0"
                 Margin="5,5,0,0"
                 VerticalAlignment="Center"
                 Text="Orbital Position Refresh Time"
                 ToolTip="{StaticResource OrbitalRefreshTime_Tooltip}" />
             <ninactrl:UnitTextBox
-                Grid.Row="0" Grid.Column="1"
+                Grid.Row="0"
+                Grid.Column="1"
                 MinWidth="80"
                 Margin="5,5,0,0"
                 HorizontalAlignment="Left"
                 ToolTip="{StaticResource OrbitalRefreshTime_Tooltip}"
                 Unit="secs">
-                <Binding
-                    Path="OrbitalPositionRefreshTime_sec"
-                    UpdateSourceTrigger="LostFocus">
+                <Binding Path="OrbitalPositionRefreshTime_sec" UpdateSourceTrigger="LostFocus">
                     <Binding.ValidationRules>
                         <orules:PositiveIntegerRule />
                     </Binding.ValidationRules>
