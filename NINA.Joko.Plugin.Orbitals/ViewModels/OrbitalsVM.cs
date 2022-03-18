@@ -102,7 +102,12 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             }, initialLoadCts.Token);
 
             this.UpdateCometElementsCommand = new AsyncCommand<bool>(UpdateCometElements, (o) => initialLoadComplete);
+            // this.UpdateNumberedAsteroidElementsCommand = new AsyncCommand<bool>(UpdateNumberedAsteroids, (o) => initialLoadComplete);
+            // this.UpdateUnnumberedAsteroidElementsCommand = new AsyncCommand<bool>(UpdateUnnumberedAsteroids, (o) => initialLoadComplete);
+
             this.CancelUpdateCometElementsCommand = new AsyncCommand<bool>(o => CancelUpdateElements(updateCometElementsTask, updateCometElementsCts));
+            this.CancelUpdateNumberedAsteroidElementsCommand = new AsyncCommand<bool>(o => CancelUpdateElements(updateNumberedAsteroidsTask, updateNumberedAsteroidsCts));
+            this.CancelUpdateUnnumberedAsteroidElementsCommand = new AsyncCommand<bool>(o => CancelUpdateElements(updateUnnumberedAsteroidsTask, updateUnnumberedAsteroidsCts));
             this.LoadSelectionCommand = new RelayCommand(LoadSelection, CanLoad);
 
             this.SendToFramingWizardCommand = new AsyncCommand<bool>(SendToFramingWizardCommandAction, o => SelectedOrbitalsObject != null);
@@ -170,7 +175,14 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             if (e.ObjectType == OrbitalObjectTypeEnum.Comet) {
                 CometCount = e.Count;
                 CometLastUpdated = e.LastUpdated;
+            } /* else if (e.ObjectType == OrbitalObjectTypeEnum.NumberedAsteroids) {
+                NumberedAsteroidCount = e.Count;
+                NumberedAsteroidLastUpdated = e.LastUpdated;
+            } else if (e.ObjectType == OrbitalObjectTypeEnum.UnnumberedAsteroids) {
+                UnnumberedAsteroidCount = e.Count;
+                UnnumberedAsteroidLastUpdated = e.LastUpdated;
             }
+            */
         }
 
         private DateTime cometLastUpdated;
@@ -179,6 +191,26 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             get => cometLastUpdated;
             private set {
                 cometLastUpdated = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        private DateTime numberedAsteroidLastUpdated;
+
+        public DateTime NumberedAsteroidLastUpdated {
+            get => numberedAsteroidLastUpdated;
+            private set {
+                numberedAsteroidLastUpdated = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        private DateTime unnumberedAsteroidLastUpdated;
+
+        public DateTime UnnumberedAsteroidLastUpdated {
+            get => unnumberedAsteroidLastUpdated;
+            private set {
+                unnumberedAsteroidLastUpdated = value;
                 RaisePropertyChanged();
             }
         }
@@ -203,12 +235,36 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             }
         }
 
+        private int numberedAsteroidCount;
+
+        public int NumberedAsteroidCount {
+            get => numberedAsteroidCount;
+            private set {
+                numberedAsteroidCount = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        private int unnumberedAsteroidCount;
+
+        public int UnnumberedAsteroidCount {
+            get => unnumberedAsteroidCount;
+            private set {
+                unnumberedAsteroidCount = value;
+                RaisePropertyChanged();
+            }
+        }
+
         private SearchObjectTypeEnum searchObjectType = SearchObjectTypeEnum.SolarSystemBody;
 
         public SearchObjectTypeEnum SearchObjectType {
             get => searchObjectType;
             set {
                 searchObjectType = value;
+                if (searchObjectType != SearchObjectTypeEnum.SolarSystemBody) {
+                    OrbitalSearchVM.ObjectType = SearchObjectType.ToOrbitalObjectTypeEnum();
+                }
+
                 RaisePropertyChanged();
             }
         }
@@ -269,6 +325,14 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
         public ICommand UpdateCometElementsCommand { get; private set; }
 
+        public ICommand CancelUpdateNumberedAsteroidElementsCommand { get; private set; }
+
+        public ICommand UpdateNumberedAsteroidElementsCommand { get; private set; }
+
+        public ICommand CancelUpdateUnnumberedAsteroidElementsCommand { get; private set; }
+
+        public ICommand UpdateUnnumberedAsteroidElementsCommand { get; private set; }
+
         public ICommand LoadSelectionCommand { get; private set; }
 
         public ICommand SlewCommand { get; private set; }
@@ -279,8 +343,16 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
         public ICommand SetGuiderShiftCommand { get; private set; }
 
+        // TODO: Refactor this the next time more orbital types are added
         private Task<bool> updateCometElementsTask;
+
         private CancellationTokenSource updateCometElementsCts;
+
+        private Task<bool> updateNumberedAsteroidsTask;
+        private CancellationTokenSource updateNumberedAsteroidsCts;
+
+        private Task<bool> updateUnnumberedAsteroidsTask;
+        private CancellationTokenSource updateUnnumberedAsteroidsCts;
 
         private bool CanLoad(object o) {
             if (SearchObjectType == SearchObjectTypeEnum.SolarSystemBody) {
@@ -326,7 +398,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         }
 
         public Task<bool> UpdateCometElements(object o) {
-            if (updateCometElementsCts != null) {
+            if (updateCometElementsTask != null && !updateCometElementsTask.IsCompleted) {
                 Logger.Error("Update already in progress");
                 return Task.FromResult(false);
             }
@@ -357,6 +429,74 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             updateCometElementsTask = task;
             return task;
         }
+
+        /*
+        public Task<bool> UpdateNumberedAsteroids(object o) {
+            if (updateNumberedAsteroidsTask != null && !updateNumberedAsteroidsTask.IsCompleted) {
+                Logger.Error("Update already in progress");
+                return Task.FromResult(false);
+            }
+
+            var cts = new CancellationTokenSource();
+            updateNumberedAsteroidsCts = cts;
+
+            var task = Task.Run(async () => {
+                try {
+                    var availableModifiedDate = await jplAccessor.GetNumberedAsteroidsLastModified();
+                    var localModifiedDate = orbitalElementsAccessor.GetLastUpdated(OrbitalObjectTypeEnum.NumberedAsteroids);
+                    if (availableModifiedDate < localModifiedDate) {
+                        Notification.ShowInformation($"{OrbitalObjectTypeEnum.NumberedAsteroids} elements already up to date");
+                        return true;
+                    }
+
+                    var elements = await jplAccessor.GetNumberedAsteroidElements();
+                    await orbitalElementsAccessor.Update(OrbitalObjectTypeEnum.NumberedAsteroids, elements.Response, progress, cts.Token);
+                    return true;
+                } catch (OperationCanceledException) {
+                    return false;
+                } catch (Exception e) {
+                    Logger.Error("Failed to update comet elements", e);
+                    Notification.ShowError($"Failed to update comet elements. {e.Message}");
+                    return false;
+                }
+            }, updateNumberedAsteroidsCts.Token);
+            updateNumberedAsteroidsTask = task;
+            return task;
+        }
+
+        public Task<bool> UpdateUnnumberedAsteroids(object o) {
+            if (updateUnnumberedAsteroidsTask != null && !updateUnnumberedAsteroidsTask.IsCompleted) {
+                Logger.Error("Update already in progress");
+                return Task.FromResult(false);
+            }
+
+            var cts = new CancellationTokenSource();
+            updateUnnumberedAsteroidsCts = cts;
+
+            var task = Task.Run(async () => {
+                try {
+                    var availableModifiedDate = await jplAccessor.GetUnnumberedAsteroidsElementsLastModified();
+                    var localModifiedDate = orbitalElementsAccessor.GetLastUpdated(OrbitalObjectTypeEnum.UnnumberedAsteroids);
+                    if (availableModifiedDate < localModifiedDate) {
+                        Notification.ShowInformation($"{OrbitalObjectTypeEnum.UnnumberedAsteroids} elements already up to date");
+                        return true;
+                    }
+
+                    var elements = await jplAccessor.GetUnnumberedAsteroidElements();
+                    await orbitalElementsAccessor.Update(OrbitalObjectTypeEnum.UnnumberedAsteroids, elements.Response, progress, cts.Token);
+                    return true;
+                } catch (OperationCanceledException) {
+                    return false;
+                } catch (Exception e) {
+                    Logger.Error("Failed to update comet elements", e);
+                    Notification.ShowError($"Failed to update comet elements. {e.Message}");
+                    return false;
+                }
+            }, updateUnnumberedAsteroidsCts.Token);
+            updateUnnumberedAsteroidsTask = task;
+            return task;
+        }
+        */
 
         private async Task<bool> CancelUpdateElements(Task<bool> updateTask, CancellationTokenSource cts) {
             try {

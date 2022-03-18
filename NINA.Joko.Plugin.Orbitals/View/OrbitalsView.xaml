@@ -17,6 +17,8 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <ScrollViewer.Resources>
             <TextBlock x:Key="UpdateCometElements_Tooltip" Text="Updates comet orbital elements" />
+            <TextBlock x:Key="UpdateNumberedAsteroidElements_Tooltip" Text="Updates numbered asteroid orbital elements" />
+            <TextBlock x:Key="UpdateUnnumberedAsteroidElements_Tooltip" Text="Updates un-numbered asteroid orbital elements" />
         </ScrollViewer.Resources>
         <Grid>
             <Grid.Resources>
@@ -44,6 +46,11 @@
                 <Grid.RowDefinitions>
                     <!-- Comets -->
                     <RowDefinition Height="Auto" />
+                    <!-- Numbered Asteroids -->
+                    <RowDefinition Height="Auto" />
+
+                    <!-- Unnumbered Asteroids -->
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <!-- Type -->
@@ -55,6 +62,8 @@
                     <!-- Last Updated -->
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
+
+                <!-- Comets -->
                 <TextBlock
                     Grid.Row="0" Grid.Column="0"
                     Margin="0"
@@ -80,6 +89,64 @@
                     VerticalAlignment="Center">
                     <Run Text="Last Updated: " /><Run Text="{Binding CometLastUpdated, Mode=OneWay, Converter={StaticResource O_DateTimeMinToNeverConverter}}" />
                 </TextBlock>
+
+                <!-- Numbered Asteroids -->
+                <!--
+                <TextBlock
+                    Grid.Row="1" Grid.Column="0"
+                    Margin="0"
+                    VerticalAlignment="Center">
+                    <Run Text="Numbered Asteroids (" /><Run Text="{Binding NumberedAsteroidCount, Mode=OneWay}" /><Run Text=")" />
+                </TextBlock>
+                <ninactrl:CancellableButton
+                    Grid.Row="1" Grid.Column="1"
+                    Margin="5"
+                    Height="30"
+                    Padding="5"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    ButtonText="Update"
+                    CancelButtonImage="{StaticResource CancelSVG}"
+                    CancelCommand="{Binding CancelUpdateNumberedAsteroidElementsCommand}"
+                    CancelToolTip="{ns:Loc LblCancel}"
+                    Command="{Binding UpdateNumberedAsteroidElementsCommand}"
+                    ToolTip="{StaticResource UpdateNumberedAsteroidElements_Tooltip}" />
+                <TextBlock
+                    Grid.Row="1" Grid.Column="2"
+                    Margin="5"
+                    VerticalAlignment="Center">
+                    <Run Text="Last Updated: " /><Run Text="{Binding NumberedAsteroidLastUpdated, Mode=OneWay, Converter={StaticResource O_DateTimeMinToNeverConverter}}" />
+                </TextBlock>
+                -->
+
+                <!-- Unnumbered Asteroids -->
+                <!--
+                <TextBlock
+                    Grid.Row="2" Grid.Column="0"
+                    Margin="0"
+                    VerticalAlignment="Center">
+                    <Run Text="Un-numbered Asteroids (" /><Run Text="{Binding UnnumberedAsteroidCount, Mode=OneWay}" /><Run Text=")" />
+                </TextBlock>
+                <ninactrl:CancellableButton
+                    Grid.Row="2" Grid.Column="1"
+                    Margin="5"
+                    Height="30"
+                    Padding="5"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    ButtonText="Update"
+                    CancelButtonImage="{StaticResource CancelSVG}"
+                    CancelCommand="{Binding CancelUpdateUnnumberedAsteroidElementsCommand}"
+                    CancelToolTip="{ns:Loc LblCancel}"
+                    Command="{Binding UpdateUnnumberedAsteroidElementsCommand}"
+                    ToolTip="{StaticResource UpdateUnnumberedAsteroidElements_Tooltip}" />
+                <TextBlock
+                    Grid.Row="2" Grid.Column="2"
+                    Margin="5"
+                    VerticalAlignment="Center">
+                    <Run Text="Last Updated: " /><Run Text="{Binding UnnumberedAsteroidLastUpdated, Mode=OneWay, Converter={StaticResource O_DateTimeMinToNeverConverter}}" />
+                </TextBlock>
+                -->
             </Grid>
 
             <!-- Search Bar -->
@@ -101,11 +168,11 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                    <Style x:Key="ShowComet" TargetType="{x:Type Border}">
-                        <Setter Property="FrameworkElement.Visibility" Value="Collapsed" />
+                    <Style x:Key="ShowOrbital" TargetType="{x:Type Border}">
+                        <Setter Property="FrameworkElement.Visibility" Value="Visible" />
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding ElementName=PART_SearchObjectTypeEnumList, Path=SelectedItem}" Value="1">
-                                <Setter Property="FrameworkElement.Visibility" Value="Visible" />
+                            <DataTrigger Binding="{Binding ElementName=PART_SearchObjectTypeEnumList, Path=SelectedItem}" Value="0">
+                                <Setter Property="FrameworkElement.Visibility" Value="Collapsed" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -146,7 +213,7 @@
                 <Border
                     Grid.Row="0" Grid.Column="1"
                     VerticalAlignment="Stretch"
-                    Style="{StaticResource ShowComet}">
+                    Style="{StaticResource ShowOrbital}">
                     <ninactrl:AutoCompleteBox
                         Margin="10,5,0,5"
                         MinWidth="200"

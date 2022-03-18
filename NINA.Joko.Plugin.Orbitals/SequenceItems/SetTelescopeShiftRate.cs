@@ -60,7 +60,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             }
         }
 
-        public override async Task Execute(IProgress<ApplicationStatus> progress, CancellationToken token) {
+        public override Task Execute(IProgress<ApplicationStatus> progress, CancellationToken token) {
             if (ShiftTrackingRate.Enabled) {
                 if (!telescopeMediator.SetCustomTrackingRate(ShiftTrackingRate.RAArcsecsPerSec, ShiftTrackingRate.DecArcsecsPerSec)) {
                     throw new SequenceEntityFailedException($"Setting tracking rate to {ShiftTrackingRate} failed");
@@ -70,6 +70,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
                     throw new SequenceEntityFailedException($"Setting tracking rate to sidereal failed");
                 }
             }
+            return Task.CompletedTask;
         }
 
         public bool Validate() {

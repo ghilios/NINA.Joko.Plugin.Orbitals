@@ -19,6 +19,15 @@ namespace NINA.Joko.Plugin.Orbitals.Enums {
     public enum OrbitalObjectTypeEnum {
 
         [Description("Comet")]
-        Comet
+        Comet = 1,
+
+        /*
+
+        [Description("Numbered Asteroids")]
+        NumberedAsteroids = 2,
+
+        [Description("Un-numbered Asteroids")]
+        UnnumberedAsteroids = 3
+            */
     }
 }

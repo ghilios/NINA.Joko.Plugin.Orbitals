@@ -91,8 +91,14 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             [ProtoMember(10)]
             public double tp_PeriapsisTime_jd { get; set; } = double.NaN;
 
+            [ProtoMember(11)]
+            public double M_MeanAnomalyAtEpoch { get; set; } = double.NaN;
+
+            [ProtoMember(12)]
+            public double a_SemiMajorAxis_au { get; set; } = double.NaN;
+
             public override string ToString() {
-                return $"{{{nameof(Name)}={Name}, {nameof(PrimaryGravitationalParameter)}={PrimaryGravitationalParameter}, {nameof(SecondaryGravitationalParameter)}={SecondaryGravitationalParameter}, {nameof(Epoch_jd)}={Epoch_jd.ToString()}, {nameof(q_Perihelion_au)}={q_Perihelion_au.ToString()}, {nameof(e_Eccentricity)}={e_Eccentricity.ToString()}, {nameof(i_Inclination_rad)}={i_Inclination_rad.ToString()}, {nameof(w_ArgOfPerihelion_rad)}={w_ArgOfPerihelion_rad.ToString()}, {nameof(node_LongitudeOfAscending_rad)}={node_LongitudeOfAscending_rad.ToString()}, {nameof(tp_PeriapsisTime_jd)}={tp_PeriapsisTime_jd.ToString()}}}";
+                return $"{{{nameof(Name)}={Name}, {nameof(PrimaryGravitationalParameter)}={PrimaryGravitationalParameter}, {nameof(SecondaryGravitationalParameter)}={SecondaryGravitationalParameter}, {nameof(Epoch_jd)}={Epoch_jd.ToString()}, {nameof(q_Perihelion_au)}={q_Perihelion_au.ToString()}, {nameof(e_Eccentricity)}={e_Eccentricity.ToString()}, {nameof(i_Inclination_rad)}={i_Inclination_rad.ToString()}, {nameof(w_ArgOfPerihelion_rad)}={w_ArgOfPerihelion_rad.ToString()}, {nameof(node_LongitudeOfAscending_rad)}={node_LongitudeOfAscending_rad.ToString()}, {nameof(tp_PeriapsisTime_jd)}={tp_PeriapsisTime_jd.ToString()}, {nameof(M_MeanAnomalyAtEpoch)}={M_MeanAnomalyAtEpoch.ToString()}, {nameof(a_SemiMajorAxis_au)}={a_SemiMajorAxis_au.ToString()}}}";
             }
         }
 
@@ -110,6 +116,10 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             public double v0_TrueAnomaly_rad { get; set; } = double.NaN;
             public double Distance_au { get; set; } = double.NaN;
             public RectangularCoordinates EclipticCoordinates { get; set; }
+
+            public override string ToString() {
+                return $"{{{nameof(Name)}={Name}, {nameof(AsOf_jd)}={AsOf_jd.ToString()}, {nameof(M_MeanAnomaly_rad)}={M_MeanAnomaly_rad.ToString()}, {nameof(e_EccentricAnomaly_rad)}={e_EccentricAnomaly_rad.ToString()}, {nameof(v0_TrueAnomaly_rad)}={v0_TrueAnomaly_rad.ToString()}, {nameof(Distance_au)}={Distance_au.ToString()}, {nameof(EclipticCoordinates)}={EclipticCoordinates}}}";
+            }
         }
 
         public static RectangularCoordinates GetApparentPosition(
@@ -131,34 +141,39 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             var ecc = orbitalElements.e_Eccentricity;
             var isParabolic = Math.Abs(ecc - 1.0d) < double.Epsilon;
             var gravParam = orbitalElements.PrimaryGravitationalParameter.Parameter_au3_d2 + orbitalElements.SecondaryGravitationalParameter.Parameter_au3_d2;
-            var daysSincePeriapsis = asOf_jd - orbitalElements.tp_PeriapsisTime_jd;
 
             if (!isParabolic) {
                 // r1, r2 = perihelion, aphelion
                 // r1 = a(1 - e)
                 // r2 = a(1 + e)
                 // r1 + r2 = 2a
-                var semiMajorAxis = orbitalElements.q_Perihelion_au / (1 - ecc);
-                if (ecc > 1) {
-                    semiMajorAxis *= -1;
+                double semiMajorAxis;
+                if (double.IsNaN(orbitalElements.a_SemiMajorAxis_au)) {
+                    semiMajorAxis = orbitalElements.q_Perihelion_au / (1 - ecc);
+                    if (ecc > 1) {
+                        semiMajorAxis *= -1;
+                    }
+                } else {
+                    semiMajorAxis = orbitalElements.a_SemiMajorAxis_au;
                 }
 
-                // TODO: Handle osculating elements case where mean anomaly per day is provided
-                // if (double.IsNaN(orbitalElements.M_MeanAnomaly_rad)) {
-                {
+                // r = distance to body from focus
+                // v = angle from perihelion to position
+
+                // n^2 * a^3 = mu
+                var n2 = gravParam / (semiMajorAxis * semiMajorAxis * semiMajorAxis);
+                var n = Math.Sqrt(n2);
+
+                if (double.IsNaN(orbitalElements.M_MeanAnomalyAtEpoch)) {
                     // Mean anomaly needs to be populated
 
-                    // r = distance to body from focus
-                    // v = angle from perihelion to position
-
-                    // n^2 * a^3 = mu
-                    var n2 = gravParam / (semiMajorAxis * semiMajorAxis * semiMajorAxis);
-                    var n = Math.Sqrt(n2);
-
+                    var daysSincePeriapsis = asOf_jd - orbitalElements.tp_PeriapsisTime_jd;
                     orbitalPosition.M_MeanAnomaly_rad = n * daysSincePeriapsis;
+                } else {
+                    var daysSinceEpoch = asOf_jd - orbitalElements.Epoch_jd;
+                    orbitalPosition.M_MeanAnomaly_rad = orbitalElements.M_MeanAnomalyAtEpoch + n * daysSinceEpoch;
                 }
 
-                // TODO: Handle osculating elements case where mean anomaly per day is provided
                 var meanAnomaly = orbitalPosition.M_MeanAnomaly_rad;
 
                 var estimate = meanAnomaly + ecc * Math.Sin(meanAnomaly);
@@ -190,7 +205,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                     // tan(v/2) = ((1 + e)/(1 - e))^(1/2) * tan(E/2)
                     var term1 = Math.Sqrt((1d + ecc) / (1d - ecc)) * Math.Tan(orbitalPosition.e_EccentricAnomaly_rad / 2d);
                     orbitalPosition.v0_TrueAnomaly_rad = AstrometricConstants.NormalizeRadians(2d * Math.Atan(term1));
-                } else if (ecc > 1) {
+                } else {
                     orbitalPosition.Distance_au = semiMajorAxis * (ecc * Math.Cosh(orbitalPosition.e_EccentricAnomaly_rad) - 1.0d);
 
                     // tan(v/2) = ((e + 1)/(e - 1))^(1/2) * tanh(E/2)
@@ -211,6 +226,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                 var mu = gravParam;
                 var q = orbitalElements.q_Perihelion_au;
                 var q3 = q * q * q;
+                var daysSincePeriapsis = asOf_jd - orbitalElements.tp_PeriapsisTime_jd;
                 var W = (3.0 / 2.0) * Math.Sqrt(mu / (2.0 * q3)) * daysSincePeriapsis;
                 var underRadical = W - Math.Sqrt(W * W + 1);
                 var y = Math.Pow(Math.Abs(underRadical), 1.0 / 3.0);

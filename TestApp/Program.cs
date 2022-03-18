@@ -25,31 +25,24 @@ namespace TestApp {
 
         private static async Task Main(string[] args) {
             var accessor = new JPLAccessor();
-            var lmd = await accessor.GetCometElementsLastModified();
-            var response = await accessor.GetCometElements();
+            var lmd = await accessor.GetNumberedAsteroidsLastModified();
+            var response = await accessor.GetNumberedAsteroidElements();
             response.ParseError += (sender, e) => {
                 Console.WriteLine($"Error parsing comets: {e.ErrorMessage}");
             };
             var now = DateTime.UtcNow;
             var nowJd = AstroUtil.GetJulianDate(now);
 
-            var parabolicComets = new List<Kepler.OrbitalElements>();
-            var cometsByName = new SuffixTrie<JPLCometElements>(3);
+            var cometsByName = new SuffixTrie<JPLOrbitalElements>(3);
             using (var ms = new MemoryStream()) {
                 foreach (var cometElements in response.Response) {
                     var cometNameLower = cometElements.name.ToLowerInvariant();
                     cometsByName.Add(cometNameLower, cometElements);
 
                     var orbitalElements = cometElements.ToOrbitalElements();
-                    if (orbitalElements.e_Eccentricity == 1.0) {
-                        // Parabolic Orbit
-                        parabolicComets.Add(orbitalElements);
-                        var orbitalPosition = Kepler.CalculateOrbitalElements(orbitalElements, nowJd);
-                        var apparentPosition = Kepler.GetApparentPosition(orbitalPosition, NOVAS.Body.Earth);
-                        var coordinates = apparentPosition.ToPolar();
-                        Console.WriteLine();
-                    }
-
+                    var orbitalPosition = Kepler.CalculateOrbitalElements(orbitalElements, nowJd);
+                    var orbitalApparentPosition = Kepler.GetApparentPosition(orbitalPosition, NOVAS.Body.Earth);
+                    var orbitalCoordinates = orbitalApparentPosition.ToPolar();
                     ProtoBuf.Serializer.SerializeWithLengthPrefix(ms, orbitalElements, ProtoBuf.PrefixStyle.Base128, 1);
                 }
 
