@@ -140,7 +140,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             } else {
                 transit = AstroUtil.GetAzimuth(180, alt180, latitude, coordinates.Dec);
             }
-            DoesTransitSouth = Convert.ToInt32(transit) == 180;
+            DoesTransitSouth = !double.IsNaN(transit) && Convert.ToInt32(transit) == 180;
         }
     }
 }

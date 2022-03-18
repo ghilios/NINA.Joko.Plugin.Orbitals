@@ -10,14 +10,20 @@
 
 #endregion "copyright"
 
+using NINA.Astrometry;
+using NINA.Astrometry.Interfaces;
+using NINA.Core.Enum;
 using NINA.Core.Model;
 using NINA.Core.Utility;
 using NINA.Core.Utility.Notification;
+using NINA.Equipment.Interfaces.Mediator;
 using NINA.Equipment.Interfaces.ViewModel;
+using NINA.Joko.Plugin.Orbitals.Calculations;
 using NINA.Joko.Plugin.Orbitals.Enums;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
 using NINA.Profile.Interfaces;
 using NINA.WPF.Base.Interfaces.Mediator;
+using NINA.WPF.Base.Interfaces.ViewModel;
 using NINA.WPF.Base.ViewModel;
 using System;
 using System.ComponentModel.Composition;
@@ -30,6 +36,11 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
     [Export(typeof(IDockableVM))]
     public class OrbitalsVM : DockableVM {
+        private readonly INighttimeCalculator nighttimeCalculator;
+        private readonly IGuiderMediator guiderMediator;
+        private readonly ITelescopeMediator telescopeMediator;
+        private readonly IFramingAssistantVM framingAssistantVM;
+        private readonly IApplicationMediator applicationMediator;
         private readonly IApplicationStatusMediator applicationStatusMediator;
         private readonly IOrbitalsOptions orbitalsOptions;
         private readonly IJPLAccessor jplAccessor;
@@ -40,12 +51,22 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         [ImportingConstructor]
         public OrbitalsVM(
             IProfileService profileService,
+            INighttimeCalculator nighttimeCalculator,
+            IGuiderMediator guiderMediator,
+            ITelescopeMediator telescopeMediator,
+            IFramingAssistantVM framingAssistantVM,
+            IApplicationMediator applicationMediator,
             IApplicationStatusMediator applicationStatusMediator)
-            : this(profileService, applicationStatusMediator, OrbitalsPlugin.OrbitalsOptions, OrbitalsPlugin.JPLAccessor, OrbitalsPlugin.OrbitalElementsAccessor, new OrbitalSearchVM(OrbitalsPlugin.OrbitalElementsAccessor)) {
+            : this(profileService, nighttimeCalculator, guiderMediator, telescopeMediator, framingAssistantVM, applicationMediator, applicationStatusMediator, OrbitalsPlugin.OrbitalsOptions, OrbitalsPlugin.JPLAccessor, OrbitalsPlugin.OrbitalElementsAccessor, new OrbitalSearchVM(OrbitalsPlugin.OrbitalElementsAccessor)) {
         }
 
         public OrbitalsVM(
             IProfileService profileService,
+            INighttimeCalculator nighttimeCalculator,
+            IGuiderMediator guiderMediator,
+            ITelescopeMediator telescopeMediator,
+            IFramingAssistantVM framingAssistantVM,
+            IApplicationMediator applicationMediator,
             IApplicationStatusMediator applicationStatusMediator,
             IOrbitalsOptions orbitalsOptions,
             IJPLAccessor jplAccessor,
@@ -58,6 +79,11 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             ImageGeometry = (System.Windows.Media.GeometryGroup)dict["OrbitSVG"];
             ImageGeometry.Freeze();
 
+            this.nighttimeCalculator = nighttimeCalculator;
+            this.guiderMediator = guiderMediator;
+            this.telescopeMediator = telescopeMediator;
+            this.framingAssistantVM = framingAssistantVM;
+            this.applicationMediator = applicationMediator;
             this.applicationStatusMediator = applicationStatusMediator;
             this.orbitalsOptions = orbitalsOptions;
             this.jplAccessor = jplAccessor;
@@ -66,17 +92,78 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             this.progress = ProgressFactory.Create(applicationStatusMediator, "Orbitals");
             this.orbitalElementsAccessor.Updated += OrbitalElementsAccessor_Updated;
             var initialLoadCts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-            Task.Run(async () => {
+            _ = Task.Run(async () => {
                 try {
                     await orbitalElementsAccessor.Load(this.progress, initialLoadCts.Token);
                     initialLoadComplete = true;
                 } catch (Exception e) {
                     Logger.Error("Initial orbital elements load failed", e);
                 }
-            });
+            }, initialLoadCts.Token);
 
             this.UpdateCometElementsCommand = new AsyncCommand<bool>(UpdateCometElements, (o) => initialLoadComplete);
             this.CancelUpdateCometElementsCommand = new AsyncCommand<bool>(o => CancelUpdateElements(updateCometElementsTask, updateCometElementsCts));
+            this.LoadSelectionCommand = new RelayCommand(LoadSelection, CanLoad);
+
+            this.SendToFramingWizardCommand = new AsyncCommand<bool>(SendToFramingWizardCommandAction, o => SelectedOrbitalsObject != null);
+            this.SetTrackingRateCommand = new RelayCommand(SetTrackingRateCommandAction, CanSetTrackingRate);
+            this.SetGuiderShiftCommand = new AsyncCommand<bool>(SetGuiderShiftCommandAction, CanSetGuiderShift);
+        }
+
+        private Task<bool> SendToFramingWizardCommandAction(object o) {
+            return Task.Run(async () => {
+                if (SelectedOrbitalsObject == null) {
+                    Notification.ShowWarning("No orbital object selected");
+                    return false;
+                }
+
+                try {
+                    var dso = new DeepSkyObject(SelectedOrbitalsObject.Name, TargetCoordinates, profileService.ActiveProfile.ApplicationSettings.SkyAtlasImageRepository, profileService.ActiveProfile.AstrometrySettings.Horizon);
+                    applicationMediator.ChangeTab(ApplicationTab.FRAMINGASSISTANT);
+                    return await framingAssistantVM.SetCoordinates(dso);
+                } catch (Exception e) {
+                    Notification.ShowError($"Failed to send orbital target to framing wizard. {e.Message}");
+                    Logger.Error("Failed to send orbital target to framing wizard", e);
+                    return false;
+                }
+            });
+        }
+
+        private bool CanSetTrackingRate(object o) {
+            var info = telescopeMediator.GetInfo();
+            return info.Connected && info.CanSetRightAscensionRate && info.CanSetDeclinationRate;
+        }
+
+        private void SetTrackingRateCommandAction(object o) {
+            try {
+                if (!this.telescopeMediator.SetCustomTrackingRate(ShiftTrackingRate.RAArcsecsPerSec, ShiftTrackingRate.DecArcsecsPerSec)) {
+                    Notification.ShowError("Failed to set orbital tracking rate");
+                }
+            } catch (Exception e) {
+                Notification.ShowError($"Failed to set orbital tracking rate. {e.Message}");
+                Logger.Error("Failed to set orbital tracking rate", e);
+            }
+        }
+
+        private bool CanSetGuiderShift(object o) {
+            var info = guiderMediator.GetInfo();
+            return info.Connected && info.CanSetShiftRate;
+        }
+
+        private Task<bool> SetGuiderShiftCommandAction(object o) {
+            return Task.Run(async () => {
+                try {
+                    if (!await this.guiderMediator.SetShiftRate(ShiftTrackingRate, CancellationToken.None)) {
+                        Notification.ShowError("Failed to set guider shift rate");
+                        return false;
+                    }
+                    return true;
+                } catch (Exception e) {
+                    Notification.ShowError($"Failed to set guider shift rate. {e.Message}");
+                    Logger.Error("Failed to set guider shift rate", e);
+                    return false;
+                }
+            });
         }
 
         private void OrbitalElementsAccessor_Updated(object sender, OrbitalElementsObjectTypeUpdatedEventArgs e) {
@@ -92,6 +179,16 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             get => cometLastUpdated;
             private set {
                 cometLastUpdated = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        private NighttimeData nighttimeData;
+
+        public NighttimeData NighttimeData {
+            get => nighttimeData;
+            private set {
+                nighttimeData = value;
                 RaisePropertyChanged();
             }
         }
@@ -126,6 +223,46 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             }
         }
 
+        private OrbitalsObjectBase selectedOrbitalsObject;
+
+        public OrbitalsObjectBase SelectedOrbitalsObject {
+            get => selectedOrbitalsObject;
+            private set {
+                selectedOrbitalsObject = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        private Coordinates targetCoordinates;
+
+        public Coordinates TargetCoordinates {
+            get => targetCoordinates;
+            private set {
+                targetCoordinates = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        private SiderealShiftTrackingRate shiftTrackingRate;
+
+        public SiderealShiftTrackingRate ShiftTrackingRate {
+            get => shiftTrackingRate;
+            private set {
+                shiftTrackingRate = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        private double distanceAU = 0.0;
+
+        public double DistanceAU {
+            get => distanceAU;
+            private set {
+                distanceAU = value;
+                RaisePropertyChanged();
+            }
+        }
+
         public IOrbitalSearchVM OrbitalSearchVM { get; private set; }
 
         public ICommand CancelUpdateCometElementsCommand { get; private set; }
@@ -134,8 +271,59 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
         public ICommand LoadSelectionCommand { get; private set; }
 
+        public ICommand SlewCommand { get; private set; }
+
+        public ICommand SendToFramingWizardCommand { get; private set; }
+
+        public ICommand SetTrackingRateCommand { get; private set; }
+
+        public ICommand SetGuiderShiftCommand { get; private set; }
+
         private Task<bool> updateCometElementsTask;
         private CancellationTokenSource updateCometElementsCts;
+
+        private bool CanLoad(object o) {
+            if (SearchObjectType == SearchObjectTypeEnum.SolarSystemBody) {
+                return true;
+            } else {
+                return OrbitalSearchVM.SelectedOrbitalElements != null;
+            }
+        }
+
+        private void LoadSelection(object o) {
+            var objectType = SearchObjectType;
+            try {
+                NighttimeData = nighttimeCalculator.Calculate();
+                if (objectType == SearchObjectTypeEnum.SolarSystemBody) {
+                    LoadSolarSystemObject(SelectedSolarSystemBody);
+                } else {
+                    LoadOrbitalObject(OrbitalSearchVM.SelectedOrbitalElements);
+                }
+
+                TargetCoordinates = SelectedOrbitalsObject.Coordinates;
+                ShiftTrackingRate = SelectedOrbitalsObject.ShiftTrackingRate;
+                DistanceAU = SelectedOrbitalsObject.Position.Distance;
+            } catch (Exception e) {
+                Notification.ShowError($"Failed to load {objectType}. {e.Message}");
+                Logger.Error($"Failed to load {objectType}", e);
+            }
+        }
+
+        private void LoadOrbitalObject(Kepler.OrbitalElements orbitalElements) {
+            if (orbitalElements == null) {
+                Notification.ShowError("No orbital object selected");
+                return;
+            }
+            var bodyObject = new OrbitalElementsObject(orbitalElementsAccessor, orbitalElements, profileService.ActiveProfile.AstrometrySettings.Horizon);
+            bodyObject.SetDateAndPosition(NighttimeCalculator.GetReferenceDate(DateTime.Now), latitude: profileService.ActiveProfile.AstrometrySettings.Latitude, longitude: profileService.ActiveProfile.AstrometrySettings.Longitude);
+            SelectedOrbitalsObject = bodyObject;
+        }
+
+        private void LoadSolarSystemObject(SolarSystemBody solarSystemBody) {
+            var bodyObject = new SolarSystemBodyObject(orbitalElementsAccessor, solarSystemBody, profileService.ActiveProfile.AstrometrySettings.Horizon);
+            bodyObject.SetDateAndPosition(NighttimeCalculator.GetReferenceDate(DateTime.Now), latitude: profileService.ActiveProfile.AstrometrySettings.Latitude, longitude: profileService.ActiveProfile.AstrometrySettings.Longitude);
+            SelectedOrbitalsObject = bodyObject;
+        }
 
         public Task<bool> UpdateCometElements(object o) {
             if (updateCometElementsCts != null) {

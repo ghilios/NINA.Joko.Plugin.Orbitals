@@ -17,9 +17,9 @@
                 <RowDefinition />
             </Grid.RowDefinitions>
             <StackPanel Grid.Column="0" Orientation="Vertical">
-                <ContentControl Content="{Binding OrbitalsOptions}" ContentTemplate="{StaticResource Orbitals_Options}" />
+                <ContentControl Content="{Binding OrbitalsOptions}" ContentTemplate="{StaticResource Orbitals_Options_Content}" />
                 <Button
-                    Margin="5"
+                    Margin="5,15,0,0"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Command="{Binding ResetOptionDefaultsCommand}">

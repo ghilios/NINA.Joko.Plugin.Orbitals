@@ -9,6 +9,7 @@
 */
 
 #endregion "copyright"
+
 using NINA.Astrometry;
 using NINA.Core.Model;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
@@ -16,21 +17,24 @@ using System;
 using static NINA.Joko.Plugin.Orbitals.Calculations.Kepler;
 
 namespace NINA.Joko.Plugin.Orbitals.Calculations {
+
     public class OrbitalElementsObject : OrbitalsObjectBase {
         private readonly IOrbitalElementsAccessor orbitalElementsAccessor;
         public static readonly string NotSetName = "Orbital Object Sequence";
+
         public OrbitalElementsObject(
             IOrbitalElementsAccessor orbitalElementsAccessor,
             OrbitalElements orbitalElements,
             CustomHorizon customHorizon) : base(orbitalElements?.Name ?? NotSetName, customHorizon) {
             this.orbitalElementsAccessor = orbitalElementsAccessor;
-            this.OrbitalElements = orbitalElements;
+            this.orbitalElements = orbitalElements;
             Moon = new MoonInfo(Coordinates);
         }
 
         public override MoonInfo Moon { get; protected set; }
 
         private OrbitalElements orbitalElements;
+
         public OrbitalElements OrbitalElements {
             get => orbitalElements;
             set {

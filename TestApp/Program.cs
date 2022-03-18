@@ -14,6 +14,7 @@ using Gma.DataStructures.StringSearch;
 using NINA.Astrometry;
 using NINA.Joko.Plugin.Orbitals.Calculations;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -29,7 +30,10 @@ namespace TestApp {
             response.ParseError += (sender, e) => {
                 Console.WriteLine($"Error parsing comets: {e.ErrorMessage}");
             };
+            var now = DateTime.UtcNow;
+            var nowJd = AstroUtil.GetJulianDate(now);
 
+            var parabolicComets = new List<Kepler.OrbitalElements>();
             var cometsByName = new SuffixTrie<JPLCometElements>(3);
             using (var ms = new MemoryStream()) {
                 foreach (var cometElements in response.Response) {
@@ -37,6 +41,15 @@ namespace TestApp {
                     cometsByName.Add(cometNameLower, cometElements);
 
                     var orbitalElements = cometElements.ToOrbitalElements();
+                    if (orbitalElements.e_Eccentricity == 1.0) {
+                        // Parabolic Orbit
+                        parabolicComets.Add(orbitalElements);
+                        var orbitalPosition = Kepler.CalculateOrbitalElements(orbitalElements, nowJd);
+                        var apparentPosition = Kepler.GetApparentPosition(orbitalPosition, NOVAS.Body.Earth);
+                        var coordinates = apparentPosition.ToPolar();
+                        Console.WriteLine();
+                    }
+
                     ProtoBuf.Serializer.SerializeWithLengthPrefix(ms, orbitalElements, ProtoBuf.PrefixStyle.Base128, 1);
                 }
 
@@ -49,8 +62,6 @@ namespace TestApp {
             // var comet = cometsByName.ValueBy("C/2021 O3 (PANSTARRS)");
             var comet = cometsByName.Retrieve(searchFor).ToList();
             var cometOrbitalElement = comet.First().ToOrbitalElements();
-            var now = DateTime.UtcNow;
-            var nowJd = AstroUtil.GetJulianDate(now);
             var cometOrbitalPosition = Kepler.CalculateOrbitalElements(cometOrbitalElement, nowJd);
 
             var earthPosition = NOVAS.BodyPositionAndVelocity(nowJd, NOVAS.Body.Earth, NOVAS.SolarSystemOrigin.SolarCenterOfMass);

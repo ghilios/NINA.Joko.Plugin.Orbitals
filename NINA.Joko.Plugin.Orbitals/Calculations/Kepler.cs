@@ -129,75 +129,107 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             double eccentricAnomalyTolerance = 1.0e-11) {
             var orbitalPosition = new OrbitalPosition(orbitalElements.Name, asOf_jd);
             var ecc = orbitalElements.e_Eccentricity;
+            var isParabolic = Math.Abs(ecc - 1.0d) < double.Epsilon;
+            var gravParam = orbitalElements.PrimaryGravitationalParameter.Parameter_au3_d2 + orbitalElements.SecondaryGravitationalParameter.Parameter_au3_d2;
+            var daysSincePeriapsis = asOf_jd - orbitalElements.tp_PeriapsisTime_jd;
 
-            // r1, r2 = perihelion, aphelion
-            // r1 = a(1 - e)
-            // r2 = a(1 + e)
-            // r1 + r2 = 2a
-            var semiMajorAxis = orbitalElements.q_Perihelion_au / (1 - ecc);
-            if (ecc > 1) {
-                semiMajorAxis *= -1;
-            }
+            if (!isParabolic) {
+                // r1, r2 = perihelion, aphelion
+                // r1 = a(1 - e)
+                // r2 = a(1 + e)
+                // r1 + r2 = 2a
+                var semiMajorAxis = orbitalElements.q_Perihelion_au / (1 - ecc);
+                if (ecc > 1) {
+                    semiMajorAxis *= -1;
+                }
 
-            // TODO: Handle osculating elements case where mean anomaly per day is provided
-            // if (double.IsNaN(orbitalElements.M_MeanAnomaly_rad)) {
-            {
-                // Mean anomaly needs to be populated
+                // TODO: Handle osculating elements case where mean anomaly per day is provided
+                // if (double.IsNaN(orbitalElements.M_MeanAnomaly_rad)) {
+                {
+                    // Mean anomaly needs to be populated
 
-                // r = distance to body from focus
-                // v = angle from perihelion to position
-                var gravParam = orbitalElements.PrimaryGravitationalParameter.Parameter_au3_d2 + orbitalElements.SecondaryGravitationalParameter.Parameter_au3_d2;
+                    // r = distance to body from focus
+                    // v = angle from perihelion to position
 
-                // TODO: What do I need h for? Consider removing
-                // h^2 = mu * a * (1 - e^2)
-                var h = Math.Sqrt(gravParam * semiMajorAxis * Math.Abs(1.0d - ecc * ecc));
+                    // n^2 * a^3 = mu
+                    var n2 = gravParam / (semiMajorAxis * semiMajorAxis * semiMajorAxis);
+                    var n = Math.Sqrt(n2);
 
-                // n^2 * a^3 = mu
-                var n2 = gravParam / (semiMajorAxis * semiMajorAxis * semiMajorAxis);
-                var n = Math.Sqrt(n2);
+                    orbitalPosition.M_MeanAnomaly_rad = n * daysSincePeriapsis;
+                }
 
-                var daysSincePeriapsis = asOf_jd - orbitalElements.tp_PeriapsisTime_jd;
-                orbitalPosition.M_MeanAnomaly_rad = n * daysSincePeriapsis;
-            }
+                // TODO: Handle osculating elements case where mean anomaly per day is provided
+                var meanAnomaly = orbitalPosition.M_MeanAnomaly_rad;
 
-            // TODO: Handle osculating elements case where mean anomaly per day is provided
-            var meanAnomaly = orbitalPosition.M_MeanAnomaly_rad;
+                var estimate = meanAnomaly + ecc * Math.Sin(meanAnomaly);
+                double estimateError = double.PositiveInfinity;
 
-            var estimate = meanAnomaly + ecc * Math.Sin(meanAnomaly);
-            double estimateError = double.PositiveInfinity;
+                int iterations = 0;
+                if (ecc < 1) {
+                    // Solve M = E - e * sin(E), for E
+                    while (Math.Abs(estimateError) > eccentricAnomalyTolerance && iterations++ < MAX_ECCENTRIC_ANOMALY_ITERATIONS) {
+                        estimateError = estimate - ecc * Math.Sin(estimate) - meanAnomaly;
+                        estimate -= estimateError / (1.0d - ecc * Math.Cos(estimate));
+                    }
+                } else {
+                    // Solve M = e * sinh(E) - E, for E
+                    while (Math.Abs(estimateError) > eccentricAnomalyTolerance && iterations++ < MAX_ECCENTRIC_ANOMALY_ITERATIONS) {
+                        estimateError = meanAnomaly + estimate - ecc * Math.Sinh(estimate);
+                        estimate += estimateError / (ecc * Math.Cosh(estimate) - 1.0d);
+                    }
+                }
 
-            int iterations = 0;
-            if (ecc < 1) {
-                // Solve M = E - e * sin(E), for E
-                while (Math.Abs(estimateError) > eccentricAnomalyTolerance && iterations++ < MAX_ECCENTRIC_ANOMALY_ITERATIONS) {
-                    estimateError = estimate - ecc * Math.Sin(estimate) - meanAnomaly;
-                    estimate -= estimateError / (1.0d - ecc * Math.Cos(estimate));
+                if (iterations >= MAX_ECCENTRIC_ANOMALY_ITERATIONS) {
+                    throw new Exception($"Maximum ({MAX_ECCENTRIC_ANOMALY_ITERATIONS}) iterations exceeded while calculating eccentric anomaly for {orbitalElements.Name}");
+                }
+                orbitalPosition.e_EccentricAnomaly_rad = estimate;
+
+                if (ecc < 1) {
+                    orbitalPosition.Distance_au = semiMajorAxis * (1.0d - ecc * Math.Cos(orbitalPosition.e_EccentricAnomaly_rad));
+
+                    // tan(v/2) = ((1 + e)/(1 - e))^(1/2) * tan(E/2)
+                    var term1 = Math.Sqrt((1d + ecc) / (1d - ecc)) * Math.Tan(orbitalPosition.e_EccentricAnomaly_rad / 2d);
+                    orbitalPosition.v0_TrueAnomaly_rad = AstrometricConstants.NormalizeRadians(2d * Math.Atan(term1));
+                } else if (ecc > 1) {
+                    orbitalPosition.Distance_au = semiMajorAxis * (ecc * Math.Cosh(orbitalPosition.e_EccentricAnomaly_rad) - 1.0d);
+
+                    // tan(v/2) = ((e + 1)/(e - 1))^(1/2) * tanh(E/2)
+                    var term1 = Math.Sqrt((ecc + 1d) / (ecc - 1d)) * Math.Tanh(orbitalPosition.e_EccentricAnomaly_rad / 2d);
+                    orbitalPosition.v0_TrueAnomaly_rad = AstrometricConstants.NormalizeRadians(2d * Math.Atan(term1));
                 }
             } else {
-                // Solve M = e * sinh(E) - E, for E
-                while (Math.Abs(estimateError) > eccentricAnomalyTolerance && iterations++ < MAX_ECCENTRIC_ANOMALY_ITERATIONS) {
-                    estimateError = meanAnomaly + estimate - ecc * Math.Sinh(estimate);
-                    estimate += estimateError / (ecc * Math.Cosh(estimate) - 1.0d);
+                // Parabolic orbit. Use Barker's equation
+                //  1        v           v      mu    1
+                //  _ * (tan(_))^3 + tan(_) = (____)^(_) * (t - t0)
+                //  3        2           2     2q^3   2
+                // See https://adsabs.harvard.edu/full/1985JBAA...95..113M for an elegant algebraic solution
+
+                // Units are
+                //  Time: days
+                //  Distance: au
+                //  Mass: kg
+                var mu = gravParam;
+                var q = orbitalElements.q_Perihelion_au;
+                var q3 = q * q * q;
+                var W = (3.0 / 2.0) * Math.Sqrt(mu / (2.0 * q3)) * daysSincePeriapsis;
+                var underRadical = W - Math.Sqrt(W * W + 1);
+                var y = Math.Pow(Math.Abs(underRadical), 1.0 / 3.0);
+                if (underRadical < 0) {
+                    y = -y;
                 }
-            }
+                var x = y - 1.0 / y;
+                var v = Math.Atan(x) * 2.0;
 
-            if (iterations >= MAX_ECCENTRIC_ANOMALY_ITERATIONS) {
-                throw new Exception($"Maximum ({MAX_ECCENTRIC_ANOMALY_ITERATIONS}) iterations exceeded while calculating eccentric anomaly for {orbitalElements.Name}");
-            }
-            orbitalPosition.e_EccentricAnomaly_rad = estimate;
+                orbitalPosition.v0_TrueAnomaly_rad = v;
 
-            if (ecc < 1) {
-                orbitalPosition.Distance_au = semiMajorAxis * (1.0d - ecc * Math.Cos(orbitalPosition.e_EccentricAnomaly_rad));
-
-                // tan(v/2) = ((1 + e)/(1 - e))^(1/2) * tan(E/2)
-                var term1 = Math.Sqrt((1d + ecc) / (1d - ecc)) * Math.Tan(orbitalPosition.e_EccentricAnomaly_rad / 2d);
-                orbitalPosition.v0_TrueAnomaly_rad = AstrometricConstants.NormalizeRadians(2d * Math.Atan(term1));
-            } else if (ecc > 1) {
-                orbitalPosition.Distance_au = semiMajorAxis * (ecc * Math.Cosh(orbitalPosition.e_EccentricAnomaly_rad) - 1.0d);
-
-                // tan(v/2) = ((e + 1)/(e - 1))^(1/2) * tanh(E/2)
-                var term1 = Math.Sqrt((ecc + 1d) / (ecc - 1d)) * Math.Tanh(orbitalPosition.e_EccentricAnomaly_rad / 2d);
-                orbitalPosition.v0_TrueAnomaly_rad = AstrometricConstants.NormalizeRadians(2d * Math.Atan(term1));
+                // See https://www.bogan.ca/orbits/kepler/orbteqtn.html for a summary of equations about orbits
+                // r = distance from central body
+                // q = periapsis distance
+                // T = theta = true anomaly
+                //
+                // r = 2q / (1 + cos(T))
+                var r = 2.0 * q / (1.0 + Math.Cos(v));
+                orbitalPosition.Distance_au = r;
             }
 
             var eclipticAngle = orbitalPosition.v0_TrueAnomaly_rad + orbitalElements.w_ArgOfPerihelion_rad;

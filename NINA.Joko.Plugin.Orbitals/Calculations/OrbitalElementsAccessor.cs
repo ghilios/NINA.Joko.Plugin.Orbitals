@@ -154,6 +154,9 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                         File.Delete(path);
                     }
                     File.Move(tmpPath, path);
+                    lock (backendLock) {
+                        backendsByType[objectType] = backend;
+                    }
                     OnUpdated(objectType, backend);
                 } catch (OperationCanceledException) {
                     Logger.Warning($"Updating {objectType} orbital elements cancelled");
