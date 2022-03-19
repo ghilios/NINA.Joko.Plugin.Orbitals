@@ -10,16 +10,16 @@
 
 #endregion "copyright"
 
-using Gma.DataStructures.StringSearch;
 using NINA.Astrometry;
 using NINA.Core.Model;
 using NINA.Core.Utility;
 using NINA.Core.Utility.Notification;
 using NINA.Joko.Plugin.Orbitals.Enums;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
+using NINA.Joko.Plugin.Orbitals.Utility;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
+using System.Data.Linq;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -31,29 +31,26 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
     public class OrbitalElementsAccessor : IOrbitalElementsAccessor {
 
-        private class OrbitalElementsBackend {
+        private class OrbitalElementsBackend : IDisposable {
 
-            private OrbitalElementsBackend(OrbitalObjectTypeEnum objectType, DateTime lastModified, ImmutableList<OrbitalElements> objects, SuffixTrie<OrbitalElements> lookup) {
+            private OrbitalElementsBackend(OrbitalObjectTypeEnum objectType, DateTime lastModified, TrigramStringMap<OrbitalElements> lookup) {
                 this.ObjectType = objectType;
-                this.Objects = objects;
                 this.Lookup = lookup;
                 this.LastModified = lastModified;
             }
 
             public OrbitalObjectTypeEnum ObjectType { get; private set; }
-            public ImmutableList<OrbitalElements> Objects { get; private set; }
-            public SuffixTrie<OrbitalElements> Lookup { get; private set; }
+            public TrigramStringMap<OrbitalElements> Lookup { get; private set; }
             public DateTime LastModified { get; private set; }
 
             public static OrbitalElementsBackend Create(OrbitalObjectTypeEnum objectType, DateTime lastModified, IEnumerable<OrbitalElements> objects, CancellationToken ct) {
-                var objectsBuilder = ImmutableList.CreateBuilder<OrbitalElements>();
-                var lookup = new SuffixTrie<OrbitalElements>(3);
-                foreach (var o in objects) {
-                    ct.ThrowIfCancellationRequested();
-                    objectsBuilder.Add(o);
-                    lookup.Add(o.Name.ToLowerInvariant(), o);
-                }
-                return new OrbitalElementsBackend(objectType, lastModified, objectsBuilder.ToImmutable(), lookup);
+                var lookup = new TrigramStringMap<OrbitalElements>();
+                lookup.AddRange(o => o.Name, objects);
+                return new OrbitalElementsBackend(objectType, lastModified, lookup);
+            }
+
+            public void Dispose() {
+                Lookup?.Dispose();
             }
         }
 
@@ -66,17 +63,18 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             }
         }
 
-        public Task Load(IProgress<ApplicationStatus> progress, CancellationToken ct) {
-            return Task.Run(() => {
-                try {
-                    foreach (var objectType in Enum.GetValues(typeof(OrbitalObjectTypeEnum)).Cast<OrbitalObjectTypeEnum>()) {
+        public async Task Load(IProgress<ApplicationStatus> progress, CancellationToken ct) {
+            try {
+                progress?.Report(new ApplicationStatus() { Source = "Orbitals", Status = $"Loading Orbital Elements" });
+                var tasks = new List<Task>();
+                foreach (var objectType in Enum.GetValues(typeof(OrbitalObjectTypeEnum)).Cast<OrbitalObjectTypeEnum>()) {
+                    var loadObjectTypeTask = Task.Run(() => {
                         var path = GetObjectTypeSavePath(objectType);
                         if (!File.Exists(path)) {
                             Logger.Info($"No {objectType} orbital elements loaded since no file was found at {path}");
-                            continue;
+                            return;
                         }
 
-                        progress?.Report(new ApplicationStatus() { Source = "Orbitals", Status = $"Loading {objectType}" });
                         try {
                             ct.ThrowIfCancellationRequested();
                             var lastModified = File.GetLastWriteTime(path);
@@ -84,9 +82,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                             using (var gs = new GZipStream(fs, CompressionMode.Decompress)) {
                                 var orbitalElements = ProtoBuf.Serializer.DeserializeItems<OrbitalElements>(gs, ProtoBuf.PrefixStyle.Base128, 1);
                                 var backend = OrbitalElementsBackend.Create(objectType, lastModified, orbitalElements, ct);
-                                lock (backendLock) {
-                                    backendsByType[objectType] = backend;
-                                }
+                                UpdateBackend(objectType, backend);
                                 OnUpdated(objectType, backend);
                             }
                         } catch (OperationCanceledException) {
@@ -95,16 +91,28 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                             Logger.Error($"Failed to load {objectType} orbital elements", e);
                             Notification.ShowError($"Failed to load {objectType} orbital elements");
                         }
-                    }
-                } finally {
-                    progress?.Report(new ApplicationStatus() { Source = "Orbitals" });
+                    }, ct);
+                    tasks.Add(loadObjectTypeTask);
                 }
-            });
+
+                await Task.WhenAll(tasks);
+            } finally {
+                progress?.Report(new ApplicationStatus() { Source = "Orbitals" });
+            }
         }
 
-        public IEnumerable<OrbitalElements> Search(OrbitalObjectTypeEnum objectType, string searchString) {
+        private void UpdateBackend(OrbitalObjectTypeEnum objectType, OrbitalElementsBackend backend) {
+            lock (backendLock) {
+                if (backendsByType.TryGetValue(objectType, out var existingBackend)) {
+                    existingBackend?.Dispose();
+                }
+                backendsByType[objectType] = backend;
+            }
+        }
+
+        public IEnumerable<OrbitalElements> Search(OrbitalObjectTypeEnum objectType, string searchString, int? limit = null) {
             var backend = GetBackend(objectType);
-            return backend.Lookup.Retrieve(searchString.ToLowerInvariant());
+            return backend.Lookup.Query(searchString, limit);
         }
 
         private OrbitalElementsBackend GetBackend(OrbitalObjectTypeEnum objectType) {
@@ -114,10 +122,10 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         }
 
         public OrbitalElements Get(OrbitalObjectTypeEnum objectType, string objectName) {
-            var searchResults = Search(objectType, objectName);
             try {
-                return searchResults.SingleOrDefault();
-            } catch (InvalidOperationException) {
+                var backend = GetBackend(objectType);
+                return backend.Lookup.Lookup(objectName);
+            } catch (DuplicateKeyException) {
                 Logger.Error($"Multiple results found for {objectName}");
                 Notification.ShowError($"Multiple results found for {objectName}");
                 return null;
@@ -131,7 +139,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
         public int GetCount(OrbitalObjectTypeEnum objectType) {
             var backend = GetBackend(objectType);
-            return backend.Objects.Count;
+            return backend.Lookup.Count;
         }
 
         public Task Update(OrbitalObjectTypeEnum objectType, IEnumerable<IOrbitalElementsSource> elements, IProgress<ApplicationStatus> progress, CancellationToken ct) {
@@ -145,7 +153,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                     var backend = OrbitalElementsBackend.Create(objectType, DateTime.Now, elements.Select(e => e.ToOrbitalElements()), ct);
                     using (var fs = new FileStream(tmpPath, FileMode.Create, FileAccess.Write, FileShare.None))
                     using (var gs = new GZipStream(fs, CompressionLevel.Optimal)) {
-                        foreach (var element in backend.Objects) {
+                        foreach (var element in backend.Lookup) {
                             ct.ThrowIfCancellationRequested();
                             ProtoBuf.Serializer.SerializeWithLengthPrefix<OrbitalElements>(gs, element, ProtoBuf.PrefixStyle.Base128, 1);
                         }
@@ -154,9 +162,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                         File.Delete(path);
                     }
                     File.Move(tmpPath, path);
-                    lock (backendLock) {
-                        backendsByType[objectType] = backend;
-                    }
+                    UpdateBackend(objectType, backend);
                     OnUpdated(objectType, backend);
                 } catch (OperationCanceledException) {
                     Logger.Warning($"Updating {objectType} orbital elements cancelled");
@@ -173,7 +179,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         private void OnUpdated(OrbitalObjectTypeEnum objectType, OrbitalElementsBackend backend) {
             this.Updated?.Invoke(this, new OrbitalElementsObjectTypeUpdatedEventArgs() {
                 ObjectType = objectType,
-                Count = backend.Objects.Count,
+                Count = backend.Lookup.Count,
                 LastUpdated = backend.LastModified
             });
         }

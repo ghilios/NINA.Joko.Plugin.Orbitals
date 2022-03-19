@@ -102,8 +102,8 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             }, initialLoadCts.Token);
 
             this.UpdateCometElementsCommand = new AsyncCommand<bool>(UpdateCometElements, (o) => initialLoadComplete);
-            // this.UpdateNumberedAsteroidElementsCommand = new AsyncCommand<bool>(UpdateNumberedAsteroids, (o) => initialLoadComplete);
-            // this.UpdateUnnumberedAsteroidElementsCommand = new AsyncCommand<bool>(UpdateUnnumberedAsteroids, (o) => initialLoadComplete);
+            this.UpdateNumberedAsteroidElementsCommand = new AsyncCommand<bool>(UpdateNumberedAsteroids, (o) => initialLoadComplete);
+            this.UpdateUnnumberedAsteroidElementsCommand = new AsyncCommand<bool>(UpdateUnnumberedAsteroids, (o) => initialLoadComplete);
 
             this.CancelUpdateCometElementsCommand = new AsyncCommand<bool>(o => CancelUpdateElements(updateCometElementsTask, updateCometElementsCts));
             this.CancelUpdateNumberedAsteroidElementsCommand = new AsyncCommand<bool>(o => CancelUpdateElements(updateNumberedAsteroidsTask, updateNumberedAsteroidsCts));
@@ -175,14 +175,13 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             if (e.ObjectType == OrbitalObjectTypeEnum.Comet) {
                 CometCount = e.Count;
                 CometLastUpdated = e.LastUpdated;
-            } /* else if (e.ObjectType == OrbitalObjectTypeEnum.NumberedAsteroids) {
+            } else if (e.ObjectType == OrbitalObjectTypeEnum.NumberedAsteroids) {
                 NumberedAsteroidCount = e.Count;
                 NumberedAsteroidLastUpdated = e.LastUpdated;
             } else if (e.ObjectType == OrbitalObjectTypeEnum.UnnumberedAsteroids) {
                 UnnumberedAsteroidCount = e.Count;
                 UnnumberedAsteroidLastUpdated = e.LastUpdated;
             }
-            */
         }
 
         private DateTime cometLastUpdated;
@@ -430,7 +429,6 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             return task;
         }
 
-        /*
         public Task<bool> UpdateNumberedAsteroids(object o) {
             if (updateNumberedAsteroidsTask != null && !updateNumberedAsteroidsTask.IsCompleted) {
                 Logger.Error("Update already in progress");
@@ -496,7 +494,6 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             updateUnnumberedAsteroidsTask = task;
             return task;
         }
-        */
 
         private async Task<bool> CancelUpdateElements(Task<bool> updateTask, CancellationTokenSource cts) {
             try {

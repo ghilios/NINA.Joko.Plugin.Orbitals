@@ -20,7 +20,7 @@
             <TextBlock x:Key="UpdateNumberedAsteroidElements_Tooltip" Text="Updates numbered asteroid orbital elements" />
             <TextBlock x:Key="UpdateUnnumberedAsteroidElements_Tooltip" Text="Updates un-numbered asteroid orbital elements" />
         </ScrollViewer.Resources>
-        <Grid>
+        <Grid Margin="5">
             <Grid.Resources>
                 <util:BindingProxy x:Key="nighttimeProxy" Data="{Binding NighttimeData}" />
             </Grid.Resources>
@@ -66,7 +66,7 @@
                 <!-- Comets -->
                 <TextBlock
                     Grid.Row="0" Grid.Column="0"
-                    Margin="0"
+                    Margin="5"
                     VerticalAlignment="Center">
                     <Run Text="Comets (" /><Run Text="{Binding CometCount, Mode=OneWay}" /><Run Text=")" />
                 </TextBlock>
@@ -91,10 +91,9 @@
                 </TextBlock>
 
                 <!-- Numbered Asteroids -->
-                <!--
                 <TextBlock
                     Grid.Row="1" Grid.Column="0"
-                    Margin="0"
+                    Margin="5"
                     VerticalAlignment="Center">
                     <Run Text="Numbered Asteroids (" /><Run Text="{Binding NumberedAsteroidCount, Mode=OneWay}" /><Run Text=")" />
                 </TextBlock>
@@ -117,13 +116,11 @@
                     VerticalAlignment="Center">
                     <Run Text="Last Updated: " /><Run Text="{Binding NumberedAsteroidLastUpdated, Mode=OneWay, Converter={StaticResource O_DateTimeMinToNeverConverter}}" />
                 </TextBlock>
-                -->
 
                 <!-- Unnumbered Asteroids -->
-                <!--
                 <TextBlock
                     Grid.Row="2" Grid.Column="0"
-                    Margin="0"
+                    Margin="5"
                     VerticalAlignment="Center">
                     <Run Text="Un-numbered Asteroids (" /><Run Text="{Binding UnnumberedAsteroidCount, Mode=OneWay}" /><Run Text=")" />
                 </TextBlock>
@@ -146,7 +143,6 @@
                     VerticalAlignment="Center">
                     <Run Text="Last Updated: " /><Run Text="{Binding UnnumberedAsteroidLastUpdated, Mode=OneWay, Converter={StaticResource O_DateTimeMinToNeverConverter}}" />
                 </TextBlock>
-                -->
             </Grid>
 
             <!-- Search Bar -->

@@ -149,7 +149,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private Task<List<IAutoCompleteItem>> SearchObjects(OrbitalObjectTypeEnum objectType, string searchString, CancellationToken ct) {
             return Task.Run(async () => {
                 await Task.Delay(100, ct);
-                var results = this.orbitalElementsAccessor.Search(objectType, searchString).Take(Limit).ToList();
+                var results = this.orbitalElementsAccessor.Search(objectType, searchString, Limit).ToList();
                 var list = new List<IAutoCompleteItem>();
                 foreach (var item in results) {
                     list.Add(new OrbitalObjectAutoCompleteItem() { Column1 = item.Name, Object = item });

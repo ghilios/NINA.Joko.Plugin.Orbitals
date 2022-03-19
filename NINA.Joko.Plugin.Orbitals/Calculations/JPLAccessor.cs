@@ -194,7 +194,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                 var headerLine = streamReader.ReadLine();
                 var spacingLine = streamReader.ReadLine();
                 var headerLengths = spacingLine.Split(' ').Select(s => s.Length).ToArray();
-                if (headerLengths.Length != 1) {
+                if (headerLengths.Length != 11) {
                     throw new Exception("Expected 11 header entries for un-numbered asteroid elements");
                 }
 

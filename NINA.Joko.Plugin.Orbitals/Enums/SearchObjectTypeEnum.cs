@@ -25,13 +25,11 @@ namespace NINA.Joko.Plugin.Orbitals.Enums {
         [Description("Comet")]
         Comet = 1,
 
-        /*
         [Description("Numbered Asteroids")]
         NumberedAsteroids = 2,
 
         [Description("Un-numbered Asteroids")]
         UnnumberedAsteroids = 3
-        */
     }
 
     public static class SearchObjectTypeEnumExtensions {

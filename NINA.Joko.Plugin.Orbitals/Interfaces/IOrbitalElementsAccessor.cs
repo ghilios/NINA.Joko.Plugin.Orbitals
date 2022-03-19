@@ -63,7 +63,7 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
 
         Task Load(IProgress<ApplicationStatus> progress, CancellationToken ct);
 
-        IEnumerable<OrbitalElements> Search(OrbitalObjectTypeEnum objectType, string searchString);
+        IEnumerable<OrbitalElements> Search(OrbitalObjectTypeEnum objectType, string searchString, int? limit = null);
 
         OrbitalElements Get(OrbitalObjectTypeEnum objectType, string objectName);
 

@@ -13,17 +13,23 @@
 using Gma.DataStructures.StringSearch;
 using NINA.Astrometry;
 using NINA.Joko.Plugin.Orbitals.Calculations;
+using NINA.Joko.Plugin.Orbitals.Utility;
 using System;
 using System.Collections.Generic;
+using System.Data.SQLite;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
+using static NINA.Joko.Plugin.Orbitals.Calculations.Kepler;
 
 namespace TestApp {
 
     internal class Program {
 
         private static async Task Main(string[] args) {
+            /*
             var accessor = new JPLAccessor();
             var lmd = await accessor.GetNumberedAsteroidsLastModified();
             var response = await accessor.GetNumberedAsteroidElements();
@@ -73,6 +79,42 @@ namespace TestApp {
             var decPerSec = AstroUtil.DegreeToArcsec((marsPosition2.Dec - marsPosition.Dec));
 
             Console.WriteLine(earthPosition);
+            */
+
+            /*
+            using (var lookup = new TrigramStringMap<JPLNumberedAsteroidElements>()) {
+                var accessor = new JPLAccessor();
+                var lmd = await accessor.GetNumberedAsteroidsLastModified();
+                var response = await accessor.GetNumberedAsteroidElements();
+                response.ParseError += (sender, e) => {
+                    Console.WriteLine($"Error parsing comets: {e.ErrorMessage}");
+                };
+                var now = DateTime.UtcNow;
+                var nowJd = AstroUtil.GetJulianDate(now);
+                int number = 0;
+                foreach (var cometElements in response.Response) {
+                    // Console.Write($"\rInserting {++number}");
+                    lookup.Add(cometElements.GetName(), cometElements);
+                }
+
+                var matchingStrings = lookup.QueryMatchingKeys("eres", 20);
+                var singleMatch = lookup.Lookup("ceres");
+                Console.WriteLine();
+            }
+            */
+
+            var stopWatch = new Stopwatch();
+            stopWatch.Start();
+            var path = @"C:\Users\ghili\AppData\Local\NINA\OrbitalElements\NumberedAsteroidsElements.bin.gz";
+            using (var lookup = new TrigramStringMap<OrbitalElements>()) {
+                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (var gs = new GZipStream(fs, CompressionMode.Decompress)) {
+                    var orbitalElements = ProtoBuf.Serializer.DeserializeItems<OrbitalElements>(gs, ProtoBuf.PrefixStyle.Base128, 1);
+                    lookup.AddRange((o) => o.Name, orbitalElements);
+                }
+            }
+            stopWatch.Stop();
+            Console.WriteLine($"Elapsed: {stopWatch.Elapsed}");
         }
     }
 }
