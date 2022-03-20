@@ -19,8 +19,8 @@ using System.Runtime.InteropServices;
 
 // [MANDATORY] The assembly versioning
 //Should be incremented for each new release build of a plugin
-[assembly: AssemblyVersion("0.3.0.0")]
-[assembly: AssemblyFileVersion("0.3.0.0")]
+[assembly: AssemblyVersion("0.4.0.0")]
+[assembly: AssemblyFileVersion("0.4.0.0")]
 
 // [MANDATORY] The name of your plugin
 [assembly: AssemblyTitle("Orbitals")]
@@ -84,6 +84,7 @@ Solar system bodies - such as the planets, the Sun, and the Moon - don't require
 * Comets. Data are provided by JPL Horizon
 * Numbered Asteroids. Data are provided by JPL Horizon
 * Un-numbered Asteroids. Data are provided by JPL Horizon
+* James-Webb Space Telescope. Data are provided by JPL Horizon
 
 # Object Types Coming Soon #
 

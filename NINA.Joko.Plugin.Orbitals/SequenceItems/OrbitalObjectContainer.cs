@@ -73,7 +73,8 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             this.applicationMediator = applicationMediator;
             this.orbitalsOptions = orbitalsOptions;
             _ = Task.Run(() => NighttimeData = nighttimeCalculator.Calculate());
-            this.OrbitalSearchVM = new OrbitalSearchVM(orbitalElementsAccessor);
+            var orbitalSearchVM = new OrbitalSearchVM(orbitalElementsAccessor);
+            this.OrbitalSearchVM = orbitalSearchVM;
 
             this.orbitalElementsAccessor = orbitalElementsAccessor;
             Target = new InputTarget(Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Latitude), Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Longitude), profileService.ActiveProfile.AstrometrySettings.Horizon);
@@ -85,7 +86,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
 
             WeakEventManager<IProfileService, EventArgs>.AddHandler(profileService, nameof(profileService.LocationChanged), ProfileService_LocationChanged);
             WeakEventManager<IProfileService, EventArgs>.AddHandler(profileService, nameof(profileService.HorizonChanged), ProfileService_HorizonChanged);
-            WeakEventManager<IOrbitalSearchVM, PropertyChangedEventArgs>.AddHandler(OrbitalSearchVM, nameof(OrbitalSearchVM.PropertyChanged), OrbitalSearchVM_PropertyChanged);
+            WeakEventManager<INotifyPropertyChanged, PropertyChangedEventArgs>.AddHandler(orbitalSearchVM, nameof(orbitalSearchVM.PropertyChanged), OrbitalSearchVM_PropertyChanged);
             WeakEventManager<IOrbitalElementsAccessor, OrbitalElementsObjectTypeUpdatedEventArgs>.AddHandler(orbitalElementsAccessor, nameof(orbitalElementsAccessor.Updated), OrbitalElementsAccessor_Updated);
         }
 
