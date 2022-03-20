@@ -44,7 +44,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             public DateTime LastModified { get; private set; }
 
             public static OrbitalElementsBackend Create(OrbitalObjectTypeEnum objectType, DateTime lastModified, IEnumerable<OrbitalElements> objects, CancellationToken ct) {
-                var lookup = new TrigramStringMap<OrbitalElements>();
+                var lookup = new TrigramStringMap<OrbitalElements>(objectType.ToString());
                 lookup.AddRange(o => o.Name, objects);
                 return new OrbitalElementsBackend(objectType, lastModified, lookup);
             }

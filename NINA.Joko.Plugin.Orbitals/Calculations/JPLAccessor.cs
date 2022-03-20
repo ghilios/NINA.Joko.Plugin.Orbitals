@@ -392,7 +392,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         public async Task<JPLVectorTable> GetJWSTVectorTable(DateTime asof, TimeSpan lookahead) {
             var startDate = asof - TimeSpan.FromHours(1);
             var endDate = asof + lookahead;
-            var queryString = $"https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND='JWST'&OBJ_DATA='NO'&MAKE_EPHEM='YES'&EPHEM_TYPE='VECTOR'&CENTER='500@399'&START_TIME='{startDate}'&STOP_TIME='{endDate}'&STEP_SIZE='1%20h'&QUANTITIES='1'&OUT_UNITS='AU-D'";
+            var queryString = $"https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND='JWST'&OBJ_DATA='NO'&MAKE_EPHEM='YES'&EPHEM_TYPE='VECTOR'&CENTER='500@399'&START_TIME='{startDate.ToString(CultureInfo.InvariantCulture)}'&STOP_TIME='{endDate.ToString(CultureInfo.InvariantCulture)}'&STEP_SIZE='1%20h'&QUANTITIES='1'&OUT_UNITS='AU-D'";
             using (var client = new HttpClient()) {
                 var data = await client.GetStringAsync(queryString);
                 var startOfEntry = "$$SOE";

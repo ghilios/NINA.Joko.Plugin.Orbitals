@@ -10,27 +10,35 @@
 
 #endregion "copyright"
 
+using NINA.Core.Utility;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data.Linq;
 using System.Data.SQLite;
+using System.Threading;
 
 namespace NINA.Joko.Plugin.Orbitals.Utility {
 
     public class TrigramStringMap<T> : IDisposable, IEnumerable<T> where T : class {
+        private static int last_db_id = 0;
+        private readonly int db_id;
         private bool disposed;
         private readonly SQLiteConnection connection;
+        private readonly string tableName;
         private List<T> backend;
 
-        public TrigramStringMap() {
+        public TrigramStringMap(string name) {
             backend = new List<T>();
+            this.db_id = Interlocked.Increment(ref last_db_id);
+            this.tableName = $"{name}{db_id}";
             var connectionStringBuilder = new SQLiteConnectionStringBuilder { DataSource = ":memory:" };
             connection = new SQLiteConnection(connectionStringBuilder.ToString());
             connection.Open();
             connection.EnableExtensions(true);
             connection.LoadExtension("SQLite.Interop.dll", "sqlite3_fts5_init");
-            using (var command = new SQLiteCommand(@"CREATE VIRTUAL TABLE values_table USING FTS5(key, tokenize=""trigram"");", connection)) {
+            var commandText = string.Format(@"CREATE VIRTUAL TABLE {0} USING FTS5(key, tokenize=""trigram"");", tableName);
+            using (var command = new SQLiteCommand(commandText, connection)) {
                 command.ExecuteNonQuery();
             }
         }
@@ -40,7 +48,8 @@ namespace NINA.Joko.Plugin.Orbitals.Utility {
         }
 
         public void Add(string key, T value) {
-            using (var insertCommand = new SQLiteCommand(@"INSERT INTO values_table(rowid, key) VALUES (?, ?)", connection)) {
+            var commandText = string.Format(@"INSERT INTO {0}(rowid, key) VALUES (?, ?)", tableName);
+            using (var insertCommand = new SQLiteCommand(commandText, connection)) {
                 insertCommand.Parameters.AddWithValue(null, backend.Count);
                 insertCommand.Parameters.AddWithValue(null, key);
                 insertCommand.ExecuteNonQuery();
@@ -49,8 +58,9 @@ namespace NINA.Joko.Plugin.Orbitals.Utility {
         }
 
         public void AddRange(Func<T, string> keyGetter, IEnumerable<T> values) {
+            var commandText = string.Format(@"INSERT INTO {0}(rowid, key) VALUES (?, ?)", tableName);
             using (var transaction = connection.BeginTransaction())
-            using (var insertCommand = new SQLiteCommand(@"INSERT INTO values_table(rowid, key) VALUES (?, ?)", connection)) {
+            using (var insertCommand = new SQLiteCommand(commandText, connection)) {
                 var rowIdParameter = insertCommand.CreateParameter();
                 var valueParameter = insertCommand.CreateParameter();
                 insertCommand.Parameters.AddRange(new SQLiteParameter[] { rowIdParameter, valueParameter });
@@ -61,11 +71,14 @@ namespace NINA.Joko.Plugin.Orbitals.Utility {
                     insertCommand.ExecuteNonQuery();
                     backend.Add(value);
                 }
+
+                transaction.Commit();
             }
         }
 
         public IList<T> Query(string key, int? limit) {
-            using (var queryCommand = new SQLiteCommand("SELECT rowid FROM values_table WHERE key MATCH ? LIMIT ?", connection)) {
+            var commandText = string.Format(@"SELECT rowid FROM {0} WHERE key MATCH ? LIMIT ?", tableName);
+            using (var queryCommand = new SQLiteCommand(commandText, connection)) {
                 queryCommand.Parameters.AddWithValue(null, key);
                 queryCommand.Parameters.AddWithValue(null, limit ?? int.MaxValue);
                 using (var resultReader = queryCommand.ExecuteReader()) {
@@ -84,7 +97,8 @@ namespace NINA.Joko.Plugin.Orbitals.Utility {
         }
 
         public T Lookup(string key) {
-            using (var queryCommand = new SQLiteCommand(@"SELECT rowid FROM values_table WHERE key MATCH ? LIMIT 2", connection)) {
+            var commandText = string.Format(@"SELECT rowid FROM {0} WHERE key MATCH ? LIMIT 2", tableName);
+            using (var queryCommand = new SQLiteCommand(commandText, connection)) {
                 queryCommand.Parameters.AddWithValue(null, key);
                 using (var resultReader = queryCommand.ExecuteReader()) {
                     if (!resultReader.HasRows) {
@@ -105,7 +119,8 @@ namespace NINA.Joko.Plugin.Orbitals.Utility {
         }
 
         public List<string> QueryMatchingKeys(string key, int? limit) {
-            using (var queryCommand = new SQLiteCommand(@"SELECT key FROM values_table WHERE key MATCH ? LIMIT ?", connection)) {
+            var commandText = string.Format(@"SELECT key FROM {0} WHERE key MATCH ? LIMIT ?", tableName);
+            using (var queryCommand = new SQLiteCommand(commandText, connection)) {
                 queryCommand.Parameters.AddWithValue(null, key);
                 queryCommand.Parameters.AddWithValue(null, limit ?? int.MaxValue);
                 using (var resultReader = queryCommand.ExecuteReader()) {
@@ -127,6 +142,14 @@ namespace NINA.Joko.Plugin.Orbitals.Utility {
         protected virtual void Dispose(bool disposing) {
             if (!disposed) {
                 if (disposing) {
+                    try {
+                        using (var dropTableCommand = new SQLiteCommand($"DROP TABLE IF EXISTS {tableName}", connection)) {
+                            dropTableCommand.ExecuteNonQuery();
+                        }
+                    } catch (Exception e) {
+                        Logger.Error($"Failed to drop {tableName}", e);
+                    }
+
                     backend = null;
                     connection.Close();
                 }
