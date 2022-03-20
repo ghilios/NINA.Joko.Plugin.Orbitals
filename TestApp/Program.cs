@@ -21,6 +21,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using static NINA.Joko.Plugin.Orbitals.Calculations.Kepler;
 
@@ -103,6 +104,7 @@ namespace TestApp {
             }
             */
 
+            /*
             var stopWatch = new Stopwatch();
             stopWatch.Start();
             var path = @"C:\Users\ghili\AppData\Local\NINA\OrbitalElements\NumberedAsteroidsElements.bin.gz";
@@ -115,6 +117,14 @@ namespace TestApp {
             }
             stopWatch.Stop();
             Console.WriteLine($"Elapsed: {stopWatch.Elapsed}");
+            */
+
+            var jplAccessor = new JPLAccessor();
+            var jwstTable = await jplAccessor.GetJWSTVectorTable(DateTime.Now, TimeSpan.FromDays(7));
+            var vectorTable = jwstTable.ToPVTable();
+            var orbitalElementsAccessor = new OrbitalElementsAccessor();
+            var orbitalPV = orbitalElementsAccessor.GetPVFromTable(DateTime.Now, vectorTable);
+            Console.WriteLine();
         }
     }
 }

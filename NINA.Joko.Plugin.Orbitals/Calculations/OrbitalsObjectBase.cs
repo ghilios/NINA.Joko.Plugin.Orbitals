@@ -74,6 +74,11 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             return pv;
         }
 
+        public virtual void Update() {
+            this.UpdateHorizonAndTransit();
+            RaiseAllPropertiesChanged();
+        }
+
         protected abstract OrbitalPositionVelocity CalculateObjectPosition(DateTime at);
 
         protected override void UpdateHorizonAndTransit() {

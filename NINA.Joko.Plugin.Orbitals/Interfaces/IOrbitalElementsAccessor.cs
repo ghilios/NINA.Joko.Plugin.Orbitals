@@ -27,6 +27,11 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
         public DateTime LastUpdated { get; set; }
     }
 
+    public class VectorTableUpdatedEventArgs : EventArgs {
+        public string Name { get; set; }
+        public DateTime ValidUntil { get; set; }
+    }
+
     public class OrbitalPositionVelocity {
 
         public static readonly OrbitalPositionVelocity NotSet = new OrbitalPositionVelocity(
@@ -77,6 +82,16 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
 
         OrbitalPositionVelocity GetObjectPV(DateTime asof, OrbitalElements orbitalElements);
 
+        OrbitalPositionVelocity GetPVFromTable(DateTime asof, PVTable vectorTable);
+
+        Task UpdateJWST(PVTable pvTable, IProgress<ApplicationStatus> progress, CancellationToken ct);
+
+        PVTable GetJWSTVectorTable();
+
+        DateTime GetJWSTValidUntil();
+
         event EventHandler<OrbitalElementsObjectTypeUpdatedEventArgs> Updated;
+
+        event EventHandler<VectorTableUpdatedEventArgs> VectorTableUpdated;
     }
 }

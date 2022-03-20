@@ -92,6 +92,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             this.OrbitalSearchVM = orbitalSearchVM;
             this.progress = ProgressFactory.Create(applicationStatusMediator, "Orbitals");
             this.orbitalElementsAccessor.Updated += OrbitalElementsAccessor_Updated;
+            this.orbitalElementsAccessor.VectorTableUpdated += OrbitalElementsAccessor_VectorTableUpdated;
             var initialLoadCts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
             _ = Task.Run(async () => {
                 try {
@@ -105,10 +106,12 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             this.UpdateCometElementsCommand = new AsyncCommand<bool>(UpdateCometElements, (o) => initialLoadComplete);
             this.UpdateNumberedAsteroidElementsCommand = new AsyncCommand<bool>(UpdateNumberedAsteroids, (o) => initialLoadComplete);
             this.UpdateUnnumberedAsteroidElementsCommand = new AsyncCommand<bool>(UpdateUnnumberedAsteroids, (o) => initialLoadComplete);
+            this.UpdateJWSTVectorTableCommand = new AsyncCommand<bool>(UpdateJWSTVectorTable, (o) => initialLoadComplete);
 
             this.CancelUpdateCometElementsCommand = new AsyncCommand<bool>(o => CancelUpdateElements(updateCometElementsTask, updateCometElementsCts));
             this.CancelUpdateNumberedAsteroidElementsCommand = new AsyncCommand<bool>(o => CancelUpdateElements(updateNumberedAsteroidsTask, updateNumberedAsteroidsCts));
             this.CancelUpdateUnnumberedAsteroidElementsCommand = new AsyncCommand<bool>(o => CancelUpdateElements(updateUnnumberedAsteroidsTask, updateUnnumberedAsteroidsCts));
+            this.CancelUpdateJWSTVectorTableCommand = new AsyncCommand<bool>(o => CancelUpdateElements(updateJWSTVectorTableTask, updateJWSTVectorTableCts));
             this.LoadSelectionCommand = new RelayCommand(LoadSelection, CanLoad);
 
             this.SendToFramingWizardCommand = new AsyncCommand<bool>(SendToFramingWizardCommandAction, o => SelectedOrbitalsObject != null);
@@ -185,6 +188,10 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             }
         }
 
+        private void OrbitalElementsAccessor_VectorTableUpdated(object sender, VectorTableUpdatedEventArgs e) {
+            JWSTVectorTableValidUntil = e.ValidUntil;
+        }
+
         private DateTime cometLastUpdated;
 
         public DateTime CometLastUpdated {
@@ -211,6 +218,16 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             get => unnumberedAsteroidLastUpdated;
             private set {
                 unnumberedAsteroidLastUpdated = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        private DateTime jwstVectorTableValidUntil;
+
+        public DateTime JWSTVectorTableValidUntil {
+            get => jwstVectorTableValidUntil;
+            private set {
+                jwstVectorTableValidUntil = value;
                 RaisePropertyChanged();
             }
         }
@@ -333,6 +350,10 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
         public ICommand UpdateUnnumberedAsteroidElementsCommand { get; private set; }
 
+        public ICommand CancelUpdateJWSTVectorTableCommand { get; private set; }
+
+        public ICommand UpdateJWSTVectorTableCommand { get; private set; }
+
         public ICommand LoadSelectionCommand { get; private set; }
 
         public ICommand SlewCommand { get; private set; }
@@ -354,9 +375,14 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private Task<bool> updateUnnumberedAsteroidsTask;
         private CancellationTokenSource updateUnnumberedAsteroidsCts;
 
+        private Task<bool> updateJWSTVectorTableTask;
+        private CancellationTokenSource updateJWSTVectorTableCts;
+
         private bool CanLoad(object o) {
             if (SearchObjectType == SearchObjectTypeEnum.SolarSystemBody) {
                 return true;
+            } else if (SearchObjectType == SearchObjectTypeEnum.JWST) {
+                return orbitalElementsAccessor.GetJWSTValidUntil() > DateTime.MinValue;
             } else {
                 return OrbitalSearchVM.SelectedOrbitalElements != null;
             }
@@ -368,6 +394,8 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 NighttimeData = nighttimeCalculator.Calculate();
                 if (objectType == SearchObjectTypeEnum.SolarSystemBody) {
                     LoadSolarSystemObject(SelectedSolarSystemBody);
+                } else if (objectType == SearchObjectTypeEnum.JWST) {
+                    LoadJWST();
                 } else {
                     LoadOrbitalObject(OrbitalSearchVM.SelectedOrbitalElements);
                 }
@@ -379,6 +407,18 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 Notification.ShowError($"Failed to load {objectType}. {e.Message}");
                 Logger.Error($"Failed to load {objectType}", e);
             }
+        }
+
+        private void LoadJWST() {
+            var jwstValidUntil = orbitalElementsAccessor.GetJWSTValidUntil();
+            if (jwstValidUntil < DateTime.Now) {
+                Notification.ShowError("JWST vector table expired");
+                return;
+            }
+
+            var pvTableObject = new PVTableObject(orbitalElementsAccessor, "James-Webb Space Telescope", profileService.ActiveProfile.AstrometrySettings.Horizon);
+            pvTableObject.SetDateAndPosition(NighttimeCalculator.GetReferenceDate(DateTime.Now), latitude: profileService.ActiveProfile.AstrometrySettings.Latitude, longitude: profileService.ActiveProfile.AstrometrySettings.Longitude);
+            SelectedOrbitalsObject = pvTableObject;
         }
 
         private void LoadOrbitalObject(Kepler.OrbitalElements orbitalElements) {
@@ -395,6 +435,32 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             var bodyObject = new SolarSystemBodyObject(orbitalElementsAccessor, solarSystemBody, profileService.ActiveProfile.AstrometrySettings.Horizon);
             bodyObject.SetDateAndPosition(NighttimeCalculator.GetReferenceDate(DateTime.Now), latitude: profileService.ActiveProfile.AstrometrySettings.Latitude, longitude: profileService.ActiveProfile.AstrometrySettings.Longitude);
             SelectedOrbitalsObject = bodyObject;
+        }
+
+        public Task<bool> UpdateJWSTVectorTable(object o) {
+            if (updateJWSTVectorTableTask != null && !updateJWSTVectorTableTask.IsCompleted) {
+                Logger.Error("Update already in progress");
+                return Task.FromResult(false);
+            }
+
+            var cts = new CancellationTokenSource();
+            updateJWSTVectorTableCts = cts;
+
+            var task = Task.Run(async () => {
+                try {
+                    var vectorTable = await jplAccessor.GetJWSTVectorTable(DateTime.Now - TimeSpan.FromDays(1), TimeSpan.FromDays(7));
+                    await orbitalElementsAccessor.UpdateJWST(vectorTable.ToPVTable(), progress, cts.Token);
+                    return true;
+                } catch (OperationCanceledException) {
+                    return false;
+                } catch (Exception e) {
+                    Logger.Error("Failed to update JWST vector table", e);
+                    Notification.ShowError($"Failed to update JWST vector table. {e.Message}");
+                    return false;
+                }
+            }, cts.Token);
+            updateJWSTVectorTableTask = task;
+            return task;
         }
 
         public Task<bool> UpdateCometElements(object o) {
@@ -425,7 +491,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                     Notification.ShowError($"Failed to update comet elements. {e.Message}");
                     return false;
                 }
-            }, updateCometElementsCts.Token);
+            }, cts.Token);
             updateCometElementsTask = task;
             return task;
         }
@@ -458,7 +524,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                     Notification.ShowError($"Failed to update comet elements. {e.Message}");
                     return false;
                 }
-            }, updateNumberedAsteroidsCts.Token);
+            }, cts.Token);
             updateNumberedAsteroidsTask = task;
             return task;
         }
@@ -491,7 +557,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                     Notification.ShowError($"Failed to update comet elements. {e.Message}");
                     return false;
                 }
-            }, updateUnnumberedAsteroidsCts.Token);
+            }, cts.Token);
             updateUnnumberedAsteroidsTask = task;
             return task;
         }

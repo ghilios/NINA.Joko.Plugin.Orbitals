@@ -16,6 +16,7 @@ using NINA.Astrometry;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -99,6 +100,36 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         }
     }
 
+    public class JPLVectorTableRow {
+        public double epochJd { get; set; }
+        public RectangularPV positionVelocity { get; set; }
+    }
+
+    public class JPLVectorTable {
+
+        public JPLVectorTable(string name) {
+            this.name = name;
+        }
+
+        public string name { get; private set; }
+
+        public List<JPLVectorTableRow> rows { get; private set; } = new List<JPLVectorTableRow>();
+
+        public PVTable ToPVTable() {
+            return new PVTable(name) {
+                Rows = rows.Select(r => new PVTableRow() {
+                    Epoch_jd = r.epochJd,
+                    X = r.positionVelocity.Position.X,
+                    Y = r.positionVelocity.Position.Y,
+                    Z = r.positionVelocity.Position.Z,
+                    VelocityX = r.positionVelocity.Velocity.X,
+                    VelocityY = r.positionVelocity.Velocity.Y,
+                    VelocityZ = r.positionVelocity.Velocity.Z,
+                }).ToList()
+            };
+        }
+    }
+
     public class JPLParseErrorDetail {
         public int RecordNumber { get; set; }
         public string ColumnName { get; set; }
@@ -152,6 +183,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                 mapper.Property(x => x.ref_, Window.Trailing);
                 var options = new FixedLengthOptions() {
                     IsFirstRecordHeader = false,
+                    FormatProvider = CultureInfo.InvariantCulture
                 };
                 var recordReader = mapper.GetReader(streamReader, options);
                 recordReader.ColumnError += (sender, e) => {
@@ -212,6 +244,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                 mapper.Property(x => x.ref_, Window.Trailing);
                 var options = new FixedLengthOptions() {
                     IsFirstRecordHeader = false,
+                    FormatProvider = CultureInfo.InvariantCulture
                 };
                 var recordReader = mapper.GetReader(streamReader, options);
                 recordReader.ColumnError += (sender, e) => {
@@ -276,6 +309,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                 mapper.Property(x => x.ref_, Window.Trailing);
                 var options = new FixedLengthOptions() {
                     IsFirstRecordHeader = false,
+                    FormatProvider = CultureInfo.InvariantCulture
                 };
                 var recordReader = mapper.GetReader(streamReader, options);
                 recordReader.ColumnError += (sender, e) => {
@@ -353,6 +387,64 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
         public Task<JPLUnnumberedAsteroidResponse> GetUnnumberedAsteroidElements() {
             return JPLUnnumberedAsteroidResponse.GetFromHttpUri(unnumbered_asteroids_url);
+        }
+
+        public async Task<JPLVectorTable> GetJWSTVectorTable(DateTime asof, TimeSpan lookahead) {
+            var startDate = asof - TimeSpan.FromHours(1);
+            var endDate = asof + lookahead;
+            var queryString = $"https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND='JWST'&OBJ_DATA='NO'&MAKE_EPHEM='YES'&EPHEM_TYPE='VECTOR'&CENTER='500@399'&START_TIME='{startDate}'&STOP_TIME='{endDate}'&STEP_SIZE='1%20h'&QUANTITIES='1'&OUT_UNITS='AU-D'";
+            using (var client = new HttpClient()) {
+                var data = await client.GetStringAsync(queryString);
+                var startOfEntry = "$$SOE";
+                var endOfEntry = "$$EOE";
+
+                var startOfEntryIndex = data.IndexOf(startOfEntry);
+                if (startOfEntryIndex < 0) {
+                    throw new Exception($"Response from JPL horizons did not contain the expected $$SOE marker");
+                }
+
+                var endOfEntryIndex = data.IndexOf(endOfEntry, startOfEntryIndex);
+                if (endOfEntryIndex < 0) {
+                    throw new Exception($"Response from JPL horizons did not contain the expected $$EOE marker");
+                }
+
+                var result = new JPLVectorTable("JWST");
+                var entryText = data.Substring(startOfEntryIndex + startOfEntry.Length, endOfEntryIndex - startOfEntryIndex - startOfEntry.Length).Trim();
+                var formatProvider = CultureInfo.InvariantCulture;
+                using (var sr = new StringReader(entryText)) {
+                    string firstLine;
+                    while ((firstLine = sr.ReadLine()) != null) {
+                        var firstLineParts = firstLine.Split('=');
+                        var epochJd = Convert.ToDouble(firstLineParts[0], formatProvider);
+                        var secondLine = sr.ReadLine();
+                        var xIndex = secondLine.IndexOf("X =");
+                        var yIndex = secondLine.IndexOf("Y =");
+                        var zIndex = secondLine.IndexOf("Z =");
+                        var x = Convert.ToDouble(secondLine.Substring(xIndex + 3, yIndex - xIndex - 3), formatProvider);
+                        var y = Convert.ToDouble(secondLine.Substring(yIndex + 3, zIndex - yIndex - 3), formatProvider);
+                        var z = Convert.ToDouble(secondLine.Substring(zIndex + 3), formatProvider);
+
+                        var thirdLine = sr.ReadLine();
+                        var vxIndex = thirdLine.IndexOf("VX=");
+                        var vyIndex = thirdLine.IndexOf("VY=");
+                        var vzIndex = thirdLine.IndexOf("VZ=");
+                        var vx = Convert.ToDouble(thirdLine.Substring(vxIndex + 3, vyIndex - vxIndex - 3), formatProvider);
+                        var vy = Convert.ToDouble(thirdLine.Substring(vyIndex + 3, vzIndex - vyIndex - 3), formatProvider);
+                        var vz = Convert.ToDouble(thirdLine.Substring(vzIndex + 3), formatProvider);
+
+                        // Ignore the 3rd line
+                        _ = sr.ReadLine();
+
+                        var position = new RectangularCoordinates(x, y, z);
+                        var velocity = new RectangularCoordinates(vx, vy, vz);
+                        result.rows.Add(new JPLVectorTableRow() {
+                            epochJd = epochJd,
+                            positionVelocity = new RectangularPV(position, velocity)
+                        });
+                    }
+                    return result;
+                }
+            }
         }
 
         /// <summary>

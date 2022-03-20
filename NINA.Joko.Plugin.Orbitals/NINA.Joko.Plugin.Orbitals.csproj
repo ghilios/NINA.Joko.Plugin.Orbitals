@@ -385,6 +385,7 @@
     <Compile Include="Calculations\OrbitalElementsAccessor.cs" />
     <Compile Include="Calculations\OrbitalElementsObject.cs" />
     <Compile Include="Calculations\OrbitalsObjectBase.cs" />
+    <Compile Include="Calculations\PVTableObject.cs" />
     <Compile Include="Calculations\SolarSystemBodyObject.cs" />
     <Compile Include="Converters\DateTimeMinToNeverConverter.cs" />
     <Compile Include="Converters\EnumStaticDescriptionValueConverter.cs" />
@@ -398,6 +399,7 @@
     <Compile Include="Interfaces\IOrbitalsOptions.cs" />
     <Compile Include="SequenceItems\SetTelescopeShiftRateTrigger.cs" />
     <Compile Include="SequenceItems\SetTelescopeShiftRate.cs" />
+    <Compile Include="SequenceItems\JWSTContainer.cs" />
     <Compile Include="SequenceItems\StopGuiderShift.cs" />
     <Compile Include="SequenceItems\SetGuiderShiftRate.cs" />
     <Compile Include="SequenceItems\SetGuiderShiftRateTrigger.cs" />
@@ -407,6 +409,7 @@
     </Compile>
     <Compile Include="SequenceItems\OrbitalObjectContainer.cs" />
     <Compile Include="Utility\EnumExtensions.cs" />
+    <Compile Include="Utility\ListExtensions.cs" />
     <Compile Include="Utility\TrigramStringMap.cs" />
     <Compile Include="ValidationRules\PositiveIntegerRule.cs" />
     <Compile Include="ValidationRules\PositiveIntegerOrInfiniteRule.cs" />

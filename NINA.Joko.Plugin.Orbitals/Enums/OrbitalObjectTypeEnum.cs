@@ -25,6 +25,6 @@ namespace NINA.Joko.Plugin.Orbitals.Enums {
         NumberedAsteroids = 2,
 
         [Description("Un-numbered Asteroids")]
-        UnnumberedAsteroids = 3
+        UnnumberedAsteroids = 3,
     }
 }

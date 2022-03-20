@@ -29,5 +29,7 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
         Task<JPLNumberedAsteroidResponse> GetNumberedAsteroidElements();
 
         Task<JPLUnnumberedAsteroidResponse> GetUnnumberedAsteroidElements();
+
+        Task<JPLVectorTable> GetJWSTVectorTable(DateTime asof, TimeSpan lookahead);
     }
 }

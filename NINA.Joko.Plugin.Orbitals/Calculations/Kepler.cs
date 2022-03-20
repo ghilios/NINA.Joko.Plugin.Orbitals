@@ -13,6 +13,7 @@
 using NINA.Astrometry;
 using ProtoBuf;
 using System;
+using System.Collections.Generic;
 
 namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
@@ -99,6 +100,61 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
             public override string ToString() {
                 return $"{{{nameof(Name)}={Name}, {nameof(PrimaryGravitationalParameter)}={PrimaryGravitationalParameter}, {nameof(SecondaryGravitationalParameter)}={SecondaryGravitationalParameter}, {nameof(Epoch_jd)}={Epoch_jd.ToString()}, {nameof(q_Perihelion_au)}={q_Perihelion_au.ToString()}, {nameof(e_Eccentricity)}={e_Eccentricity.ToString()}, {nameof(i_Inclination_rad)}={i_Inclination_rad.ToString()}, {nameof(w_ArgOfPerihelion_rad)}={w_ArgOfPerihelion_rad.ToString()}, {nameof(node_LongitudeOfAscending_rad)}={node_LongitudeOfAscending_rad.ToString()}, {nameof(tp_PeriapsisTime_jd)}={tp_PeriapsisTime_jd.ToString()}, {nameof(M_MeanAnomalyAtEpoch)}={M_MeanAnomalyAtEpoch.ToString()}, {nameof(a_SemiMajorAxis_au)}={a_SemiMajorAxis_au.ToString()}}}";
+            }
+        }
+
+        [ProtoContract]
+        public class PVTableRow {
+
+            [ProtoMember(1)]
+            public double Epoch_jd { get; set; }
+
+            [ProtoMember(2)]
+            public double X { get; set; }
+
+            [ProtoMember(3)]
+            public double Y { get; set; }
+
+            [ProtoMember(4)]
+            public double Z { get; set; }
+
+            [ProtoMember(5)]
+            public double VelocityX { get; set; }
+
+            [ProtoMember(6)]
+            public double VelocityY { get; set; }
+
+            [ProtoMember(7)]
+            public double VelocityZ { get; set; }
+
+            public RectangularCoordinates GetPosition() {
+                return new RectangularCoordinates(X, Y, Z);
+            }
+
+            public RectangularCoordinates GetVelocity() {
+                return new RectangularCoordinates(VelocityX, VelocityY, VelocityZ);
+            }
+
+            public override string ToString() {
+                return $"{{{nameof(Epoch_jd)}={Epoch_jd.ToString()}, {nameof(X)}={X.ToString()}, {nameof(Y)}={Y.ToString()}, {nameof(Z)}={Z.ToString()}, {nameof(VelocityX)}={VelocityX.ToString()}, {nameof(VelocityY)}={VelocityY.ToString()}, {nameof(VelocityZ)}={VelocityZ.ToString()}}}";
+            }
+        }
+
+        [ProtoContract(SkipConstructor = true)]
+        public class PVTable {
+
+            public PVTable(string name) {
+                this.Name = name;
+            }
+
+            [ProtoMember(1)]
+            public string Name { get; private set; }
+
+            [ProtoMember(2)]
+            public List<PVTableRow> Rows { get; set; }
+
+            public override string ToString() {
+                return $"{{{nameof(Name)}={Name}, {nameof(Rows)}={Rows}}}";
             }
         }
 

@@ -28,41 +28,37 @@ using NINA.Sequencer.Trigger;
 using NINA.Sequencer.Conditions;
 using NINA.Joko.Plugin.Orbitals.Calculations;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
-using NINA.Joko.Plugin.Orbitals.Enums;
-using NINA.Joko.Plugin.Orbitals.ViewModels;
 using System.Threading;
 using NINA.Core.Utility.Notification;
 using NINA.Core.Utility;
-using System.ComponentModel;
-using NINA.Joko.Plugin.Orbitals.Utility;
 
 namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
 
-    [ExportMetadata("Name", "Orbital Object Sequence")]
-    [ExportMetadata("Description", "Works like a sequential instruction set, but a comet, asteroid, or other object with orbital elements can be specified inside. These don't track at the sidereal rate, so their coordinates are constantly updated.")]
-    [ExportMetadata("Icon", "CometSVG")]
+    [ExportMetadata("Name", "James-Webb Space Telescope Sequence")]
+    [ExportMetadata("Description", "Works like a sequential instruction set, but tracks the JWST. It does't track at the sidereal rate, so its coordinates are constantly updated.")]
+    [ExportMetadata("Icon", "JWSTSVG")]
     [ExportMetadata("Category", "Lbl_SequenceCategory_Container")]
     [Export(typeof(ISequenceItem))]
     [Export(typeof(ISequenceContainer))]
     [JsonObject(MemberSerialization.OptIn)]
-    public class OrbitalObjectContainer : SequenceContainer, IDeepSkyObjectContainer {
+    public class JWSTContainer : SequenceContainer, IDeepSkyObjectContainer {
         private readonly IProfileService profileService;
         private readonly IApplicationMediator applicationMediator;
         private readonly IOrbitalElementsAccessor orbitalElementsAccessor;
         private readonly IOrbitalsOptions orbitalsOptions;
-        private readonly INighttimeCalculator nighttimeCalculator;
         private readonly Task coordinateUpdateTask;
         private readonly CancellationTokenSource coordinateUpdateCts;
+        private INighttimeCalculator nighttimeCalculator;
         private InputTarget target;
 
         [ImportingConstructor]
-        public OrbitalObjectContainer(
+        public JWSTContainer(
             IProfileService profileService,
             INighttimeCalculator nighttimeCalculator,
             IApplicationMediator applicationMediator) : this(profileService, nighttimeCalculator, applicationMediator, OrbitalsPlugin.OrbitalElementsAccessor, OrbitalsPlugin.OrbitalsOptions) {
         }
 
-        public OrbitalObjectContainer(
+        public JWSTContainer(
             IProfileService profileService,
             INighttimeCalculator nighttimeCalculator,
             IApplicationMediator applicationMediator,
@@ -73,11 +69,10 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             this.applicationMediator = applicationMediator;
             this.orbitalsOptions = orbitalsOptions;
             _ = Task.Run(() => NighttimeData = nighttimeCalculator.Calculate());
-            this.OrbitalSearchVM = new OrbitalSearchVM(orbitalElementsAccessor);
-
             this.orbitalElementsAccessor = orbitalElementsAccessor;
+
             Target = new InputTarget(Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Latitude), Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Longitude), profileService.ActiveProfile.AstrometrySettings.Horizon);
-            Target.DeepSkyObject = new OrbitalElementsObject(orbitalElementsAccessor, null, profileService.ActiveProfile.AstrometrySettings.Horizon);
+            Target.DeepSkyObject = new PVTableObject(orbitalElementsAccessor, "James-Webb Space Telescope", profileService.ActiveProfile.AstrometrySettings.Horizon);
             Target.DeepSkyObject.SetDateAndPosition(NighttimeCalculator.GetReferenceDate(DateTime.Now), latitude: profileService.ActiveProfile.AstrometrySettings.Latitude, longitude: profileService.ActiveProfile.AstrometrySettings.Longitude);
 
             coordinateUpdateCts = new CancellationTokenSource();
@@ -85,82 +80,18 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
 
             WeakEventManager<IProfileService, EventArgs>.AddHandler(profileService, nameof(profileService.LocationChanged), ProfileService_LocationChanged);
             WeakEventManager<IProfileService, EventArgs>.AddHandler(profileService, nameof(profileService.HorizonChanged), ProfileService_HorizonChanged);
-            WeakEventManager<IOrbitalSearchVM, PropertyChangedEventArgs>.AddHandler(OrbitalSearchVM, nameof(OrbitalSearchVM.PropertyChanged), OrbitalSearchVM_PropertyChanged);
-            WeakEventManager<IOrbitalElementsAccessor, OrbitalElementsObjectTypeUpdatedEventArgs>.AddHandler(orbitalElementsAccessor, nameof(orbitalElementsAccessor.Updated), OrbitalElementsAccessor_Updated);
+            WeakEventManager<IOrbitalElementsAccessor, VectorTableUpdatedEventArgs>.AddHandler(this.orbitalElementsAccessor, nameof(this.orbitalElementsAccessor.VectorTableUpdated), OrbitalElementsAccessor_VectorTableUpdated);
         }
 
-        private void OrbitalElementsAccessor_Updated(object sender, OrbitalElementsObjectTypeUpdatedEventArgs e) {
+        private void OrbitalElementsAccessor_VectorTableUpdated(object sender, VectorTableUpdatedEventArgs e) {
             try {
-                if (e.ObjectType == OrbitalSearchVM.ObjectType) {
-                    TargetObject.Update();
-                    RefreshCoordinates();
-                }
-            } catch (Exception ex) {
-                Notification.ShowError($"Failed to reload {e.ObjectType.ToDescriptionString()} data in advanced sequencer after update. {ex.Message}");
-                Logger.Error($"Failed to reload {e.ObjectType} data in advanced sequencer after update", ex);
-            }
-        }
-
-        private void OrbitalSearchVM_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e) {
-            if (e.PropertyName == nameof(OrbitalSearchVM.SelectedOrbitalElements)) {
-                TargetObject.OrbitalElements = OrbitalSearchVM.SelectedOrbitalElements;
-                var targetName = TargetObject.OrbitalElements.Name;
-                Target.TargetName = targetName;
-                Name = targetName;
-                RaisePropertyChanged(nameof(SelectedOrbitalName));
+                TargetObject.Update();
                 RefreshCoordinates();
+            } catch (Exception ex) {
+                Notification.ShowError($"Failed to reload JWST data in advanced sequencer after update. {ex.Message}");
+                Logger.Error("Failed to reload JWST data in advanced sequencer after update", ex);
             }
         }
-
-        public OrbitalObjectTypeEnum ObjectType {
-            get => OrbitalSearchVM.ObjectType;
-            set {
-                if (OrbitalSearchVM.ObjectType != value) {
-                    OrbitalSearchVM.ObjectType = value;
-                    RaisePropertyChanged();
-                }
-            }
-        }
-
-        [JsonProperty]
-        public string SelectedOrbitalName {
-            get => TargetObject.OrbitalElements?.Name;
-            set {
-                var currentName = TargetObject.OrbitalElements?.Name;
-                if (currentName != value) {
-                    string targetName = OrbitalElementsObject.NotSetName;
-                    if (string.IsNullOrEmpty(value)) {
-                        TargetObject.OrbitalElements = null;
-                        OrbitalSearchVM.SetTargetNameWithoutSearch("");
-                    } else {
-                        try {
-                            var orbitalElements = orbitalElementsAccessor.Get(ObjectType, value);
-                            if (orbitalElements != null) {
-                                TargetObject.OrbitalElements = orbitalElements;
-                                targetName = TargetObject.OrbitalElements.Name;
-                                OrbitalSearchVM.SetTargetNameWithoutSearch(targetName);
-                            } else {
-                                TargetObject.OrbitalElements = null;
-                                OrbitalSearchVM.SetTargetNameWithoutSearch(value);
-                                Logger.Warning($"Orbital object {value}({ObjectType}) not found");
-                                Notification.ShowWarning($"Orbital object {value}({ObjectType}) not found");
-                            }
-                        } catch (Exception e) {
-                            Logger.Error($"Failed to get orbital object {value}({ObjectType})", e);
-                            Notification.ShowError($"Failed to get orbital object. {e.Message}");
-                        }
-                    }
-
-                    Target.TargetName = targetName;
-                    Name = targetName;
-
-                    RefreshCoordinates();
-                    RaisePropertyChanged();
-                }
-            }
-        }
-
-        public IOrbitalSearchVM OrbitalSearchVM { get; private set; }
 
         private async Task CoordinateUpdateLoop(CancellationToken ct) {
             while (!ct.IsCancellationRequested) {
@@ -203,7 +134,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             coordinateUpdateCts?.Cancel();
         }
 
-        private OrbitalElementsObject TargetObject => (OrbitalElementsObject)Target.DeepSkyObject;
+        private PVTableObject TargetObject => (PVTableObject)Target.DeepSkyObject;
 
         private void ProfileService_HorizonChanged(object sender, EventArgs e) {
             Target?.DeepSkyObject?.SetCustomHorizon(profileService.ActiveProfile.AstrometrySettings.Horizon);
@@ -235,7 +166,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         }
 
         public override object Clone() {
-            var clone = new OrbitalObjectContainer(profileService, nighttimeCalculator, applicationMediator) {
+            var clone = new JWSTContainer(profileService, nighttimeCalculator, applicationMediator) {
                 Icon = Icon,
                 Name = Name,
                 Category = Category,
@@ -245,7 +176,6 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
                 Conditions = new ObservableCollection<ISequenceCondition>(Conditions.Select(t => t.Clone() as ISequenceCondition))
             };
 
-            clone.TargetObject.OrbitalElements = TargetObject.OrbitalElements;
             clone.Target.Rotation = this.Target.Rotation;
 
             foreach (var item in clone.Items) {
