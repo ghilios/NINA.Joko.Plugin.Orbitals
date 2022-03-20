@@ -148,7 +148,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                 var tmpPath = path + ".temp";
                 try {
                     progress?.Report(new ApplicationStatus() {
-                        Status = $"Updating {objectType} Elements"
+                        Status = $"Updating {objectType.ToDescriptionString()} Elements"
                     });
                     var backend = OrbitalElementsBackend.Create(objectType, DateTime.Now, elements.Select(e => e.ToOrbitalElements()), ct);
                     using (var fs = new FileStream(tmpPath, FileMode.Create, FileAccess.Write, FileShare.None))
@@ -169,7 +169,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                     return;
                 } catch (Exception e) {
                     Logger.Error($"Failed to update {objectType} orbital elements", e);
-                    Notification.ShowError($"Failed to update {objectType} orbital elements. {e.Message}");
+                    Notification.ShowError($"Failed to update {objectType.ToDescriptionString()} orbital elements. {e.Message}");
                 } finally {
                     progress?.Report(new ApplicationStatus());
                 }

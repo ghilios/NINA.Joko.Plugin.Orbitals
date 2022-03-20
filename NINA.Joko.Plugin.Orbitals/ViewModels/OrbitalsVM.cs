@@ -21,6 +21,7 @@ using NINA.Equipment.Interfaces.ViewModel;
 using NINA.Joko.Plugin.Orbitals.Calculations;
 using NINA.Joko.Plugin.Orbitals.Enums;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
+using NINA.Joko.Plugin.Orbitals.Utility;
 using NINA.Profile.Interfaces;
 using NINA.WPF.Base.Interfaces.Mediator;
 using NINA.WPF.Base.Interfaces.ViewModel;
@@ -410,7 +411,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                     var availableModifiedDate = await jplAccessor.GetCometElementsLastModified();
                     var localModifiedDate = orbitalElementsAccessor.GetLastUpdated(OrbitalObjectTypeEnum.Comet);
                     if (availableModifiedDate < localModifiedDate) {
-                        Notification.ShowInformation($"{OrbitalObjectTypeEnum.Comet} elements already up to date");
+                        Notification.ShowInformation($"{OrbitalObjectTypeEnum.Comet.ToDescriptionString()} elements already up to date");
                         return true;
                     }
 
@@ -443,7 +444,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                     var availableModifiedDate = await jplAccessor.GetNumberedAsteroidsLastModified();
                     var localModifiedDate = orbitalElementsAccessor.GetLastUpdated(OrbitalObjectTypeEnum.NumberedAsteroids);
                     if (availableModifiedDate < localModifiedDate) {
-                        Notification.ShowInformation($"{OrbitalObjectTypeEnum.NumberedAsteroids} elements already up to date");
+                        Notification.ShowInformation($"{OrbitalObjectTypeEnum.NumberedAsteroids.ToDescriptionString()} elements already up to date");
                         return true;
                     }
 
@@ -476,7 +477,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                     var availableModifiedDate = await jplAccessor.GetUnnumberedAsteroidsElementsLastModified();
                     var localModifiedDate = orbitalElementsAccessor.GetLastUpdated(OrbitalObjectTypeEnum.UnnumberedAsteroids);
                     if (availableModifiedDate < localModifiedDate) {
-                        Notification.ShowInformation($"{OrbitalObjectTypeEnum.UnnumberedAsteroids} elements already up to date");
+                        Notification.ShowInformation($"{OrbitalObjectTypeEnum.UnnumberedAsteroids.ToDescriptionString()} elements already up to date");
                         return true;
                     }
 
