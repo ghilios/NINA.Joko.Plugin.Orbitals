@@ -139,8 +139,13 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         }
 
         public IEnumerable<OrbitalElements> Search(OrbitalObjectTypeEnum objectType, string searchString, int? limit = null) {
-            var backend = GetBackend(objectType);
-            return backend.Lookup.Query(searchString, limit);
+            try {
+                var backend = GetBackend(objectType);
+                return backend.Lookup.Query(searchString, limit);
+            } catch (Exception e) {
+                Logger.Error($"Failed to search using \"{searchString}\"", e);
+                return Enumerable.Empty<OrbitalElements>();
+            }
         }
 
         private OrbitalElementsBackend GetBackend(OrbitalObjectTypeEnum objectType) {

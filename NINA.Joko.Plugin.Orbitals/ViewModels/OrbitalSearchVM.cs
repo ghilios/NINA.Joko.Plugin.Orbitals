@@ -65,7 +65,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 ShowPopup = false;
                 targetName = value;
                 if (!SkipSearch) {
-                    if (TargetName.Length > 1) {
+                    if (TargetName.Length > 2) {
                         targetSearchCts?.Cancel();
                         targetSearchCts?.Dispose();
                         targetSearchCts = new CancellationTokenSource();

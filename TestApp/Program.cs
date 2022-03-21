@@ -82,27 +82,20 @@ namespace TestApp {
             Console.WriteLine(earthPosition);
             */
 
-            /*
-            using (var lookup = new TrigramStringMap<JPLNumberedAsteroidElements>()) {
+            using (var lookup = new TrigramStringMap<OrbitalElements>("comets2")) {
                 var accessor = new JPLAccessor();
-                var lmd = await accessor.GetNumberedAsteroidsLastModified();
-                var response = await accessor.GetNumberedAsteroidElements();
+                var response = await accessor.GetCometElements();
                 response.ParseError += (sender, e) => {
                     Console.WriteLine($"Error parsing comets: {e.ErrorMessage}");
                 };
                 var now = DateTime.UtcNow;
                 var nowJd = AstroUtil.GetJulianDate(now);
-                int number = 0;
-                foreach (var cometElements in response.Response) {
-                    // Console.Write($"\rInserting {++number}");
-                    lookup.Add(cometElements.GetName(), cometElements);
-                }
+                lookup.AddRange(k => k.Name, response.Response.Select(r => r.ToOrbitalElements()));
 
-                var matchingStrings = lookup.QueryMatchingKeys("eres", 20);
+                var matchingStrings = lookup.Query("C/202", 20);
                 var singleMatch = lookup.Lookup("ceres");
                 Console.WriteLine();
             }
-            */
 
             /*
             var stopWatch = new Stopwatch();
@@ -119,12 +112,14 @@ namespace TestApp {
             Console.WriteLine($"Elapsed: {stopWatch.Elapsed}");
             */
 
+            /*
             var jplAccessor = new JPLAccessor();
             var jwstTable = await jplAccessor.GetJWSTVectorTable(DateTime.Now, TimeSpan.FromDays(7));
             var vectorTable = jwstTable.ToPVTable();
             var orbitalElementsAccessor = new OrbitalElementsAccessor();
             var orbitalPV = orbitalElementsAccessor.GetPVFromTable(DateTime.Now, vectorTable);
             Console.WriteLine();
+            */
         }
     }
 }
