@@ -416,7 +416,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 return;
             }
 
-            var pvTableObject = new PVTableObject(orbitalElementsAccessor, "James-Webb Space Telescope", profileService.ActiveProfile.AstrometrySettings.Horizon);
+            var pvTableObject = new PVTableObject(orbitalElementsAccessor, "James-Webb Space Telescope", profileService.ActiveProfile.AstrometrySettings.Horizon, profileService);
             pvTableObject.SetDateAndPosition(NighttimeCalculator.GetReferenceDate(DateTime.Now), latitude: profileService.ActiveProfile.AstrometrySettings.Latitude, longitude: profileService.ActiveProfile.AstrometrySettings.Longitude);
             SelectedOrbitalsObject = pvTableObject;
         }
@@ -426,7 +426,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 Notification.ShowError("No orbital object selected");
                 return;
             }
-            var bodyObject = new OrbitalElementsObject(orbitalElementsAccessor, orbitalElements, profileService.ActiveProfile.AstrometrySettings.Horizon);
+            var bodyObject = new OrbitalElementsObject(orbitalElementsAccessor, orbitalElements, profileService.ActiveProfile.AstrometrySettings.Horizon, profileService);
             bodyObject.SetDateAndPosition(NighttimeCalculator.GetReferenceDate(DateTime.Now), latitude: profileService.ActiveProfile.AstrometrySettings.Latitude, longitude: profileService.ActiveProfile.AstrometrySettings.Longitude);
             SelectedOrbitalsObject = bodyObject;
         }

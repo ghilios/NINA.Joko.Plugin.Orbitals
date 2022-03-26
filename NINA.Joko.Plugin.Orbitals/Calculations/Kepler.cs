@@ -11,6 +11,7 @@
 #endregion "copyright"
 
 using NINA.Astrometry;
+using NINA.Joko.Plugin.Orbitals.Utility;
 using ProtoBuf;
 using System;
 using System.Collections.Generic;
@@ -178,15 +179,44 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             }
         }
 
+        public static RectangularPV GetPVOnEarthSurface(DateTime asof, Angle latitude, Angle longitude, double elevation) {
+            var jd = AstroUtil.GetJulianDate(asof);
+            var deltaT = AstroUtil.DeltaT(asof);
+            var observer = new NOVAS.Observer() {
+                Where = 1,
+                OnSurf = new NOVAS.OnSurface() {
+                    Latitude = latitude.Degree,
+                    Longitude = longitude.Degree,
+                    Height = elevation
+                }
+            };
+
+            var pos = new double[3];
+            var vel = new double[3];
+            var result = NOVASEx.NOVAS_geo_posvel(jd, deltaT, NOVAS.Accuracy.Full, observer, pos, vel);
+            if (result != 0) {
+                throw new Exception($"NOVAS geo_posvel failed. Result={result}");
+            }
+            return new RectangularPV(
+                new RectangularCoordinates(pos[0], pos[1], pos[2]),
+                new RectangularCoordinates(vel[0], vel[1], vel[2]));
+        }
+
         public static RectangularCoordinates GetApparentPosition(
             OrbitalPosition orbitalPosition,
-            NOVAS.Body orbitalCenterBody) {
+            NOVAS.Body orbitalCenterBody,
+            Angle latitude,
+            Angle longitude,
+            double elevation) {
             var centerPosition = NOVAS.BodyPositionAndVelocity(orbitalPosition.AsOf_jd, orbitalCenterBody, NOVAS.SolarSystemOrigin.SolarCenterOfMass);
+            var asof = NOVAS.JulianToDateTime(orbitalPosition.AsOf_jd);
+            var pvOnSurface = GetPVOnEarthSurface(asof, latitude, longitude, elevation);
+
             // NOVAS returns ecliptic coordinates. Reverse the ecliptic rotation to get to equatorial so we can subtract from the orbital position
             var earthPositionEquatorial = centerPosition.Position.RotateEcliptic(-AstrometricConstants.J2000MeanObliquity);
 
-            var earthCenteredPosition = orbitalPosition.EclipticCoordinates - earthPositionEquatorial;
-            return earthCenteredPosition.RotateEcliptic(AstrometricConstants.J2000MeanObliquity);
+            var earthSurfacePosition = orbitalPosition.EclipticCoordinates - earthPositionEquatorial - pvOnSurface.Position.RotateEcliptic(-AstrometricConstants.J2000MeanObliquity);
+            return earthSurfacePosition.RotateEcliptic(AstrometricConstants.J2000MeanObliquity);
         }
 
         public static OrbitalPosition CalculateOrbitalElements(

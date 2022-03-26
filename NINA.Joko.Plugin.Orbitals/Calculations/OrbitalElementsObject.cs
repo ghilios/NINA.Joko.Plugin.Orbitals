@@ -13,6 +13,7 @@
 using NINA.Astrometry;
 using NINA.Core.Model;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
+using NINA.Profile.Interfaces;
 using System;
 using static NINA.Joko.Plugin.Orbitals.Calculations.Kepler;
 
@@ -20,14 +21,17 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
     public class OrbitalElementsObject : OrbitalsObjectBase {
         private readonly IOrbitalElementsAccessor orbitalElementsAccessor;
+        private readonly IProfileService profileService;
         public static readonly string NotSetName = "Orbital Object Sequence";
 
         public OrbitalElementsObject(
             IOrbitalElementsAccessor orbitalElementsAccessor,
             OrbitalElements orbitalElements,
-            CustomHorizon customHorizon) : base(orbitalElements?.Name ?? NotSetName, customHorizon) {
+            CustomHorizon customHorizon,
+            IProfileService profileService) : base(orbitalElements?.Name ?? NotSetName, customHorizon) {
             this.orbitalElementsAccessor = orbitalElementsAccessor;
             this.orbitalElements = orbitalElements;
+            this.profileService = profileService;
             Moon = new MoonInfo(Coordinates);
         }
 
@@ -50,11 +54,14 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             if (OrbitalElements == null) {
                 return OrbitalPositionVelocity.NotSet;
             }
-            return orbitalElementsAccessor.GetObjectPV(at, OrbitalElements);
+            var latitude = Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Latitude);
+            var longitude = Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Longitude);
+            var elevation = profileService.ActiveProfile.AstrometrySettings.Elevation;
+            return orbitalElementsAccessor.GetObjectPV(at, OrbitalElements, latitude, longitude, elevation);
         }
 
         public OrbitalElementsObject Clone() {
-            var cloned = new OrbitalElementsObject(orbitalElementsAccessor, OrbitalElements, customHorizon);
+            var cloned = new OrbitalElementsObject(orbitalElementsAccessor, OrbitalElements, customHorizon, profileService);
             cloned.SetDateAndPosition(cloned._referenceDate, cloned._latitude, cloned._longitude);
             return cloned;
         }

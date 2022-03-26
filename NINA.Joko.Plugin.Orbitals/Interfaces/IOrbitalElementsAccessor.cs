@@ -80,9 +80,9 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
 
         OrbitalPositionVelocity GetSolarSystemBodyPV(DateTime asof, SolarSystemBody solarSystemBody);
 
-        OrbitalPositionVelocity GetObjectPV(DateTime asof, OrbitalElements orbitalElements);
+        OrbitalPositionVelocity GetObjectPV(DateTime asof, OrbitalElements orbitalElements, Angle latitude, Angle longitude, double elevation);
 
-        OrbitalPositionVelocity GetPVFromTable(DateTime asof, PVTable vectorTable);
+        OrbitalPositionVelocity GetPVFromTable(DateTime asof, PVTable vectorTable, Angle latitude, Angle longitude, double elevation);
 
         Task UpdateJWST(PVTable pvTable, IProgress<ApplicationStatus> progress, CancellationToken ct);
 

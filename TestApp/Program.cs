@@ -82,6 +82,36 @@ namespace TestApp {
             Console.WriteLine(earthPosition);
             */
 
+            var latitude = Angle.ByDegree(41.292198);
+            var longitude = Angle.ByDegree(-74.361229);
+            var elevation = 0.0d;
+
+            /*
+            var date = DateTime.Now;
+            var jd = AstroUtil.GetJulianDate(date);
+            long jd_high = (long)jd;
+            double jd_low = jd - jd_high;
+            var deltaT = AstroUtil.DeltaT(date);
+
+            var observer = new NOVAS.Observer() {
+                Where = 1,
+                OnSurf = new NOVAS.OnSurface() {
+                    Latitude = latitude.Degree,
+                    Longitude = longitude.Degree,
+                    Height = elevation
+                }
+            };
+
+            var pos = new double[3];
+            var vel = new double[3];
+            var result2 = NOVASEx.NOVAS_geo_posvel(jd, deltaT, NOVAS.Accuracy.Full, observer, pos, vel);
+
+            var posKm = pos.Select(p => p * AstrometricConstants.KM_PER_AU).ToArray();
+            var posKmVector = new RectangularCoordinates(posKm[0], posKm[1], posKm[2]);
+            Console.WriteLine(posKmVector);
+            */
+
+            /*
             using (var lookup = new TrigramStringMap<OrbitalElements>("comets2")) {
                 var accessor = new JPLAccessor();
                 var response = await accessor.GetCometElements();
@@ -96,6 +126,7 @@ namespace TestApp {
                 var singleMatch = lookup.Lookup("ceres");
                 Console.WriteLine();
             }
+            */
 
             /*
             var stopWatch = new Stopwatch();
@@ -112,14 +143,19 @@ namespace TestApp {
             Console.WriteLine($"Elapsed: {stopWatch.Elapsed}");
             */
 
-            /*
             var jplAccessor = new JPLAccessor();
-            var jwstTable = await jplAccessor.GetJWSTVectorTable(DateTime.Now, TimeSpan.FromDays(7));
+            var startTime = new DateTime(2022, 3, 25, 12, 0, 0, DateTimeKind.Utc);
+            var jwstTable = await jplAccessor.GetJWSTVectorTable(startTime - TimeSpan.FromHours(1), TimeSpan.FromDays(1));
             var vectorTable = jwstTable.ToPVTable();
             var orbitalElementsAccessor = new OrbitalElementsAccessor();
-            var orbitalPV = orbitalElementsAccessor.GetPVFromTable(DateTime.Now, vectorTable);
-            Console.WriteLine();
-            */
+            var interval = TimeSpan.FromMinutes(5);
+            var queryTime = startTime;
+
+            for (int i = 0; i < 48; ++i) {
+                var orbitalPV = orbitalElementsAccessor.GetPVFromTable(queryTime, vectorTable, latitude, longitude, elevation);
+                Console.WriteLine($"{AstroUtil.GetJulianDate(queryTime)} -> {orbitalPV.Coordinates}");
+                queryTime += interval;
+            }
         }
     }
 }
