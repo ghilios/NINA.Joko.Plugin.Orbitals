@@ -193,7 +193,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
             var pos = new double[3];
             var vel = new double[3];
-            var result = NOVASEx.NOVAS_geo_posvel(jd, deltaT, NOVAS.Accuracy.Full, observer, pos, vel);
+            var result = NOVAS.NOVAS_geo_posvel(jd, deltaT, NOVAS.Accuracy.Full, observer, pos, vel);
             if (result != 0) {
                 throw new Exception($"NOVAS geo_posvel failed. Result={result}");
             }

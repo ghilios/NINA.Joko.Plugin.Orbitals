@@ -448,7 +448,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
             var task = Task.Run(async () => {
                 try {
-                    var vectorTable = await jplAccessor.GetJWSTVectorTable(DateTime.Now - TimeSpan.FromDays(1), TimeSpan.FromDays(7));
+                    var vectorTable = await jplAccessor.GetJWSTVectorTable(DateTime.Now - TimeSpan.FromDays(1), TimeSpan.FromDays(8));
                     await orbitalElementsAccessor.UpdateJWST(vectorTable.ToPVTable(), progress, cts.Token);
                     return true;
                 } catch (OperationCanceledException) {

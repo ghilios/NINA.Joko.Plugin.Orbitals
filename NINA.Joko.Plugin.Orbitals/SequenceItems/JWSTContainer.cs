@@ -31,6 +31,7 @@ using NINA.Joko.Plugin.Orbitals.Interfaces;
 using System.Threading;
 using NINA.Core.Utility.Notification;
 using NINA.Core.Utility;
+using System.Collections.Generic;
 
 namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
 
@@ -72,6 +73,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             this.orbitalElementsAccessor = orbitalElementsAccessor;
 
             Target = new InputTarget(Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Latitude), Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Longitude), profileService.ActiveProfile.AstrometrySettings.Horizon);
+            Target.TargetName = "JWST";
             Target.DeepSkyObject = new PVTableObject(orbitalElementsAccessor, "James-Webb Space Telescope", profileService.ActiveProfile.AstrometrySettings.Horizon, profileService);
             Target.DeepSkyObject.SetDateAndPosition(NighttimeCalculator.GetReferenceDate(DateTime.Now), latitude: profileService.ActiveProfile.AstrometrySettings.Latitude, longitude: profileService.ActiveProfile.AstrometrySettings.Longitude);
 
@@ -161,6 +163,18 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             }
         }
 
+        private bool invalid = false;
+
+        public bool Invalid {
+            get => invalid;
+            private set {
+                if (invalid != value) {
+                    invalid = value;
+                    RaisePropertyChanged();
+                }
+            }
+        }
+
         private void Target_OnCoordinatesChanged(object sender, EventArgs e) {
             AfterParentChanged();
         }
@@ -196,6 +210,17 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         public override string ToString() {
             var baseString = base.ToString();
             return $"{baseString}, Target: {Target?.TargetName} {Target?.DeepSkyObject?.Coordinates} {Target?.Rotation}";
+        }
+
+        public override bool Validate() {
+            if (Target.InputCoordinates?.Coordinates == null
+                || Target.InputCoordinates.Coordinates.RA == 0.0d
+                || Target.InputCoordinates.Coordinates.Dec == 0.0d) {
+                Invalid = true;
+            } else {
+                Invalid = false;
+            }
+            return base.Validate();
         }
     }
 }

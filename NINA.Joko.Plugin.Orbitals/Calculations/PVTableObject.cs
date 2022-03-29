@@ -12,6 +12,7 @@
 
 using NINA.Astrometry;
 using NINA.Core.Model;
+using NINA.Core.Utility.Notification;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
 using NINA.Profile.Interfaces;
 using System;
@@ -40,10 +41,12 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                 var latitude = Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Latitude);
                 var longitude = Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Longitude);
                 var elevation = profileService.ActiveProfile.AstrometrySettings.Elevation;
-                return orbitalElementsAccessor.GetPVFromTable(at, pvTable, latitude, longitude, elevation);
-            } else {
-                return OrbitalPositionVelocity.NotSet;
+                var pv = orbitalElementsAccessor.GetPVFromTable(at, pvTable, latitude, longitude, elevation);
+                if (pv != null) {
+                    return pv;
+                }
             }
+            return OrbitalPositionVelocity.NotSet;
         }
 
         public PVTableObject Clone() {
