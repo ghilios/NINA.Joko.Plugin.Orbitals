@@ -315,10 +315,10 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             var endJd = vectorTable.Rows.Last().Epoch_jd;
             var asofJd = AstroUtil.GetJulianDate(asof);
             if (asofJd < startJd) {
-                Logger.Error($"No vector data available for JWST at {asof}. The earliest available is {NOVAS.JulianToDateTime(startJd)}");
+                Logger.Trace($"No vector data available for JWST at {asof}. The earliest available is {NOVAS.JulianToDateTime(startJd)}");
                 return null;
             } else if (asofJd >= endJd) {
-                Logger.Error($"No vector data available for JWST at {asof}. The last available is {NOVAS.JulianToDateTime(endJd)}");
+                Logger.Trace($"No vector data available for JWST at {asof}. The last available is {NOVAS.JulianToDateTime(endJd)}");
                 return null;
             }
 
