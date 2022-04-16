@@ -84,5 +84,10 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             Issues = i;
             return i.Count == 0;
         }
+
+        public override void AfterParentChanged() {
+            TriggerRunner.AttachNewParent(this.Parent);
+            base.AfterParentChanged();
+        }
     }
 }

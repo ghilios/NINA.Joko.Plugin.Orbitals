@@ -113,6 +113,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             }
         }
 
+        [JsonProperty]
         public OrbitalObjectTypeEnum ObjectType {
             get => OrbitalSearchVM.ObjectType;
             set {
@@ -153,6 +154,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
                     }
 
                     Target.TargetName = targetName;
+                    TargetObject.Update();
                     Name = targetName;
 
                     RefreshCoordinates();

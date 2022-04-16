@@ -91,6 +91,8 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
                 ShiftTrackingRate = SiderealShiftTrackingRate.Disabled;
             }
             Validate();
+
+            base.AfterParentChanged();
         }
 
         public override string ToString() {
