@@ -19,6 +19,8 @@ using System.ComponentModel.Composition;
 using System.Windows.Input;
 using System.IO;
 using NINA.Joko.Plugin.Orbitals.Calculations;
+using System.Threading;
+using System.Globalization;
 
 namespace NINA.Joko.Plugin.Orbitals {
 
@@ -50,14 +52,20 @@ namespace NINA.Joko.Plugin.Orbitals {
                 JPLAccessor = new JPLAccessor();
             }
 
+            if (SystemCultureInfo == null) {
+                SystemCultureInfo = new Thread(delegate () { }).CurrentCulture;
+            }
+
             ResetOptionDefaultsCommand = new RelayCommand((object o) => OrbitalsOptions.ResetDefaults());
         }
 
         public static OrbitalsOptions OrbitalsOptions { get; private set; }
 
-        public static OrbitalElementsAccessor OrbitalElementsAccessor { get; private set; } 
+        public static OrbitalElementsAccessor OrbitalElementsAccessor { get; private set; }
 
         public static JPLAccessor JPLAccessor { get; private set; }
+
+        public static CultureInfo SystemCultureInfo { get; private set; }
 
         public ICommand ResetOptionDefaultsCommand { get; private set; }
     }

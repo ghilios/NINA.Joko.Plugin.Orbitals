@@ -27,7 +27,7 @@ namespace NINA.Joko.Plugin.Orbitals.Converters {
             if (dateTime <= DateTime.MinValue) {
                 return "Never";
             }
-            return dateTime.ToString(culture);
+            return dateTime.ToString(OrbitalsPlugin.SystemCultureInfo);
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
