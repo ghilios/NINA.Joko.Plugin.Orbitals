@@ -9,7 +9,7 @@
     xmlns:enums="clr-namespace:NINA.Joko.Plugin.Orbitals.Enums"
     xmlns:localvm="clr-namespace:NINA.Joko.Plugin.Orbitals.ViewModels"
     xmlns:alt="clr-namespace:NINA.WPF.Base.View;assembly=NINA.WPF.Base"
-    xmlns:ninactrl="clr-namespace:NINACustomControlLibrary;assembly=NINACustomControlLibrary"
+    xmlns:ninactrl="clr-namespace:NINA.CustomControlLibrary;assembly=NINA.CustomControlLibrary"
     x:Name="UC"
     d:DataContext="{d:DesignInstance localvm:OrbitalsVM,
                                      IsDesignTimeCreatable=False}"

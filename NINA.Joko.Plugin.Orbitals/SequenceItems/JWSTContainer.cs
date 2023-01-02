@@ -190,7 +190,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
                 Conditions = new ObservableCollection<ISequenceCondition>(Conditions.Select(t => t.Clone() as ISequenceCondition))
             };
 
-            clone.Target.Rotation = this.Target.Rotation;
+            clone.Target.PositionAngle = this.Target.PositionAngle;
 
             foreach (var item in clone.Items) {
                 item.AttachNewParent(clone);
@@ -209,7 +209,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
 
         public override string ToString() {
             var baseString = base.ToString();
-            return $"{baseString}, Target: {Target?.TargetName} {Target?.DeepSkyObject?.Coordinates} {Target?.Rotation}";
+            return $"{baseString}, Target: {Target?.TargetName} {Target?.DeepSkyObject?.Coordinates} {Target?.PositionAngle}";
         }
 
         public override bool Validate() {

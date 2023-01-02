@@ -10,7 +10,6 @@
 
 #endregion "copyright"
 
-using Gma.DataStructures.StringSearch;
 using NINA.Astrometry;
 using NINA.Joko.Plugin.Orbitals.Calculations;
 using NINA.Joko.Plugin.Orbitals.Utility;

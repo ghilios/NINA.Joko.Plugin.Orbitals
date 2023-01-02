@@ -11,7 +11,6 @@
 #endregion "copyright"
 
 using NINA.Joko.Plugin.Orbitals.Properties;
-using NINA.Core.Utility;
 using NINA.Plugin;
 using NINA.Plugin.Interfaces;
 using NINA.Profile.Interfaces;
@@ -21,6 +20,10 @@ using System.IO;
 using NINA.Joko.Plugin.Orbitals.Calculations;
 using System.Threading;
 using System.Globalization;
+using NINA.Core.Utility;
+using RelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
+using System;
+using System.Reflection;
 
 namespace NINA.Joko.Plugin.Orbitals {
 
@@ -53,10 +56,12 @@ namespace NINA.Joko.Plugin.Orbitals {
             }
 
             if (SystemCultureInfo == null) {
-                SystemCultureInfo = new Thread(delegate () { }).CurrentCulture;
+                var userDefaultCultureProp = typeof(CultureInfo).GetProperty("UserDefaultUICulture", BindingFlags.Static | BindingFlags.GetProperty | BindingFlags.NonPublic);
+                var defaultCulture = (CultureInfo)userDefaultCultureProp?.GetValue(null);
+                SystemCultureInfo = defaultCulture ?? CultureInfo.DefaultThreadCurrentUICulture ?? CultureInfo.CurrentUICulture;
             }
 
-            ResetOptionDefaultsCommand = new RelayCommand((object o) => OrbitalsOptions.ResetDefaults());
+            ResetOptionDefaultsCommand = new RelayCommand(OrbitalsOptions.ResetDefaults);
         }
 
         public static OrbitalsOptions OrbitalsOptions { get; private set; }

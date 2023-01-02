@@ -10,6 +10,7 @@
 
 #endregion "copyright"
 
+using CommunityToolkit.Mvvm.Input;
 using NINA.Astrometry;
 using NINA.Astrometry.Interfaces;
 using NINA.Core.Enum;
@@ -32,6 +33,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using RelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
 namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
@@ -103,23 +105,23 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 }
             }, initialLoadCts.Token);
 
-            this.UpdateCometElementsCommand = new AsyncCommand<bool>(UpdateCometElements, (o) => initialLoadComplete);
-            this.UpdateNumberedAsteroidElementsCommand = new AsyncCommand<bool>(UpdateNumberedAsteroids, (o) => initialLoadComplete);
-            this.UpdateUnnumberedAsteroidElementsCommand = new AsyncCommand<bool>(UpdateUnnumberedAsteroids, (o) => initialLoadComplete);
-            this.UpdateJWSTVectorTableCommand = new AsyncCommand<bool>(UpdateJWSTVectorTable, (o) => initialLoadComplete);
+            this.UpdateCometElementsCommand = new AsyncRelayCommand(UpdateCometElements, () => initialLoadComplete);
+            this.UpdateNumberedAsteroidElementsCommand = new AsyncRelayCommand(UpdateNumberedAsteroids, () => initialLoadComplete);
+            this.UpdateUnnumberedAsteroidElementsCommand = new AsyncRelayCommand(UpdateUnnumberedAsteroids, () => initialLoadComplete);
+            this.UpdateJWSTVectorTableCommand = new AsyncRelayCommand(UpdateJWSTVectorTable, () => initialLoadComplete);
 
-            this.CancelUpdateCometElementsCommand = new AsyncCommand<bool>(o => CancelUpdateElements(updateCometElementsTask, updateCometElementsCts));
-            this.CancelUpdateNumberedAsteroidElementsCommand = new AsyncCommand<bool>(o => CancelUpdateElements(updateNumberedAsteroidsTask, updateNumberedAsteroidsCts));
-            this.CancelUpdateUnnumberedAsteroidElementsCommand = new AsyncCommand<bool>(o => CancelUpdateElements(updateUnnumberedAsteroidsTask, updateUnnumberedAsteroidsCts));
-            this.CancelUpdateJWSTVectorTableCommand = new AsyncCommand<bool>(o => CancelUpdateElements(updateJWSTVectorTableTask, updateJWSTVectorTableCts));
+            this.CancelUpdateCometElementsCommand = new AsyncRelayCommand(o => CancelUpdateElements(updateCometElementsTask, updateCometElementsCts));
+            this.CancelUpdateNumberedAsteroidElementsCommand = new AsyncRelayCommand(o => CancelUpdateElements(updateNumberedAsteroidsTask, updateNumberedAsteroidsCts));
+            this.CancelUpdateUnnumberedAsteroidElementsCommand = new AsyncRelayCommand(o => CancelUpdateElements(updateUnnumberedAsteroidsTask, updateUnnumberedAsteroidsCts));
+            this.CancelUpdateJWSTVectorTableCommand = new AsyncRelayCommand(o => CancelUpdateElements(updateJWSTVectorTableTask, updateJWSTVectorTableCts));
             this.LoadSelectionCommand = new RelayCommand(LoadSelection, CanLoad);
 
-            this.SendToFramingWizardCommand = new AsyncCommand<bool>(SendToFramingWizardCommandAction, o => SelectedOrbitalsObject != null);
+            this.SendToFramingWizardCommand = new AsyncRelayCommand(SendToFramingWizardCommandAction, () => SelectedOrbitalsObject != null);
             this.SetTrackingRateCommand = new RelayCommand(SetTrackingRateCommandAction, CanSetTrackingRate);
-            this.SetGuiderShiftCommand = new AsyncCommand<bool>(SetGuiderShiftCommandAction, CanSetGuiderShift);
+            this.SetGuiderShiftCommand = new AsyncRelayCommand(SetGuiderShiftCommandAction, CanSetGuiderShift);
         }
 
-        private Task<bool> SendToFramingWizardCommandAction(object o) {
+        private Task<bool> SendToFramingWizardCommandAction() {
             return Task.Run(async () => {
                 if (SelectedOrbitalsObject == null) {
                     Notification.ShowWarning("No orbital object selected");
@@ -138,12 +140,12 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             });
         }
 
-        private bool CanSetTrackingRate(object o) {
+        private bool CanSetTrackingRate() {
             var info = telescopeMediator.GetInfo();
             return info.Connected && info.CanSetRightAscensionRate && info.CanSetDeclinationRate;
         }
 
-        private void SetTrackingRateCommandAction(object o) {
+        private void SetTrackingRateCommandAction() {
             try {
                 if (!this.telescopeMediator.SetCustomTrackingRate(ShiftTrackingRate.RAArcsecsPerSec, ShiftTrackingRate.DecArcsecsPerSec)) {
                     Notification.ShowError("Failed to set orbital tracking rate");
@@ -154,12 +156,12 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             }
         }
 
-        private bool CanSetGuiderShift(object o) {
+        private bool CanSetGuiderShift() {
             var info = guiderMediator.GetInfo();
             return info.Connected && info.CanSetShiftRate;
         }
 
-        private Task<bool> SetGuiderShiftCommandAction(object o) {
+        private Task<bool> SetGuiderShiftCommandAction() {
             return Task.Run(async () => {
                 try {
                     if (!await this.guiderMediator.SetShiftRate(ShiftTrackingRate, CancellationToken.None)) {
@@ -378,7 +380,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private Task<bool> updateJWSTVectorTableTask;
         private CancellationTokenSource updateJWSTVectorTableCts;
 
-        private bool CanLoad(object o) {
+        private bool CanLoad() {
             if (SearchObjectType == SearchObjectTypeEnum.SolarSystemBody) {
                 return true;
             } else if (SearchObjectType == SearchObjectTypeEnum.JWST) {
@@ -388,7 +390,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             }
         }
 
-        private void LoadSelection(object o) {
+        private void LoadSelection() {
             var objectType = SearchObjectType;
             try {
                 NighttimeData = nighttimeCalculator.Calculate();
@@ -437,7 +439,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             SelectedOrbitalsObject = bodyObject;
         }
 
-        public Task<bool> UpdateJWSTVectorTable(object o) {
+        public Task<bool> UpdateJWSTVectorTable() {
             if (updateJWSTVectorTableTask != null && !updateJWSTVectorTableTask.IsCompleted) {
                 Logger.Error("Update already in progress");
                 return Task.FromResult(false);
@@ -463,7 +465,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             return task;
         }
 
-        public Task<bool> UpdateCometElements(object o) {
+        public Task<bool> UpdateCometElements() {
             if (updateCometElementsTask != null && !updateCometElementsTask.IsCompleted) {
                 Logger.Error("Update already in progress");
                 return Task.FromResult(false);
@@ -496,7 +498,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             return task;
         }
 
-        public Task<bool> UpdateNumberedAsteroids(object o) {
+        public Task<bool> UpdateNumberedAsteroids() {
             if (updateNumberedAsteroidsTask != null && !updateNumberedAsteroidsTask.IsCompleted) {
                 Logger.Error("Update already in progress");
                 return Task.FromResult(false);
@@ -529,7 +531,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             return task;
         }
 
-        public Task<bool> UpdateUnnumberedAsteroids(object o) {
+        public Task<bool> UpdateUnnumberedAsteroids() {
             if (updateUnnumberedAsteroidsTask != null && !updateUnnumberedAsteroidsTask.IsCompleted) {
                 Logger.Error("Update already in progress");
                 return Task.FromResult(false);

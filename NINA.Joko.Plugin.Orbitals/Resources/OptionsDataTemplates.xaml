@@ -6,7 +6,7 @@
     xmlns:interfaces="clr-namespace:NINA.Joko.Plugin.Orbitals.Interfaces"
     xmlns:local="clr-namespace:NINA.Joko.Plugin.Orbitals"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:ninactrl="clr-namespace:NINACustomControlLibrary;assembly=NINACustomControlLibrary"
+    xmlns:ninactrl="clr-namespace:NINA.CustomControlLibrary;assembly=NINA.CustomControlLibrary"
     xmlns:oconverters="clr-namespace:NINA.Joko.Plugin.Orbitals.Converters"
     xmlns:orules="clr-namespace:NINA.Joko.Plugin.Orbitals.ValidationRules"
     xmlns:rules="clr-namespace:NINA.Core.Utility.ValidationRules;assembly=NINA.Core"
