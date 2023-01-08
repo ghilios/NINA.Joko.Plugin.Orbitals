@@ -10,6 +10,7 @@
 
 #endregion "copyright"
 
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NINA.Astrometry;
 using NINA.Astrometry.Interfaces;
@@ -17,6 +18,8 @@ using NINA.Core.Enum;
 using NINA.Core.Model;
 using NINA.Core.Utility;
 using NINA.Core.Utility.Notification;
+using NINA.Equipment.Equipment.MyGuider;
+using NINA.Equipment.Equipment.MyTelescope;
 using NINA.Equipment.Interfaces.Mediator;
 using NINA.Equipment.Interfaces.ViewModel;
 using NINA.Joko.Plugin.Orbitals.Calculations;
@@ -99,26 +102,41 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             _ = Task.Run(async () => {
                 try {
                     await orbitalElementsAccessor.Load(this.progress, initialLoadCts.Token);
-                    initialLoadComplete = true;
+                    InitialLoadComplete = true;
                 } catch (Exception e) {
                     Logger.Error("Initial orbital elements load failed", e);
                 }
             }, initialLoadCts.Token);
 
-            this.UpdateCometElementsCommand = new AsyncRelayCommand(UpdateCometElements, () => initialLoadComplete);
-            this.UpdateNumberedAsteroidElementsCommand = new AsyncRelayCommand(UpdateNumberedAsteroids, () => initialLoadComplete);
-            this.UpdateUnnumberedAsteroidElementsCommand = new AsyncRelayCommand(UpdateUnnumberedAsteroids, () => initialLoadComplete);
-            this.UpdateJWSTVectorTableCommand = new AsyncRelayCommand(UpdateJWSTVectorTable, () => initialLoadComplete);
+            this.UpdateCometElementsCommand = new AsyncRelayCommand(UpdateCometElements, () => InitialLoadComplete);
+            this.UpdateCometElementsCommand.RegisterPropertyChangeNotification(this, nameof(InitialLoadComplete));
+
+            this.UpdateNumberedAsteroidElementsCommand = new AsyncRelayCommand(UpdateNumberedAsteroids, () => InitialLoadComplete);
+            this.UpdateNumberedAsteroidElementsCommand.RegisterPropertyChangeNotification(this, nameof(InitialLoadComplete));
+
+            this.UpdateUnnumberedAsteroidElementsCommand = new AsyncRelayCommand(UpdateUnnumberedAsteroids, () => InitialLoadComplete);
+            this.UpdateUnnumberedAsteroidElementsCommand.RegisterPropertyChangeNotification(this, nameof(InitialLoadComplete));
+
+            this.UpdateJWSTVectorTableCommand = new AsyncRelayCommand(UpdateJWSTVectorTable, () => InitialLoadComplete);
+            this.UpdateJWSTVectorTableCommand.RegisterPropertyChangeNotification(this, nameof(InitialLoadComplete));
 
             this.CancelUpdateCometElementsCommand = new AsyncRelayCommand(o => CancelUpdateElements(updateCometElementsTask, updateCometElementsCts));
             this.CancelUpdateNumberedAsteroidElementsCommand = new AsyncRelayCommand(o => CancelUpdateElements(updateNumberedAsteroidsTask, updateNumberedAsteroidsCts));
             this.CancelUpdateUnnumberedAsteroidElementsCommand = new AsyncRelayCommand(o => CancelUpdateElements(updateUnnumberedAsteroidsTask, updateUnnumberedAsteroidsCts));
             this.CancelUpdateJWSTVectorTableCommand = new AsyncRelayCommand(o => CancelUpdateElements(updateJWSTVectorTableTask, updateJWSTVectorTableCts));
+
             this.LoadSelectionCommand = new RelayCommand(LoadSelection, CanLoad);
+            this.LoadSelectionCommand.RegisterPropertyChangeNotification(this, nameof(SearchObjectType));
+            this.LoadSelectionCommand.RegisterPropertyChangeNotification(OrbitalSearchVM, nameof(OrbitalSearchVM.TargetSearchResult));
 
             this.SendToFramingWizardCommand = new AsyncRelayCommand(SendToFramingWizardCommandAction, () => SelectedOrbitalsObject != null);
+            this.SendToFramingWizardCommand.RegisterPropertyChangeNotification(this, nameof(SelectedOrbitalsObject));
+
             this.SetTrackingRateCommand = new RelayCommand(SetTrackingRateCommandAction, CanSetTrackingRate);
+            this.SetTrackingRateCommand.RegisterPropertyChangeNotification(telescopeMediator.GetInfo(), nameof(TelescopeInfo.Connected), nameof(TelescopeInfo.CanSetRightAscensionRate), nameof(TelescopeInfo.CanSetDeclinationRate));
+
             this.SetGuiderShiftCommand = new AsyncRelayCommand(SetGuiderShiftCommandAction, CanSetGuiderShift);
+            this.SetGuiderShiftCommand.RegisterPropertyChangeNotification(guiderMediator.GetInfo(), nameof(GuiderInfo.Connected), nameof(GuiderInfo.CanSetShiftRate));
         }
 
         private Task<bool> SendToFramingWizardCommandAction() {
@@ -138,6 +156,16 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                     return false;
                 }
             });
+        }
+
+        private bool InitialLoadComplete {
+            get => initialLoadComplete;
+            set {
+                if (this.initialLoadComplete != value) {
+                    this.initialLoadComplete = value;
+                    RaisePropertyChanged();
+                }
+            }
         }
 
         private bool CanSetTrackingRate() {
@@ -340,31 +368,31 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
         public IOrbitalSearchVM OrbitalSearchVM { get; private set; }
 
-        public ICommand CancelUpdateCometElementsCommand { get; private set; }
+        public AsyncRelayCommand CancelUpdateCometElementsCommand { get; private set; }
 
-        public ICommand UpdateCometElementsCommand { get; private set; }
+        public AsyncRelayCommand UpdateCometElementsCommand { get; private set; }
 
-        public ICommand CancelUpdateNumberedAsteroidElementsCommand { get; private set; }
+        public AsyncRelayCommand CancelUpdateNumberedAsteroidElementsCommand { get; private set; }
 
-        public ICommand UpdateNumberedAsteroidElementsCommand { get; private set; }
+        public AsyncRelayCommand UpdateNumberedAsteroidElementsCommand { get; private set; }
 
-        public ICommand CancelUpdateUnnumberedAsteroidElementsCommand { get; private set; }
+        public AsyncRelayCommand CancelUpdateUnnumberedAsteroidElementsCommand { get; private set; }
 
-        public ICommand UpdateUnnumberedAsteroidElementsCommand { get; private set; }
+        public AsyncRelayCommand UpdateUnnumberedAsteroidElementsCommand { get; private set; }
 
-        public ICommand CancelUpdateJWSTVectorTableCommand { get; private set; }
+        public AsyncRelayCommand CancelUpdateJWSTVectorTableCommand { get; private set; }
 
-        public ICommand UpdateJWSTVectorTableCommand { get; private set; }
+        public AsyncRelayCommand UpdateJWSTVectorTableCommand { get; private set; }
 
-        public ICommand LoadSelectionCommand { get; private set; }
+        public RelayCommand LoadSelectionCommand { get; private set; }
 
-        public ICommand SlewCommand { get; private set; }
+        public AsyncRelayCommand SlewCommand { get; private set; }
 
-        public ICommand SendToFramingWizardCommand { get; private set; }
+        public AsyncRelayCommand SendToFramingWizardCommand { get; private set; }
 
-        public ICommand SetTrackingRateCommand { get; private set; }
+        public RelayCommand SetTrackingRateCommand { get; private set; }
 
-        public ICommand SetGuiderShiftCommand { get; private set; }
+        public AsyncRelayCommand SetGuiderShiftCommand { get; private set; }
 
         // TODO: Refactor this the next time more orbital types are added
         private Task<bool> updateCometElementsTask;
