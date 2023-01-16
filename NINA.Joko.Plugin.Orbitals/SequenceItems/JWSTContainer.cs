@@ -42,15 +42,9 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
     [Export(typeof(ISequenceItem))]
     [Export(typeof(ISequenceContainer))]
     [JsonObject(MemberSerialization.OptIn)]
-    public class JWSTContainer : SequenceContainer, IDeepSkyObjectContainer {
-        private readonly IProfileService profileService;
+    public class JWSTContainer : OrbitalsContainerBase<PVTableObject> {
         private readonly IApplicationMediator applicationMediator;
         private readonly IOrbitalElementsAccessor orbitalElementsAccessor;
-        private readonly IOrbitalsOptions orbitalsOptions;
-        private readonly Task coordinateUpdateTask;
-        private readonly CancellationTokenSource coordinateUpdateCts;
-        private INighttimeCalculator nighttimeCalculator;
-        private InputTarget target;
 
         [ImportingConstructor]
         public JWSTContainer(
@@ -64,12 +58,8 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             INighttimeCalculator nighttimeCalculator,
             IApplicationMediator applicationMediator,
             IOrbitalElementsAccessor orbitalElementsAccessor,
-            IOrbitalsOptions orbitalsOptions) : base(new SequentialStrategy()) {
-            this.profileService = profileService;
-            this.nighttimeCalculator = nighttimeCalculator;
+            IOrbitalsOptions orbitalsOptions) : base(profileService, nighttimeCalculator, orbitalsOptions) {
             this.applicationMediator = applicationMediator;
-            this.orbitalsOptions = orbitalsOptions;
-            _ = Task.Run(() => NighttimeData = nighttimeCalculator.Calculate());
             this.orbitalElementsAccessor = orbitalElementsAccessor;
 
             Target = new InputTarget(Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Latitude), Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Longitude), profileService.ActiveProfile.AstrometrySettings.Horizon);
@@ -77,12 +67,8 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             Target.DeepSkyObject = new PVTableObject(orbitalElementsAccessor, "James-Webb Space Telescope", profileService.ActiveProfile.AstrometrySettings.Horizon, profileService);
             Target.DeepSkyObject.SetDateAndPosition(NighttimeCalculator.GetReferenceDate(DateTime.Now), latitude: profileService.ActiveProfile.AstrometrySettings.Latitude, longitude: profileService.ActiveProfile.AstrometrySettings.Longitude);
 
-            coordinateUpdateCts = new CancellationTokenSource();
-            coordinateUpdateTask = Task.Run(() => CoordinateUpdateLoop(coordinateUpdateCts.Token));
-
-            WeakEventManager<IProfileService, EventArgs>.AddHandler(profileService, nameof(profileService.LocationChanged), ProfileService_LocationChanged);
-            WeakEventManager<IProfileService, EventArgs>.AddHandler(profileService, nameof(profileService.HorizonChanged), ProfileService_HorizonChanged);
             WeakEventManager<IOrbitalElementsAccessor, VectorTableUpdatedEventArgs>.AddHandler(this.orbitalElementsAccessor, nameof(this.orbitalElementsAccessor.VectorTableUpdated), OrbitalElementsAccessor_VectorTableUpdated);
+            PostConstruction();
         }
 
         private void OrbitalElementsAccessor_VectorTableUpdated(object sender, VectorTableUpdatedEventArgs e) {
@@ -93,90 +79,6 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
                 Notification.ShowError($"Failed to reload JWST data in advanced sequencer after update. {ex.Message}");
                 Logger.Error("Failed to reload JWST data in advanced sequencer after update", ex);
             }
-        }
-
-        private async Task CoordinateUpdateLoop(CancellationToken ct) {
-            while (!ct.IsCancellationRequested) {
-                RefreshCoordinates();
-
-                await Task.Delay(TimeSpan.FromSeconds(this.orbitalsOptions.OrbitalPositionRefreshTime_sec), ct);
-            }
-        }
-
-        private void RefreshCoordinates() {
-            Target.InputCoordinates.Coordinates = Target.DeepSkyObject.Coordinates;
-            ShiftTrackingRate = Target.DeepSkyObject.ShiftTrackingRate;
-            DistanceAU = TargetObject.Position.Distance;
-            AfterParentChanged();
-        }
-
-        private SiderealShiftTrackingRate shiftTrackingRate = SiderealShiftTrackingRate.Disabled;
-
-        public SiderealShiftTrackingRate ShiftTrackingRate {
-            get => shiftTrackingRate;
-            private set {
-                shiftTrackingRate = value;
-                RaisePropertyChanged();
-            }
-        }
-
-        private double distanceAU = 0.0;
-
-        public double DistanceAU {
-            get => distanceAU;
-            private set {
-                distanceAU = value;
-                RaisePropertyChanged();
-            }
-        }
-
-        public override void Teardown() {
-            base.Teardown();
-
-            coordinateUpdateCts?.Cancel();
-        }
-
-        private PVTableObject TargetObject => (PVTableObject)Target.DeepSkyObject;
-
-        private void ProfileService_HorizonChanged(object sender, EventArgs e) {
-            Target?.DeepSkyObject?.SetCustomHorizon(profileService.ActiveProfile.AstrometrySettings.Horizon);
-        }
-
-        private void ProfileService_LocationChanged(object sender, EventArgs e) {
-            Target?.SetPosition(Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Latitude), Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Longitude));
-        }
-
-        public NighttimeData NighttimeData { get; private set; }
-
-        [JsonProperty]
-        public InputTarget Target {
-            get => target;
-            set {
-                if (Target != null) {
-                    WeakEventManager<InputTarget, EventArgs>.RemoveHandler(Target, nameof(Target.CoordinatesChanged), Target_OnCoordinatesChanged);
-                }
-                target = value;
-                if (Target != null) {
-                    WeakEventManager<InputTarget, EventArgs>.AddHandler(Target, nameof(Target.CoordinatesChanged), Target_OnCoordinatesChanged);
-                }
-                RaisePropertyChanged();
-            }
-        }
-
-        private bool invalid = false;
-
-        public bool Invalid {
-            get => invalid;
-            private set {
-                if (invalid != value) {
-                    invalid = value;
-                    RaisePropertyChanged();
-                }
-            }
-        }
-
-        private void Target_OnCoordinatesChanged(object sender, EventArgs e) {
-            AfterParentChanged();
         }
 
         public override object Clone() {
@@ -210,17 +112,6 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         public override string ToString() {
             var baseString = base.ToString();
             return $"{baseString}, Target: {Target?.TargetName} {Target?.DeepSkyObject?.Coordinates} {Target?.PositionAngle}";
-        }
-
-        public override bool Validate() {
-            if (Target.InputCoordinates?.Coordinates == null
-                || Target.InputCoordinates.Coordinates.RA == 0.0d
-                || Target.InputCoordinates.Coordinates.Dec == 0.0d) {
-                Invalid = true;
-            } else {
-                Invalid = false;
-            }
-            return base.Validate();
         }
     }
 }
