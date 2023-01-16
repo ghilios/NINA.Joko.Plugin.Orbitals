@@ -80,82 +80,83 @@
     <DataTemplate DataType="{x:Type local:OrbitalObjectContainer}">
         <view:SequenceContainerView>
             <view:SequenceContainerView.SequenceContainerContent>
-                <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,2">
-                    <ninactrl:DetachingExpander IsExpanded="{Binding Target.Expanded}" Style="{StaticResource OrbitalObjectExpander}">
-                        <ninactrl:DetachingExpander.Header>
-                            <StackPanel Orientation="Horizontal">
-                                <Border MinHeight="25">
-                                    <TextBlock
+                <StackPanel Orientation="Vertical">
+                    <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,2">
+                        <ninactrl:DetachingExpander IsExpanded="{Binding Target.Expanded}" Style="{StaticResource OrbitalObjectExpander}">
+                            <ninactrl:DetachingExpander.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <Border MinHeight="25">
+                                        <TextBlock
                                         VerticalAlignment="Center"
                                         Foreground="{StaticResource ButtonForegroundBrush}"
                                         Text="{ns:Loc LblTarget}" />
-                                </Border>
-                                <StackPanel Margin="5,0,0,0" Orientation="Horizontal">
-                                    <TextBlock
+                                    </Border>
+                                    <StackPanel Margin="5,0,0,0" Orientation="Horizontal">
+                                        <TextBlock
                                         VerticalAlignment="Center"
                                         Foreground="{StaticResource ButtonForegroundBrush}"
                                         Text="{Binding Target.TargetName}" />
-                                    <TextBlock
+                                        <TextBlock
                                         Margin="5,0,5,0"
                                         VerticalAlignment="Center"
                                         Foreground="{StaticResource ButtonForegroundBrush}"
                                         Text="|" />
-                                    <TextBlock
+                                        <TextBlock
                                         VerticalAlignment="Center"
                                         Foreground="{StaticResource ButtonForegroundBrush}"
                                         Text="{Binding Target.DeepSkyObject.Coordinates.RAString}" />
-                                    <TextBlock
+                                        <TextBlock
                                         Margin="5,0,5,0"
                                         VerticalAlignment="Center"
                                         Foreground="{StaticResource ButtonForegroundBrush}"
                                         Text="|" />
-                                    <TextBlock
+                                        <TextBlock
                                         VerticalAlignment="Center"
                                         Foreground="{StaticResource ButtonForegroundBrush}"
                                         Text="{Binding Target.DeepSkyObject.Coordinates.DecString}" />
-                                    <TextBlock
+                                        <TextBlock
                                         Margin="5,0,5,0"
                                         VerticalAlignment="Center"
                                         Foreground="{StaticResource ButtonForegroundBrush}"
                                         Text="|" />
-                                    <TextBlock
+                                        <TextBlock
                                         VerticalAlignment="Center"
                                         Foreground="{StaticResource ButtonForegroundBrush}"
                                         Text="{Binding Target.Rotation}" />
-                                    <TextBlock
+                                        <TextBlock
                                         VerticalAlignment="Center"
                                         Foreground="{StaticResource ButtonForegroundBrush}"
                                         Text="°" />
-                                    <StackPanel.Style>
-                                        <Style TargetType="StackPanel">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ninactrl:DetachingExpander}, Path=IsExpanded}" Value="True">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </StackPanel.Style>
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ninactrl:DetachingExpander}, Path=IsExpanded}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
+                                    </StackPanel>
                                 </StackPanel>
-                            </StackPanel>
-                        </ninactrl:DetachingExpander.Header>
-                        <Grid>
-                            <Grid.Resources>
-                                <util:BindingProxy x:Key="nighttimeProxy" Data="{Binding NighttimeData}" />
-                            </Grid.Resources>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                            </Grid.RowDefinitions>
-                            <ComboBox
+                            </ninactrl:DetachingExpander.Header>
+                            <Grid>
+                                <Grid.Resources>
+                                    <util:BindingProxy x:Key="nighttimeProxy" Data="{Binding NighttimeData}" />
+                                </Grid.Resources>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <ComboBox
                                 Grid.Row="0"
                                 Grid.Column="0"
                                 MinWidth="80"
@@ -164,13 +165,13 @@
                                 VerticalAlignment="Center"
                                 ItemsSource="{Binding Source={util:EnumBindingSource {x:Type enums:OrbitalObjectTypeEnum}}}"
                                 SelectedItem="{Binding ObjectType}">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Converter={StaticResource O_EnumStaticDescriptionValueConverter}}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <ninactrl:AutoCompleteBox
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Converter={StaticResource O_EnumStaticDescriptionValueConverter}}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <ninactrl:AutoCompleteBox
                                 Grid.Row="0"
                                 Grid.Column="1"
                                 MinWidth="200"
@@ -184,74 +185,74 @@
                                 SelectedSearchResult="{Binding OrbitalSearchVM.SelectedTargetSearchResult, Mode=TwoWay}"
                                 ShowPopup="{Binding OrbitalSearchVM.ShowPopup, Mode=TwoWay}"
                                 Text="{Binding OrbitalSearchVM.TargetName, UpdateSourceTrigger=PropertyChanged}">
-                                <ninactrl:AutoCompleteBox.Background>
-                                    <SolidColorBrush Opacity="0.05" Color="{Binding Color, Source={StaticResource PrimaryBrush}}" />
-                                </ninactrl:AutoCompleteBox.Background>
-                            </ninactrl:AutoCompleteBox>
-                            <TextBlock
+                                    <ninactrl:AutoCompleteBox.Background>
+                                        <SolidColorBrush Opacity="0.05" Color="{Binding Color, Source={StaticResource PrimaryBrush}}" />
+                                    </ninactrl:AutoCompleteBox.Background>
+                                </ninactrl:AutoCompleteBox>
+                                <TextBlock
                                 Grid.Row="1"
                                 Grid.Column="0"
                                 Margin="5"
                                 VerticalAlignment="Center"
                                 Text="RA" />
-                            <TextBlock
+                                <TextBlock
                                 Grid.Row="1"
                                 Grid.Column="1"
                                 Margin="5"
                                 VerticalAlignment="Center"
                                 Text="{Binding Target.InputCoordinates.Coordinates.RAString, Mode=OneWay}" />
-                            <TextBlock
+                                <TextBlock
                                 Grid.Row="2"
                                 Grid.Column="0"
                                 Margin="5"
                                 VerticalAlignment="Center"
                                 Text="Dec" />
-                            <TextBlock
+                                <TextBlock
                                 Grid.Row="2"
                                 Grid.Column="1"
                                 Margin="5"
                                 VerticalAlignment="Center"
                                 Text="{Binding Target.InputCoordinates.Coordinates.DecString, Mode=OneWay}" />
-                            <TextBlock
+                                <TextBlock
                                 Grid.Row="3"
                                 Grid.Column="0"
                                 Margin="5"
                                 VerticalAlignment="Center"
                                 Text="RA Shift Rate" />
-                            <TextBlock
+                                <TextBlock
                                 Grid.Row="3"
                                 Grid.Column="1"
                                 Margin="5"
                                 VerticalAlignment="Center">
                                 <Run Text="{Binding ShiftTrackingRate.RAArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
-                            </TextBlock>
-                            <TextBlock
+                                </TextBlock>
+                                <TextBlock
                                 Grid.Row="4"
                                 Grid.Column="0"
                                 Margin="5"
                                 VerticalAlignment="Center"
                                 Text="Dec Shift Rate" />
-                            <TextBlock
+                                <TextBlock
                                 Grid.Row="4"
                                 Grid.Column="1"
                                 Margin="5"
                                 VerticalAlignment="Center">
                                 <Run Text="{Binding ShiftTrackingRate.DecArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
-                            </TextBlock>
-                            <TextBlock
+                                </TextBlock>
+                                <TextBlock
                                 Grid.Row="5"
                                 Grid.Column="0"
                                 Margin="5"
                                 VerticalAlignment="Center"
                                 Text="Distance" />
-                            <TextBlock
+                                <TextBlock
                                 Grid.Row="5"
                                 Grid.Column="1"
                                 Margin="5"
                                 VerticalAlignment="Center">
                                 <Run Text="{Binding DistanceAU, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="au" />
-                            </TextBlock>
-                            <alt:AltitudeChart
+                                </TextBlock>
+                                <alt:AltitudeChart
                                 Grid.Row="0"
                                 Grid.RowSpan="6"
                                 Grid.Column="2"
@@ -263,9 +264,151 @@
                                 AnnotateAltitudeAxis="False"
                                 DataContext="{Binding Target.DeepSkyObject}"
                                 NighttimeData="{Binding Source={StaticResource nighttimeProxy}, Path=Data}" />
-                        </Grid>
-                    </ninactrl:DetachingExpander>
-                </Border>
+                            </Grid>
+                        </ninactrl:DetachingExpander>
+                    </Border>
+                    <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,2">
+                        <ninactrl:DetachingExpander IsExpanded="{Binding OffsetExpanded}" Style="{StaticResource OrbitalObjectExpander}">
+                            <ninactrl:DetachingExpander.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <Border MinHeight="25">
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="Offset (Advanced)" />
+                                    </Border>
+                                </StackPanel>
+                            </ninactrl:DetachingExpander.Header>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <StackPanel
+                                    Grid.Row="0"
+                                    Grid.Column="0"
+                                    Margin="0,5,0,0"
+                                    DataContext="{Binding OffsetCoordinates}"
+                                    Orientation="Horizontal">
+                                    <TextBlock
+                                        Width="50"
+                                        VerticalAlignment="Center"
+                                        Text="{ns:Loc LblRA}" />
+                                    <TextBox
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        TextAlignment="Right">
+                                        <TextBox.Text>
+                                            <Binding Path="RAHours" UpdateSourceTrigger="LostFocus">
+                                                <Binding.ValidationRules>
+                                                    <rules:HoursRule />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <TextBlock VerticalAlignment="Center">h</TextBlock>
+                                    <TextBox
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        TextAlignment="Right">
+                                        <TextBox.Text>
+                                            <Binding Path="RAMinutes" UpdateSourceTrigger="LostFocus">
+                                                <Binding.ValidationRules>
+                                                    <rules:MinutesRule />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <TextBlock VerticalAlignment="Center">m</TextBlock>
+                                    <TextBox
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        TextAlignment="Right">
+                                        <TextBox.Text>
+                                            <Binding
+                                                Path="RASeconds"
+                                                StringFormat="N1"
+                                                UpdateSourceTrigger="LostFocus">
+                                                <Binding.ValidationRules>
+                                                    <rules:SecondsRule />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <TextBlock VerticalAlignment="Center">s</TextBlock>
+                                </StackPanel>
+                                <StackPanel
+                                    Grid.Row="1"
+                                    Grid.Column="0"
+                                    Margin="0,5,0,0"
+                                    VerticalAlignment="Center"
+                                    DataContext="{Binding OffsetCoordinates}"
+                                    Orientation="Horizontal">
+                                    <TextBlock
+                                        Width="50"
+                                        VerticalAlignment="Center"
+                                        Text="{ns:Loc LblDec}" />
+                                    <TextBox
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        TextAlignment="Right">
+                                        <TextBox.Text>
+                                            <MultiBinding Converter="{StaticResource DecDegreeConverter}" UpdateSourceTrigger="LostFocus">
+                                                <Binding Path="NegativeDec" />
+                                                <Binding Path="DecDegrees">
+                                                    <Binding.ValidationRules>
+                                                        <rules:DegreesRule />
+                                                    </Binding.ValidationRules>
+                                                </Binding>
+                                            </MultiBinding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <TextBlock VerticalAlignment="Center">d</TextBlock>
+                                    <TextBox
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        TextAlignment="Right">
+                                        <TextBox.Text>
+                                            <Binding Path="DecMinutes" UpdateSourceTrigger="LostFocus">
+                                                <Binding.ValidationRules>
+                                                    <rules:MinutesRule />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <TextBlock VerticalAlignment="Center">m</TextBlock>
+                                    <TextBox
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        TextAlignment="Right">
+                                        <TextBox.Text>
+                                            <Binding
+                                                Path="DecSeconds"
+                                                StringFormat="N1"
+                                                UpdateSourceTrigger="LostFocus">
+                                                <Binding.ValidationRules>
+                                                    <rules:SecondsRule />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <TextBlock VerticalAlignment="Center">s</TextBlock>
+                                </StackPanel>
+                            </Grid>
+                        </ninactrl:DetachingExpander>
+                    </Border>
+                </StackPanel>
             </view:SequenceContainerView.SequenceContainerContent>
         </view:SequenceContainerView>
     </DataTemplate>
@@ -273,179 +416,322 @@
     <DataTemplate DataType="{x:Type local:SolarSystemBodyContainer}">
         <view:SequenceContainerView>
             <view:SequenceContainerView.SequenceContainerContent>
-                <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,2">
-                    <ninactrl:DetachingExpander IsExpanded="{Binding Target.Expanded}" Style="{StaticResource OrbitalObjectExpander}">
-                        <ninactrl:DetachingExpander.Header>
-                            <StackPanel Orientation="Horizontal">
-                                <Border MinHeight="25">
-                                    <TextBlock
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="{ns:Loc LblTarget}" />
-                                </Border>
-                                <StackPanel Margin="5,0,0,0" Orientation="Horizontal">
-                                    <TextBlock
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="{Binding Target.TargetName}" />
-                                    <TextBlock
-                                        Margin="5,0,5,0"
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="|" />
-                                    <TextBlock
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="{Binding Target.DeepSkyObject.Coordinates.RAString}" />
-                                    <TextBlock
-                                        Margin="5,0,5,0"
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="|" />
-                                    <TextBlock
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="{Binding Target.DeepSkyObject.Coordinates.DecString}" />
-                                    <TextBlock
-                                        Margin="5,0,5,0"
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="|" />
-                                    <TextBlock
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="{Binding Target.Rotation}" />
-                                    <TextBlock
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="°" />
-                                    <StackPanel.Style>
-                                        <Style TargetType="StackPanel">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ninactrl:DetachingExpander}, Path=IsExpanded}" Value="True">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </StackPanel.Style>
+                <StackPanel Orientation="Vertical">
+                    <Border>
+                        <ninactrl:DetachingExpander IsExpanded="{Binding Target.Expanded}" Style="{StaticResource OrbitalObjectExpander}">
+                            <ninactrl:DetachingExpander.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <Border MinHeight="25">
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="{ns:Loc LblTarget}" />
+                                    </Border>
+                                    <StackPanel Margin="5,0,0,0" Orientation="Horizontal">
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="{Binding Target.TargetName}" />
+                                        <TextBlock
+                                            Margin="5,0,5,0"
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="|" />
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="{Binding Target.DeepSkyObject.Coordinates.RAString}" />
+                                        <TextBlock
+                                            Margin="5,0,5,0"
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="|" />
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="{Binding Target.DeepSkyObject.Coordinates.DecString}" />
+                                        <TextBlock
+                                            Margin="5,0,5,0"
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="|" />
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="{Binding Target.Rotation}" />
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="°" />
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ninactrl:DetachingExpander}, Path=IsExpanded}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
+                                    </StackPanel>
                                 </StackPanel>
-                            </StackPanel>
-                        </ninactrl:DetachingExpander.Header>
-                        <Grid>
-                            <Grid.Resources>
-                                <util:BindingProxy x:Key="nighttimeProxy" Data="{Binding NighttimeData}" />
-                            </Grid.Resources>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                            </Grid.RowDefinitions>
-                            <TextBlock
-                                Grid.Row="0"
-                                Grid.Column="0"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="Body" />
-                            <ComboBox
-                                Grid.Row="0"
-                                Grid.Column="1"
-                                MinWidth="80"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                ItemsSource="{Binding Source={util:EnumBindingSource {x:Type enums:SolarSystemBody}}}"
-                                SelectedItem="{Binding SelectedSolarSystemBody}">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Converter={StaticResource O_EnumStaticDescriptionValueConverter}}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <TextBlock
-                                Grid.Row="1"
-                                Grid.Column="0"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="RA" />
-                            <TextBlock
-                                Grid.Row="1"
-                                Grid.Column="1"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="{Binding Target.InputCoordinates.Coordinates.RAString, Mode=OneWay}" />
-                            <TextBlock
-                                Grid.Row="2"
-                                Grid.Column="0"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="Dec" />
-                            <TextBlock
-                                Grid.Row="2"
-                                Grid.Column="1"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="{Binding Target.InputCoordinates.Coordinates.DecString, Mode=OneWay}" />
-                            <TextBlock
-                                Grid.Row="3"
-                                Grid.Column="0"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="RA Shift Rate" />
-                            <TextBlock
-                                Grid.Row="3"
-                                Grid.Column="1"
-                                Margin="5"
-                                VerticalAlignment="Center">
-                                <Run Text="{Binding ShiftTrackingRate.RAArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
-                            </TextBlock>
-                            <TextBlock
-                                Grid.Row="4"
-                                Grid.Column="0"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="Dec Shift Rate" />
-                            <TextBlock
-                                Grid.Row="4"
-                                Grid.Column="1"
-                                Margin="5"
-                                VerticalAlignment="Center">
-                                <Run Text="{Binding ShiftTrackingRate.DecArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
-                            </TextBlock>
-                            <TextBlock
-                                Grid.Row="5"
-                                Grid.Column="0"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="Distance" />
-                            <TextBlock
-                                Grid.Row="5"
-                                Grid.Column="1"
-                                Margin="5"
-                                VerticalAlignment="Center">
-                                <Run Text="{Binding DistanceAU, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="au" />
-                            </TextBlock>
-                            <alt:AltitudeChart
-                                Grid.Row="0"
-                                Grid.RowSpan="6"
-                                Grid.Column="2"
-                                MinWidth="400"
-                                MinHeight="120"
-                                Margin="10,0,0,0"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Stretch"
-                                AnnotateAltitudeAxis="False"
-                                DataContext="{Binding Target.DeepSkyObject}"
-                                NighttimeData="{Binding Source={StaticResource nighttimeProxy}, Path=Data}" />
-                        </Grid>
-                    </ninactrl:DetachingExpander>
-                </Border>
+                            </ninactrl:DetachingExpander.Header>
+                            <Grid>
+                                <Grid.Resources>
+                                    <util:BindingProxy x:Key="nighttimeProxy" Data="{Binding NighttimeData}" />
+                                </Grid.Resources>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <TextBlock
+                                    Grid.Row="0"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="Body" />
+                                <ComboBox
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    MinWidth="80"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    ItemsSource="{Binding Source={util:EnumBindingSource {x:Type enums:SolarSystemBody}}}"
+                                    SelectedItem="{Binding SelectedSolarSystemBody}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Converter={StaticResource O_EnumStaticDescriptionValueConverter}}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <TextBlock
+                                    Grid.Row="1"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="RA" />
+                                <TextBlock
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="{Binding Target.InputCoordinates.Coordinates.RAString, Mode=OneWay}" />
+                                <TextBlock
+                                    Grid.Row="2"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="Dec" />
+                                <TextBlock
+                                    Grid.Row="2"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="{Binding Target.InputCoordinates.Coordinates.DecString, Mode=OneWay}" />
+                                <TextBlock
+                                    Grid.Row="3"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="RA Shift Rate" />
+                                <TextBlock
+                                    Grid.Row="3"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    VerticalAlignment="Center">
+                                    <Run Text="{Binding ShiftTrackingRate.RAArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
+                                </TextBlock>
+                                <TextBlock
+                                    Grid.Row="4"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="Dec Shift Rate" />
+                                <TextBlock
+                                    Grid.Row="4"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    VerticalAlignment="Center">
+                                    <Run Text="{Binding ShiftTrackingRate.DecArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
+                                </TextBlock>
+                                <TextBlock
+                                    Grid.Row="5"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="Distance" />
+                                <TextBlock
+                                    Grid.Row="5"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    VerticalAlignment="Center">
+                                    <Run Text="{Binding DistanceAU, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="au" />
+                                </TextBlock>
+                                <alt:AltitudeChart
+                                    Grid.Row="0"
+                                    Grid.RowSpan="6"
+                                    Grid.Column="2"
+                                    MinWidth="400"
+                                    MinHeight="120"
+                                    Margin="10,0,0,0"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
+                                    AnnotateAltitudeAxis="False"
+                                    DataContext="{Binding Target.DeepSkyObject}"
+                                    NighttimeData="{Binding Source={StaticResource nighttimeProxy}, Path=Data}" />
+                            </Grid>
+                        </ninactrl:DetachingExpander>
+                    </Border>
+                    <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,2">
+                        <ninactrl:DetachingExpander IsExpanded="{Binding OffsetExpanded}" Style="{StaticResource OrbitalObjectExpander}">
+                            <ninactrl:DetachingExpander.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <Border MinHeight="25">
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="Offset (Advanced)" />
+                                    </Border>
+                                </StackPanel>
+                            </ninactrl:DetachingExpander.Header>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <StackPanel
+                                    Grid.Row="0"
+                                    Grid.Column="0"
+                                    Margin="0,5,0,0"
+                                    DataContext="{Binding OffsetCoordinates}"
+                                    Orientation="Horizontal">
+                                    <TextBlock
+                                        Width="50"
+                                        VerticalAlignment="Center"
+                                        Text="{ns:Loc LblRA}" />
+                                    <TextBox
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        TextAlignment="Right">
+                                        <TextBox.Text>
+                                            <Binding Path="RAHours" UpdateSourceTrigger="LostFocus">
+                                                <Binding.ValidationRules>
+                                                    <rules:HoursRule />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <TextBlock VerticalAlignment="Center">h</TextBlock>
+                                    <TextBox
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        TextAlignment="Right">
+                                        <TextBox.Text>
+                                            <Binding Path="RAMinutes" UpdateSourceTrigger="LostFocus">
+                                                <Binding.ValidationRules>
+                                                    <rules:MinutesRule />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <TextBlock VerticalAlignment="Center">m</TextBlock>
+                                    <TextBox
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        TextAlignment="Right">
+                                        <TextBox.Text>
+                                            <Binding
+                                                Path="RASeconds"
+                                                StringFormat="N1"
+                                                UpdateSourceTrigger="LostFocus">
+                                                <Binding.ValidationRules>
+                                                    <rules:SecondsRule />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <TextBlock VerticalAlignment="Center">s</TextBlock>
+                                </StackPanel>
+                                <StackPanel
+                                    Grid.Row="1"
+                                    Grid.Column="0"
+                                    Margin="0,5,0,0"
+                                    VerticalAlignment="Center"
+                                    DataContext="{Binding OffsetCoordinates}"
+                                    Orientation="Horizontal">
+                                    <TextBlock
+                                        Width="50"
+                                        VerticalAlignment="Center"
+                                        Text="{ns:Loc LblDec}" />
+                                    <TextBox
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        TextAlignment="Right">
+                                        <TextBox.Text>
+                                            <MultiBinding Converter="{StaticResource DecDegreeConverter}" UpdateSourceTrigger="LostFocus">
+                                                <Binding Path="NegativeDec" />
+                                                <Binding Path="DecDegrees">
+                                                    <Binding.ValidationRules>
+                                                        <rules:DegreesRule />
+                                                    </Binding.ValidationRules>
+                                                </Binding>
+                                            </MultiBinding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <TextBlock VerticalAlignment="Center">d</TextBlock>
+                                    <TextBox
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        TextAlignment="Right">
+                                        <TextBox.Text>
+                                            <Binding Path="DecMinutes" UpdateSourceTrigger="LostFocus">
+                                                <Binding.ValidationRules>
+                                                    <rules:MinutesRule />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <TextBlock VerticalAlignment="Center">m</TextBlock>
+                                    <TextBox
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        TextAlignment="Right">
+                                        <TextBox.Text>
+                                            <Binding
+                                                Path="DecSeconds"
+                                                StringFormat="N1"
+                                                UpdateSourceTrigger="LostFocus">
+                                                <Binding.ValidationRules>
+                                                    <rules:SecondsRule />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <TextBlock VerticalAlignment="Center">s</TextBlock>
+                                </StackPanel>
+                            </Grid>
+                        </ninactrl:DetachingExpander>
+                    </Border>
+                </StackPanel>
             </view:SequenceContainerView.SequenceContainerContent>
         </view:SequenceContainerView>
     </DataTemplate>
@@ -453,146 +739,147 @@
     <DataTemplate DataType="{x:Type local:JWSTContainer}">
         <view:SequenceContainerView>
             <view:SequenceContainerView.SequenceContainerContent>
-                <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,2">
-                    <ninactrl:DetachingExpander IsExpanded="{Binding Target.Expanded}" Style="{StaticResource OrbitalObjectExpander}">
-                        <ninactrl:DetachingExpander.Header>
-                            <StackPanel Orientation="Horizontal">
-                                <Border MinHeight="25">
-                                    <TextBlock
+                <StackPanel Orientation="Vertical">
+                    <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,2">
+                        <ninactrl:DetachingExpander IsExpanded="{Binding Target.Expanded}" Style="{StaticResource OrbitalObjectExpander}">
+                            <ninactrl:DetachingExpander.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <Border MinHeight="25">
+                                        <TextBlock
                                         VerticalAlignment="Center"
                                         Foreground="{StaticResource ButtonForegroundBrush}"
                                         Text="{ns:Loc LblTarget}" />
-                                </Border>
-                                <StackPanel Margin="5,0,0,0" Orientation="Horizontal">
-                                    <TextBlock
+                                    </Border>
+                                    <StackPanel Margin="5,0,0,0" Orientation="Horizontal">
+                                        <TextBlock
                                         VerticalAlignment="Center"
                                         Foreground="{StaticResource ButtonForegroundBrush}"
                                         Text="{Binding Target.TargetName}" />
-                                    <TextBlock
+                                        <TextBlock
                                         Margin="5,0,5,0"
                                         VerticalAlignment="Center"
                                         Foreground="{StaticResource ButtonForegroundBrush}"
                                         Text="|" />
-                                    <TextBlock
+                                        <TextBlock
                                         VerticalAlignment="Center"
                                         Foreground="{StaticResource ButtonForegroundBrush}"
                                         Text="{Binding Target.DeepSkyObject.Coordinates.RAString}" />
-                                    <TextBlock
+                                        <TextBlock
                                         Margin="5,0,5,0"
                                         VerticalAlignment="Center"
                                         Foreground="{StaticResource ButtonForegroundBrush}"
                                         Text="|" />
-                                    <TextBlock
+                                        <TextBlock
                                         VerticalAlignment="Center"
                                         Foreground="{StaticResource ButtonForegroundBrush}"
                                         Text="{Binding Target.DeepSkyObject.Coordinates.DecString}" />
-                                    <TextBlock
+                                        <TextBlock
                                         Margin="5,0,5,0"
                                         VerticalAlignment="Center"
                                         Foreground="{StaticResource ButtonForegroundBrush}"
                                         Text="|" />
-                                    <TextBlock
+                                        <TextBlock
                                         VerticalAlignment="Center"
                                         Foreground="{StaticResource ButtonForegroundBrush}"
                                         Text="{Binding Target.Rotation}" />
-                                    <TextBlock
+                                        <TextBlock
                                         VerticalAlignment="Center"
                                         Foreground="{StaticResource ButtonForegroundBrush}"
                                         Text="°" />
-                                    <StackPanel.Style>
-                                        <Style TargetType="StackPanel">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ninactrl:DetachingExpander}, Path=IsExpanded}" Value="True">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </StackPanel.Style>
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ninactrl:DetachingExpander}, Path=IsExpanded}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
+                                    </StackPanel>
                                 </StackPanel>
-                            </StackPanel>
-                        </ninactrl:DetachingExpander.Header>
-                        <Grid>
-                            <Grid.Resources>
-                                <util:BindingProxy x:Key="nighttimeProxy" Data="{Binding NighttimeData}" />
-                            </Grid.Resources>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                            </Grid.RowDefinitions>
-                            <TextBlock
+                            </ninactrl:DetachingExpander.Header>
+                            <Grid>
+                                <Grid.Resources>
+                                    <util:BindingProxy x:Key="nighttimeProxy" Data="{Binding NighttimeData}" />
+                                </Grid.Resources>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <TextBlock
                                 Grid.Row="1"
                                 Grid.Column="0"
                                 Margin="5"
                                 VerticalAlignment="Center"
                                 Text="RA" />
-                            <TextBlock
+                                <TextBlock
                                 Grid.Row="1"
                                 Grid.Column="1"
                                 Margin="5"
                                 VerticalAlignment="Center"
                                 Text="{Binding Target.InputCoordinates.Coordinates.RAString, Mode=OneWay}" />
-                            <TextBlock
+                                <TextBlock
                                 Grid.Row="2"
                                 Grid.Column="0"
                                 Margin="5"
                                 VerticalAlignment="Center"
                                 Text="Dec" />
-                            <TextBlock
+                                <TextBlock
                                 Grid.Row="2"
                                 Grid.Column="1"
                                 Margin="5"
                                 VerticalAlignment="Center"
                                 Text="{Binding Target.InputCoordinates.Coordinates.DecString, Mode=OneWay}" />
-                            <TextBlock
+                                <TextBlock
                                 Grid.Row="3"
                                 Grid.Column="0"
                                 Margin="5"
                                 VerticalAlignment="Center"
                                 Text="RA Shift Rate" />
-                            <TextBlock
+                                <TextBlock
                                 Grid.Row="3"
                                 Grid.Column="1"
                                 Margin="5"
                                 VerticalAlignment="Center">
                                 <Run Text="{Binding ShiftTrackingRate.RAArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
-                            </TextBlock>
-                            <TextBlock
+                                </TextBlock>
+                                <TextBlock
                                 Grid.Row="4"
                                 Grid.Column="0"
                                 Margin="5"
                                 VerticalAlignment="Center"
                                 Text="Dec Shift Rate" />
-                            <TextBlock
+                                <TextBlock
                                 Grid.Row="4"
                                 Grid.Column="1"
                                 Margin="5"
                                 VerticalAlignment="Center">
                                 <Run Text="{Binding ShiftTrackingRate.DecArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
-                            </TextBlock>
-                            <TextBlock
+                                </TextBlock>
+                                <TextBlock
                                 Grid.Row="5"
                                 Grid.Column="0"
                                 Margin="5"
                                 VerticalAlignment="Center"
                                 Text="Distance" />
-                            <TextBlock
+                                <TextBlock
                                 Grid.Row="5"
                                 Grid.Column="1"
                                 Margin="5"
                                 VerticalAlignment="Center">
                                 <Run Text="{Binding DistanceAU, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="au" />
-                            </TextBlock>
-                            <StackPanel
+                                </TextBlock>
+                                <StackPanel
                                 Grid.Row="6"
                                 Grid.Column="0"
                                 Grid.ColumnSpan="2"
@@ -600,22 +887,22 @@
                                 Orientation="Horizontal"
                                 Margin="5"
                                 Visibility="{Binding Invalid, Converter={StaticResource BooleanToVisibilityCollapsedConverter}}">
-                                <Border
+                                    <Border
                                     Width="20"
                                     Height="20"
                                     Margin="5,0,5,0"
                                     Background="{StaticResource NotificationErrorBrush}"
                                     BorderBrush="Transparent"
                                     CornerRadius="10">
-                                    <Path
+                                        <Path
                                         HorizontalAlignment="Right"
                                         Data="{StaticResource ExclamationCircledSVG}"
                                         Fill="{StaticResource ButtonForegroundBrush}"
                                         Stretch="Uniform" />
-                                </Border>
-                                <TextBlock Margin="5" Text="JWST data is out of date" VerticalAlignment="Center" />
-                            </StackPanel>
-                            <alt:AltitudeChart
+                                    </Border>
+                                    <TextBlock Margin="5" Text="JWST data is out of date" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <alt:AltitudeChart
                                 Grid.Row="0"
                                 Grid.RowSpan="7"
                                 Grid.Column="2"
@@ -627,9 +914,151 @@
                                 AnnotateAltitudeAxis="False"
                                 DataContext="{Binding Target.DeepSkyObject}"
                                 NighttimeData="{Binding Source={StaticResource nighttimeProxy}, Path=Data}" />
-                        </Grid>
-                    </ninactrl:DetachingExpander>
-                </Border>
+                            </Grid>
+                        </ninactrl:DetachingExpander>
+                    </Border>
+                    <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,2">
+                        <ninactrl:DetachingExpander IsExpanded="{Binding OffsetExpanded}" Style="{StaticResource OrbitalObjectExpander}">
+                            <ninactrl:DetachingExpander.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <Border MinHeight="25">
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="Offset (Advanced)" />
+                                    </Border>
+                                </StackPanel>
+                            </ninactrl:DetachingExpander.Header>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <StackPanel
+                                    Grid.Row="0"
+                                    Grid.Column="0"
+                                    Margin="0,5,0,0"
+                                    DataContext="{Binding OffsetCoordinates}"
+                                    Orientation="Horizontal">
+                                    <TextBlock
+                                        Width="50"
+                                        VerticalAlignment="Center"
+                                        Text="{ns:Loc LblRA}" />
+                                    <TextBox
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        TextAlignment="Right">
+                                        <TextBox.Text>
+                                            <Binding Path="RAHours" UpdateSourceTrigger="LostFocus">
+                                                <Binding.ValidationRules>
+                                                    <rules:HoursRule />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <TextBlock VerticalAlignment="Center">h</TextBlock>
+                                    <TextBox
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        TextAlignment="Right">
+                                        <TextBox.Text>
+                                            <Binding Path="RAMinutes" UpdateSourceTrigger="LostFocus">
+                                                <Binding.ValidationRules>
+                                                    <rules:MinutesRule />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <TextBlock VerticalAlignment="Center">m</TextBlock>
+                                    <TextBox
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        TextAlignment="Right">
+                                        <TextBox.Text>
+                                            <Binding
+                                                Path="RASeconds"
+                                                StringFormat="N1"
+                                                UpdateSourceTrigger="LostFocus">
+                                                <Binding.ValidationRules>
+                                                    <rules:SecondsRule />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <TextBlock VerticalAlignment="Center">s</TextBlock>
+                                </StackPanel>
+                                <StackPanel
+                                    Grid.Row="1"
+                                    Grid.Column="0"
+                                    Margin="0,5,0,0"
+                                    VerticalAlignment="Center"
+                                    DataContext="{Binding OffsetCoordinates}"
+                                    Orientation="Horizontal">
+                                    <TextBlock
+                                        Width="50"
+                                        VerticalAlignment="Center"
+                                        Text="{ns:Loc LblDec}" />
+                                    <TextBox
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        TextAlignment="Right">
+                                        <TextBox.Text>
+                                            <MultiBinding Converter="{StaticResource DecDegreeConverter}" UpdateSourceTrigger="LostFocus">
+                                                <Binding Path="NegativeDec" />
+                                                <Binding Path="DecDegrees">
+                                                    <Binding.ValidationRules>
+                                                        <rules:DegreesRule />
+                                                    </Binding.ValidationRules>
+                                                </Binding>
+                                            </MultiBinding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <TextBlock VerticalAlignment="Center">d</TextBlock>
+                                    <TextBox
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        TextAlignment="Right">
+                                        <TextBox.Text>
+                                            <Binding Path="DecMinutes" UpdateSourceTrigger="LostFocus">
+                                                <Binding.ValidationRules>
+                                                    <rules:MinutesRule />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <TextBlock VerticalAlignment="Center">m</TextBlock>
+                                    <TextBox
+                                        Width="40"
+                                        Margin="5,0,0,0"
+                                        VerticalAlignment="Center"
+                                        TextAlignment="Right">
+                                        <TextBox.Text>
+                                            <Binding
+                                                Path="DecSeconds"
+                                                StringFormat="N1"
+                                                UpdateSourceTrigger="LostFocus">
+                                                <Binding.ValidationRules>
+                                                    <rules:SecondsRule />
+                                                </Binding.ValidationRules>
+                                            </Binding>
+                                        </TextBox.Text>
+                                    </TextBox>
+                                    <TextBlock VerticalAlignment="Center">s</TextBlock>
+                                </StackPanel>
+                            </Grid>
+                        </ninactrl:DetachingExpander>
+                    </Border>
+                </StackPanel>
             </view:SequenceContainerView.SequenceContainerContent>
         </view:SequenceContainerView>
     </DataTemplate>

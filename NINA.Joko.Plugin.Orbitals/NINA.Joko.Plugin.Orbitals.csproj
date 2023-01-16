@@ -397,6 +397,7 @@
     <Compile Include="Interfaces\IOrbitalElementsSource.cs" />
     <Compile Include="Interfaces\IOrbitalSearchVM.cs" />
     <Compile Include="Interfaces\IOrbitalsOptions.cs" />
+    <Compile Include="SequenceItems\OrbitalsContainerBase.cs" />
     <Compile Include="SequenceItems\SetTelescopeShiftRateTrigger.cs" />
     <Compile Include="SequenceItems\SetTelescopeShiftRate.cs" />
     <Compile Include="SequenceItems\JWSTContainer.cs" />
