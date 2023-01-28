@@ -290,6 +290,7 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -376,8 +377,32 @@
                         VerticalAlignment="Center">
                         <Run Text="{Binding DistanceAU, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="au" />
                     </TextBlock>
+                    <TextBlock
+                        Grid.Row="4" Grid.Column="4"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="Offset RA"
+                        FontWeight="DemiBold" />
+                    <TextBlock
+                        Grid.Row="4" Grid.Column="5"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="{Binding RAOffset, Converter={StaticResource HoursToHMSConverter}}">
+                    </TextBlock>
+                    <TextBlock
+                        Grid.Row="5" Grid.Column="4"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="Offset Dec"
+                        FontWeight="DemiBold" />
+                    <TextBlock
+                        Grid.Row="5" Grid.Column="5"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="{Binding DecOffset, Converter={StaticResource DegreesToDMSConverter}}">
+                    </TextBlock>
                     <WrapPanel
-                        Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="7"
+                        Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="7"
                         Orientation="Horizontal"
                         Margin="5"
                         HorizontalAlignment="Center"
@@ -411,6 +436,26 @@
                                 Margin="10,5,10,5"
                                 Foreground="{StaticResource ButtonForegroundBrush}"
                                 Text="Set Guider Shift Rate" />
+                        </Button>
+                        <Button
+                            Margin="5"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Command="{Binding SetOffsetCommand}">
+                            <TextBlock
+                                Margin="10,5,10,5"
+                                Foreground="{StaticResource ButtonForegroundBrush}"
+                                Text="Set Offset" />
+                        </Button>
+                        <Button
+                            Margin="5"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Command="{Binding ResetOffsetCommand}">
+                            <TextBlock
+                                Margin="10,5,10,5"
+                                Foreground="{StaticResource ButtonForegroundBrush}"
+                                Text="Clear Offset" />
                         </Button>
                     </WrapPanel>
                 </Grid>
