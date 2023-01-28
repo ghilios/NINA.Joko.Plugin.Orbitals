@@ -17,6 +17,7 @@ using NINA.Astrometry.Interfaces;
 using NINA.Core.Utility.Notification;
 using NINA.Joko.Plugin.Orbitals.Calculations;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
+using NINA.Joko.Plugin.Orbitals.Utility;
 using NINA.Profile;
 using NINA.Profile.Interfaces;
 using NINA.Sequencer.Container;
@@ -55,7 +56,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             coordinateUpdateCts = new CancellationTokenSource();
             coordinateUpdateTask = Task.Run(() => CoordinateUpdateLoop(coordinateUpdateCts.Token));
 
-            OffsetCoordinates = new InputCoordinates();
+            OffsetCoordinates = new InputCoordinatesEx();
 
             WeakEventManager<IProfileService, EventArgs>.AddHandler(profileService, nameof(profileService.LocationChanged), ProfileService_LocationChanged);
             WeakEventManager<IProfileService, EventArgs>.AddHandler(profileService, nameof(profileService.HorizonChanged), ProfileService_HorizonChanged);
@@ -74,10 +75,10 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             }
         }
 
-        private InputCoordinates offsetCoordinates;
+        private InputCoordinatesEx offsetCoordinates;
 
         [JsonProperty]
-        public InputCoordinates OffsetCoordinates {
+        public InputCoordinatesEx OffsetCoordinates {
             get => offsetCoordinates;
             set {
                 if (offsetCoordinates != null) {

@@ -410,8 +410,10 @@
     </Compile>
     <Compile Include="SequenceItems\OrbitalObjectContainer.cs" />
     <Compile Include="Utility\EnumExtensions.cs" />
+    <Compile Include="Utility\InputCoordinatesEx.cs" />
     <Compile Include="Utility\ListExtensions.cs" />
     <Compile Include="Utility\TrigramStringMap.cs" />
+    <Compile Include="ValidationRules\HoursExRule.cs" />
     <Compile Include="ValidationRules\PositiveIntegerRule.cs" />
     <Compile Include="ValidationRules\PositiveIntegerOrInfiniteRule.cs" />
     <Compile Include="OrbitalsOptions.cs" />

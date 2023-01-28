@@ -15,23 +15,19 @@ using NINA.Astrometry;
 using NINA.Astrometry.Interfaces;
 using NINA.Profile.Interfaces;
 using NINA.Sequencer.Container;
-using NINA.Sequencer.Container.ExecutionStrategy;
 using NINA.Sequencer.SequenceItem;
 using NINA.WPF.Base.Interfaces.Mediator;
 using System;
 using System.ComponentModel.Composition;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Collections.ObjectModel;
 using NINA.Sequencer.Trigger;
 using NINA.Sequencer.Conditions;
 using NINA.Joko.Plugin.Orbitals.Calculations;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
-using System.Threading;
 using NINA.Core.Utility.Notification;
 using NINA.Core.Utility;
-using System.Collections.Generic;
 
 namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
 
