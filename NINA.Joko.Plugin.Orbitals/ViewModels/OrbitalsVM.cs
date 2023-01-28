@@ -137,6 +137,9 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
             this.SetGuiderShiftCommand = new AsyncRelayCommand(SetGuiderShiftCommandAction, CanSetGuiderShift);
             this.SetGuiderShiftCommand.RegisterPropertyChangeNotification(guiderMediator.GetInfo(), nameof(GuiderInfo.Connected), nameof(GuiderInfo.CanSetShiftRate));
+
+            this.ResetOffsetCommand = new RelayCommand(ResetOffset, (o) => SelectedOrbitalsObject != null && (RAOffset != 0.0d || DecOffset != 0.0d));
+            this.SetOffsetCommand = new RelayCommand(SetOffset, (o) => SelectedOrbitalsObject != null && telescopeMediator.GetInfo().Connected);
         }
 
         private Task<bool> SendToFramingWizardCommandAction() {
@@ -147,7 +150,11 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 }
 
                 try {
-                    var dso = new DeepSkyObject(SelectedOrbitalsObject.Name, TargetCoordinates, profileService.ActiveProfile.ApplicationSettings.SkyAtlasImageRepository, profileService.ActiveProfile.AstrometrySettings.Horizon);
+                    var adjustedCoordinates = TargetCoordinates.Clone();
+                    adjustedCoordinates.RA += RAOffset;
+                    adjustedCoordinates.Dec += DecOffset;
+
+                    var dso = new DeepSkyObject(SelectedOrbitalsObject.Name, adjustedCoordinates.Transform(Epoch.J2000), profileService.ActiveProfile.ApplicationSettings.SkyAtlasImageRepository, profileService.ActiveProfile.AstrometrySettings.Horizon);
                     applicationMediator.ChangeTab(ApplicationTab.FRAMINGASSISTANT);
                     return await framingAssistantVM.SetCoordinates(dso);
                 } catch (Exception e) {
@@ -366,6 +373,26 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             }
         }
 
+        private double raOffset = 0.0d;
+
+        public double RAOffset {
+            get => raOffset;
+            private set {
+                raOffset = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        private double decOffset = 0.0d;
+
+        public double DecOffset {
+            get => decOffset;
+            private set {
+                decOffset = value;
+                RaisePropertyChanged();
+            }
+        }
+
         public IOrbitalSearchVM OrbitalSearchVM { get; private set; }
 
         public AsyncRelayCommand CancelUpdateCometElementsCommand { get; private set; }
@@ -393,6 +420,9 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         public RelayCommand SetTrackingRateCommand { get; private set; }
 
         public AsyncRelayCommand SetGuiderShiftCommand { get; private set; }
+
+        public ICommand ResetOffsetCommand { get; private set; }
+        public ICommand SetOffsetCommand { get; private set; }
 
         // TODO: Refactor this the next time more orbital types are added
         private Task<bool> updateCometElementsTask;
@@ -465,6 +495,18 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             var bodyObject = new SolarSystemBodyObject(orbitalElementsAccessor, solarSystemBody, profileService.ActiveProfile.AstrometrySettings.Horizon);
             bodyObject.SetDateAndPosition(NighttimeCalculator.GetReferenceDate(DateTime.Now), latitude: profileService.ActiveProfile.AstrometrySettings.Latitude, longitude: profileService.ActiveProfile.AstrometrySettings.Longitude);
             SelectedOrbitalsObject = bodyObject;
+        }
+
+        private void ResetOffset(object o) {
+            RAOffset = 0.0d;
+            DecOffset = 0.0d;
+        }
+
+        private void SetOffset(object o) {
+            var targetCoordinates = TargetCoordinates;
+            var currentCoordinates = this.telescopeMediator.GetCurrentPosition().Transform(targetCoordinates.Epoch);
+            RAOffset = currentCoordinates.RA - targetCoordinates.RA;
+            DecOffset = currentCoordinates.Dec - targetCoordinates.Dec;
         }
 
         public Task<bool> UpdateJWSTVectorTable() {
