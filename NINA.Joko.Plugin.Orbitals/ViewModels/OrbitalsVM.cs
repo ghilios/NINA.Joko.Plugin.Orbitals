@@ -127,7 +127,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
             this.LoadSelectionCommand = new RelayCommand(LoadSelection, CanLoad);
             this.LoadSelectionCommand.RegisterPropertyChangeNotification(this, nameof(SearchObjectType));
-            this.LoadSelectionCommand.RegisterPropertyChangeNotification(OrbitalSearchVM, nameof(OrbitalSearchVM.TargetSearchResult));
+            this.LoadSelectionCommand.RegisterPropertyChangeNotification(OrbitalSearchVM, nameof(OrbitalSearchVM.SelectedOrbitalElements));
 
             this.SendToFramingWizardCommand = new AsyncRelayCommand(SendToFramingWizardCommandAction, () => SelectedOrbitalsObject != null);
             this.SendToFramingWizardCommand.RegisterPropertyChangeNotification(this, nameof(SelectedOrbitalsObject));
@@ -138,8 +138,12 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             this.SetGuiderShiftCommand = new AsyncRelayCommand(SetGuiderShiftCommandAction, CanSetGuiderShift);
             this.SetGuiderShiftCommand.RegisterPropertyChangeNotification(guiderMediator.GetInfo(), nameof(GuiderInfo.Connected), nameof(GuiderInfo.CanSetShiftRate));
 
-            this.ResetOffsetCommand = new RelayCommand(ResetOffset, (o) => SelectedOrbitalsObject != null && (RAOffset != 0.0d || DecOffset != 0.0d));
-            this.SetOffsetCommand = new RelayCommand(SetOffset, (o) => SelectedOrbitalsObject != null && telescopeMediator.GetInfo().Connected);
+            this.ResetOffsetCommand = new RelayCommand(ResetOffset, () => SelectedOrbitalsObject != null && (RAOffset != 0.0d || DecOffset != 0.0d));
+            this.ResetOffsetCommand.RegisterPropertyChangeNotification(this, nameof(SelectedOrbitalsObject), nameof(RAOffset), nameof(DecOffset));
+
+            this.SetOffsetCommand = new RelayCommand(SetOffset, () => SelectedOrbitalsObject != null && telescopeMediator.GetInfo().Connected);
+            this.SetOffsetCommand.RegisterPropertyChangeNotification(this, nameof(SelectedOrbitalsObject));
+            this.SetOffsetCommand.RegisterPropertyChangeNotification(telescopeMediator.GetInfo(), nameof(TelescopeInfo.Connected));
         }
 
         private Task<bool> SendToFramingWizardCommandAction() {
@@ -421,8 +425,8 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
         public AsyncRelayCommand SetGuiderShiftCommand { get; private set; }
 
-        public ICommand ResetOffsetCommand { get; private set; }
-        public ICommand SetOffsetCommand { get; private set; }
+        public RelayCommand ResetOffsetCommand { get; private set; }
+        public RelayCommand SetOffsetCommand { get; private set; }
 
         // TODO: Refactor this the next time more orbital types are added
         private Task<bool> updateCometElementsTask;
@@ -497,12 +501,12 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             SelectedOrbitalsObject = bodyObject;
         }
 
-        private void ResetOffset(object o) {
+        private void ResetOffset() {
             RAOffset = 0.0d;
             DecOffset = 0.0d;
         }
 
-        private void SetOffset(object o) {
+        private void SetOffset() {
             var targetCoordinates = TargetCoordinates;
             var currentCoordinates = this.telescopeMediator.GetCurrentPosition().Transform(targetCoordinates.Epoch);
             RAOffset = currentCoordinates.RA - targetCoordinates.RA;
