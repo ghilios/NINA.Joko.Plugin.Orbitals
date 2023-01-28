@@ -9,6 +9,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:mini="clr-namespace:NINA.View.Sequencer.MiniSequencer;assembly=NINA.Sequencer"
     xmlns:ninactrl="clr-namespace:NINA.CustomControlLibrary;assembly=NINA.CustomControlLibrary"
+    xmlns:orules="clr-namespace:NINA.Joko.Plugin.Orbitals.ValidationRules"
     xmlns:ns="clr-namespace:NINA.Core.Locale;assembly=NINA.Core"
     xmlns:rules="clr-namespace:NINA.Core.Utility.ValidationRules;assembly=NINA.Core"
     xmlns:util="clr-namespace:NINA.Core.Utility;assembly=NINA.Core"
@@ -305,11 +306,14 @@
                                         VerticalAlignment="Center"
                                         TextAlignment="Right">
                                         <TextBox.Text>
-                                            <Binding Path="RAHours" UpdateSourceTrigger="LostFocus">
-                                                <Binding.ValidationRules>
-                                                    <rules:HoursRule />
-                                                </Binding.ValidationRules>
-                                            </Binding>
+                                            <MultiBinding Converter="{StaticResource DecDegreeConverter}" UpdateSourceTrigger="LostFocus">
+                                                <Binding Path="NegativeRA" />
+                                                <Binding Path="RAHours">
+                                                    <Binding.ValidationRules>
+                                                        <orules:HoursExRule />
+                                                    </Binding.ValidationRules>
+                                                </Binding>
+                                            </MultiBinding>
                                         </TextBox.Text>
                                     </TextBox>
                                     <TextBlock VerticalAlignment="Center">h</TextBlock>
@@ -628,11 +632,14 @@
                                         VerticalAlignment="Center"
                                         TextAlignment="Right">
                                         <TextBox.Text>
-                                            <Binding Path="RAHours" UpdateSourceTrigger="LostFocus">
-                                                <Binding.ValidationRules>
-                                                    <rules:HoursRule />
-                                                </Binding.ValidationRules>
-                                            </Binding>
+                                            <MultiBinding Converter="{StaticResource DecDegreeConverter}" UpdateSourceTrigger="LostFocus">
+                                                <Binding Path="NegativeRA" />
+                                                <Binding Path="RAHours">
+                                                    <Binding.ValidationRules>
+                                                        <orules:HoursExRule />
+                                                    </Binding.ValidationRules>
+                                                </Binding>
+                                            </MultiBinding>
                                         </TextBox.Text>
                                     </TextBox>
                                     <TextBlock VerticalAlignment="Center">h</TextBlock>
@@ -955,11 +962,14 @@
                                         VerticalAlignment="Center"
                                         TextAlignment="Right">
                                         <TextBox.Text>
-                                            <Binding Path="RAHours" UpdateSourceTrigger="LostFocus">
-                                                <Binding.ValidationRules>
-                                                    <rules:HoursRule />
-                                                </Binding.ValidationRules>
-                                            </Binding>
+                                            <MultiBinding Converter="{StaticResource DecDegreeConverter}" UpdateSourceTrigger="LostFocus">
+                                                <Binding Path="NegativeRA" />
+                                                <Binding Path="RAHours">
+                                                    <Binding.ValidationRules>
+                                                        <orules:HoursExRule />
+                                                    </Binding.ValidationRules>
+                                                </Binding>
+                                            </MultiBinding>
                                         </TextBox.Text>
                                     </TextBox>
                                     <TextBlock VerticalAlignment="Center">h</TextBlock>
