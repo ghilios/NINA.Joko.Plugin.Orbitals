@@ -64,7 +64,7 @@
                 Name="PART_QuirksModeEnumList"
                 Grid.Row="1" Grid.Column="2"
                 MinWidth="80"
-                Margin="10,5,0,5"
+                Margin="5,5,0,5"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Center"
                 ToolTip="{StaticResource QuirksMode_Tooltip}"
