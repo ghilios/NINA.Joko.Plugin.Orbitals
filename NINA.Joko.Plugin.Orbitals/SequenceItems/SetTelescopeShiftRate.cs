@@ -15,6 +15,8 @@ using NINA.Astrometry;
 using NINA.Core.Locale;
 using NINA.Core.Model;
 using NINA.Equipment.Interfaces.Mediator;
+using NINA.Joko.Plugin.Orbitals.Interfaces;
+using NINA.Joko.Plugin.Orbitals.Utility;
 using NINA.Sequencer.SequenceItem;
 using NINA.Sequencer.Utility;
 using NINA.Sequencer.Validations;
@@ -34,10 +36,12 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
     [JsonObject(MemberSerialization.OptIn)]
     public class SetTelescopeShiftRate : SequenceItem, IValidatable {
         private readonly ITelescopeMediator telescopeMediator;
+        private readonly IOrbitalsOptions options;
 
         [ImportingConstructor]
         public SetTelescopeShiftRate(ITelescopeMediator telescopeMediator) {
             this.telescopeMediator = telescopeMediator;
+            this.options = OrbitalsPlugin.OrbitalsOptions;
         }
 
         private SetTelescopeShiftRate(SetTelescopeShiftRate cloneMe) : this(cloneMe.telescopeMediator) {
@@ -62,8 +66,9 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
 
         public override Task Execute(IProgress<ApplicationStatus> progress, CancellationToken token) {
             if (ShiftTrackingRate.Enabled) {
-                if (!telescopeMediator.SetCustomTrackingRate(ShiftTrackingRate.RAArcsecsPerSec, ShiftTrackingRate.DecArcsecsPerSec)) {
-                    throw new SequenceEntityFailedException($"Setting tracking rate to {ShiftTrackingRate} failed");
+                var adjustedRate = ShiftTrackingRate.AdjustForASCOM(this.options);
+                if (!telescopeMediator.SetCustomTrackingRate(adjustedRate.RAArcsecsPerSec, adjustedRate.DecArcsecsPerSec)) {
+                    throw new SequenceEntityFailedException($"Setting tracking rate to {adjustedRate} failed");
                 }
             } else {
                 if (!telescopeMediator.SetTrackingMode(Equipment.Interfaces.TrackingMode.Sidereal)) {

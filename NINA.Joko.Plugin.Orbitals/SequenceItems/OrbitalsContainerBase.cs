@@ -14,6 +14,7 @@ using ASCOM.Astrometry;
 using Newtonsoft.Json;
 using NINA.Astrometry;
 using NINA.Astrometry.Interfaces;
+using NINA.Core.Utility;
 using NINA.Core.Utility.Notification;
 using NINA.Joko.Plugin.Orbitals.Calculations;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
@@ -127,23 +128,27 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         protected T TargetObject => (T)Target.DeepSkyObject;
 
         protected void RefreshCoordinates() {
-            var targetCoordinates = Target.DeepSkyObject.Coordinates.Clone();
-            if (OffsetCoordinates != null) {
-                var newDec = targetCoordinates.Dec + offsetCoordinates.Coordinates.Dec;
-                var newRa = targetCoordinates.RA + offsetCoordinates.Coordinates.RA;
-                if (newDec < -90.0 || newDec > 90.0) {
-                    Notification.ShowWarning("Invalid dec after applying offset. Resetting offset.");
-                    OffsetCoordinates.Coordinates = new Coordinates(Angle.Zero, Angle.Zero, Epoch.J2000);
-                } else {
-                    newRa = AstroUtil.EuclidianModulus(newRa, 24.0);
-                    targetCoordinates.Dec = newDec;
-                    targetCoordinates.RA = newRa;
+            try {
+                var targetCoordinates = Target.DeepSkyObject.Coordinates.Clone();
+                if (OffsetCoordinates != null) {
+                    var newDec = targetCoordinates.Dec + offsetCoordinates.Coordinates.Dec;
+                    var newRa = targetCoordinates.RA + offsetCoordinates.Coordinates.RA;
+                    if (newDec < -90.0 || newDec > 90.0) {
+                        Notification.ShowWarning("Invalid dec after applying offset. Resetting offset.");
+                        OffsetCoordinates.Coordinates = new Coordinates(Angle.Zero, Angle.Zero, Epoch.J2000);
+                    } else {
+                        newRa = AstroUtil.EuclidianModulus(newRa, 24.0);
+                        targetCoordinates.Dec = newDec;
+                        targetCoordinates.RA = newRa;
+                    }
                 }
+                Target.InputCoordinates.Coordinates = targetCoordinates;
+                ShiftTrackingRate = Target.DeepSkyObject.ShiftTrackingRate;
+                DistanceAU = TargetObject.Position.Distance;
+                AfterParentChanged();
+            } catch (Exception e) {
+                Logger.Error("Error while refreshing coordinates", e);
             }
-            Target.InputCoordinates.Coordinates = targetCoordinates;
-            ShiftTrackingRate = Target.DeepSkyObject.ShiftTrackingRate;
-            DistanceAU = TargetObject.Position.Distance;
-            AfterParentChanged();
         }
 
         public override void Teardown() {

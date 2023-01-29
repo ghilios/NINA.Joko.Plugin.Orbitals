@@ -390,6 +390,7 @@
     <Compile Include="Converters\DateTimeMinToNeverConverter.cs" />
     <Compile Include="Converters\EnumStaticDescriptionValueConverter.cs" />
     <Compile Include="Enums\OrbitalObjectTypeEnum.cs" />
+    <Compile Include="Enums\QuirksModeEnum.cs" />
     <Compile Include="Enums\SearchObjectTypeEnum.cs" />
     <Compile Include="Enums\SolarSystemBody.cs" />
     <Compile Include="Interfaces\IJPLAccessor.cs" />
@@ -412,6 +413,7 @@
     <Compile Include="Utility\EnumExtensions.cs" />
     <Compile Include="Utility\InputCoordinatesEx.cs" />
     <Compile Include="Utility\ListExtensions.cs" />
+    <Compile Include="Utility\SiderealTrackingRateExtensions.cs" />
     <Compile Include="Utility\TrigramStringMap.cs" />
     <Compile Include="ValidationRules\HoursExRule.cs" />
     <Compile Include="ValidationRules\PositiveIntegerRule.cs" />
@@ -505,7 +507,8 @@
       echo "Copying $(PlatformName) $(TargetFileName) Dependencies"
       xcopy "$(TargetDir)protobuf-net*.dll" "%25localappdata%25\NINA\Plugins\Orbitals\dll" /h/k/r/y
       xcopy "$(TargetDir)TrieNet*.dll" "%25localappdata%25\NINA\Plugins\Orbitals\dll" /h/k/r/y
-      xcopy "$(TargetDir)FlatFiles*.dll" "%25localappdata%25\NINA\Plugins\Orbitals\dll" /h/k/r/y</PostBuildEvent>
+      xcopy "$(TargetDir)FlatFiles*.dll" "%25localappdata%25\NINA\Plugins\Orbitals\dll" /h/k/r/y
+</PostBuildEvent>
   </PropertyGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
