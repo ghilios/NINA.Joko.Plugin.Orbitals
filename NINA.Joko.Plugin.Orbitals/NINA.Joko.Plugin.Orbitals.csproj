@@ -23,7 +23,7 @@
     <PackageReference Include="Dirkster.AvalonDock" Version="4.60.0" />
     <PackageReference Include="FlatFiles" Version="5.0.4" />
     <PackageReference Include="Mindbox.Data.Linq" Version="5.0.0" />
-    <PackageReference Include="NINA.Plugin" Version="3.0.0.1010-nightly" />
+    <PackageReference Include="NINA.Plugin" Version="3.0.0.1015-nightly" />
     <PackageReference Include="protobuf-net" Version="3.1.26" />
     <PackageReference Include="protobuf-net.Core" Version="3.1.26" />
   </ItemGroup>

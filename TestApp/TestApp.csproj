@@ -52,7 +52,7 @@
   <ItemGroup>
     <PackageReference Include="ASCOM.Platform" Version="6.5.2" />
     <PackageReference Include="FlatFiles" Version="5.0.4" />
-    <PackageReference Include="NINA.Plugin" Version="3.0.0.1010-nightly" />
+    <PackageReference Include="NINA.Plugin" Version="3.0.0.1015-nightly" />
     <PackageReference Include="System.Windows.Interactivity.WPF" Version="2.0.20525" />
   </ItemGroup>
 </Project>
