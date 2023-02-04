@@ -225,7 +225,7 @@
                                 Grid.Column="1"
                                 Margin="5"
                                 VerticalAlignment="Center">
-                                <Run Text="{Binding ShiftTrackingRate.RAArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
+                                <Run Text="{Binding ShiftTrackingRate.RASecondsPerSiderealSecond, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="sec/sidereal sec" />
                                 </TextBlock>
                                 <TextBlock
                                 Grid.Row="4"
@@ -551,7 +551,7 @@
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center">
-                                    <Run Text="{Binding ShiftTrackingRate.RAArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
+                                    <Run Text="{Binding ShiftTrackingRate.RASecondsPerSiderealSecond, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="sec/sidereal sec" />
                                 </TextBlock>
                                 <TextBlock
                                     Grid.Row="4"
@@ -858,7 +858,7 @@
                                 Grid.Column="1"
                                 Margin="5"
                                 VerticalAlignment="Center">
-                                <Run Text="{Binding ShiftTrackingRate.RAArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
+                                <Run Text="{Binding ShiftTrackingRate.RASecondsPerSiderealSecond, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="sec/sidereal sec" />
                                 </TextBlock>
                                 <TextBlock
                                 Grid.Row="4"

@@ -152,8 +152,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
         private void SetTrackingRateCommandAction(object o) {
             try {
-                var adjustedRate = ShiftTrackingRate.AdjustForASCOM(this.orbitalsOptions);
-                if (!this.telescopeMediator.SetCustomTrackingRate(adjustedRate.RAArcsecsPerSec, adjustedRate.DecArcsecsPerSec)) {
+                if (!this.telescopeMediator.SetCustomTrackingRate(ShiftTrackingRate)) {
                     Notification.ShowError("Failed to set orbital tracking rate");
                 }
             } catch (Exception e) {

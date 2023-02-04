@@ -30,7 +30,6 @@
             </Grid.RowDefinitions>
             <Grid.Resources>
                 <TextBlock x:Key="OrbitalRefreshTime_Tooltip" Text="How frequently, in seconds, the coordinates for an orbital object in the sequencer is updated. Setting this too low can negatively impact machine performance." />
-                <TextBlock x:Key="QuirksMode_Tooltip" Text="Most people should keep this at None. Astrophysics currently needs a 15.0411x adjustment to RA Tracking Rate." />
             </Grid.Resources>
             <TextBlock
                 Grid.Row="0"
@@ -53,29 +52,6 @@
                     </Binding.ValidationRules>
                 </Binding>
             </ninactrl:UnitTextBox>
-            <TextBlock
-                Grid.Row="1"
-                Grid.Column="0"
-                Margin="5,5,0,0"
-                VerticalAlignment="Center"
-                Text="Quirks Mode"
-                ToolTip="{StaticResource QuirksMode_Tooltip}" />
-            <ComboBox
-                Name="PART_QuirksModeEnumList"
-                Grid.Row="1" Grid.Column="2"
-                MinWidth="80"
-                Margin="10,5,0,5"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Center"
-                ToolTip="{StaticResource QuirksMode_Tooltip}"
-                ItemsSource="{Binding Source={util:EnumBindingSource {x:Type enums:QuirksModeEnum}}}"
-                SelectedItem="{Binding QuirksMode}">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding Converter={StaticResource O_EnumStaticDescriptionValueConverter}}" />
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
         </Grid>
     </DataTemplate>
 </ResourceDictionary>

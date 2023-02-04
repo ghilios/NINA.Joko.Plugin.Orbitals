@@ -390,7 +390,6 @@
     <Compile Include="Converters\DateTimeMinToNeverConverter.cs" />
     <Compile Include="Converters\EnumStaticDescriptionValueConverter.cs" />
     <Compile Include="Enums\OrbitalObjectTypeEnum.cs" />
-    <Compile Include="Enums\QuirksModeEnum.cs" />
     <Compile Include="Enums\SearchObjectTypeEnum.cs" />
     <Compile Include="Enums\SolarSystemBody.cs" />
     <Compile Include="Interfaces\IJPLAccessor.cs" />
@@ -413,7 +412,6 @@
     <Compile Include="Utility\EnumExtensions.cs" />
     <Compile Include="Utility\InputCoordinatesEx.cs" />
     <Compile Include="Utility\ListExtensions.cs" />
-    <Compile Include="Utility\SiderealTrackingRateExtensions.cs" />
     <Compile Include="Utility\TrigramStringMap.cs" />
     <Compile Include="ValidationRules\HoursExRule.cs" />
     <Compile Include="ValidationRules\PositiveIntegerRule.cs" />
