@@ -66,9 +66,8 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
 
         public override Task Execute(IProgress<ApplicationStatus> progress, CancellationToken token) {
             if (ShiftTrackingRate.Enabled) {
-                var adjustedRate = ShiftTrackingRate.AdjustForASCOM(this.options);
-                if (!telescopeMediator.SetCustomTrackingRate(adjustedRate.RAArcsecsPerSec, adjustedRate.DecArcsecsPerSec)) {
-                    throw new SequenceEntityFailedException($"Setting tracking rate to {adjustedRate} failed");
+                if (!telescopeMediator.SetCustomTrackingRate(ShiftTrackingRate)) {
+                    throw new SequenceEntityFailedException($"Setting tracking rate to {ShiftTrackingRate} failed");
                 }
             } else {
                 if (!telescopeMediator.SetTrackingMode(Equipment.Interfaces.TrackingMode.Sidereal)) {
