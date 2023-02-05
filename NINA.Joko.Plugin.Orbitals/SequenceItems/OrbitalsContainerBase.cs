@@ -41,9 +41,6 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         }
 
         protected void PostConstruction() {
-            coordinateUpdateCts = new CancellationTokenSource();
-            coordinateUpdateTask = Task.Run(() => CoordinateUpdateLoop(coordinateUpdateCts.Token));
-
             OffsetCoordinates = new InputCoordinatesEx();
 
             WeakEventManager<IProfileService, EventArgs>.AddHandler(profileService, nameof(profileService.LocationChanged), ProfileService_LocationChanged);
@@ -116,6 +113,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         protected void RefreshCoordinates() {
             try {
                 var targetCoordinates = Target.DeepSkyObject.Coordinates.Clone();
+                Logger.Info($"Refreshing Coordinates. Target: {Target?.TargetName??string.Empty} Before: {targetCoordinates}");
                 if (OffsetCoordinates != null) {
                     var newDec = targetCoordinates.Dec + offsetCoordinates.Coordinates.Dec;
                     var newRa = targetCoordinates.RA + offsetCoordinates.Coordinates.RA;
@@ -131,18 +129,41 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
                 Target.InputCoordinates.Coordinates = targetCoordinates;
                 ShiftTrackingRate = Target.DeepSkyObject.ShiftTrackingRate;
                 DistanceAU = TargetObject.Position.Distance;
-                AfterParentChanged();
+                Logger.Info($"Refreshing Coordinates. Target: {Target?.TargetName??string.Empty} After: {targetCoordinates}");
+                base.AfterParentChanged();
             } catch (Exception e) {
-                Logger.Error("Error while refreshing coordinates", e);
+                Logger.Error($"Error while refreshing coordinates. Target: {Target?.TargetName??string.Empty}", e);
             }
         }
 
-        public override void Teardown() {
-            base.Teardown();
+        public override void AfterParentChanged(){
+            base.AfterParentChanged();
 
-            coordinateUpdateCts?.Cancel();
+            var parentSRC = Parent;
+            while (parentSRC != null && !(parentSRC is ISequenceRootContainer)) {
+                parentSRC = parentSRC.Parent;
+            }
+
+            if(parentSRC==null && coordinateUpdateTask != null)
+            {
+                Logger.Info($"Cancelling Coordinate Update Loop. Target: {Target?.TargetName??string.Empty}");
+
+                // hack: setting the update task to null allows a new task to start after changing the parent.
+                // Without this, no new updates happen when moving the item to a non-sibling node in the sequence.
+                // (for example moving it to a new Sequential Instruction Container)
+                // Is there a way to detect this instead?
+                coordinateUpdateTask=null;
+                coordinateUpdateCts?.Cancel();
+                coordinateUpdateCts=null;
+            }
+            if(coordinateUpdateTask==null && parentSRC != null)
+            {
+                Logger.Info($"Starting Coordinate Update Loop. Target: {Target?.TargetName??string.Empty}");
+                coordinateUpdateCts = new CancellationTokenSource();
+                coordinateUpdateTask = Task.Run(() => CoordinateUpdateLoop(coordinateUpdateCts.Token));
+            }
         }
-
+       
         private SiderealShiftTrackingRate shiftTrackingRate = SiderealShiftTrackingRate.Disabled;
 
         public SiderealShiftTrackingRate ShiftTrackingRate {
