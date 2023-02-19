@@ -10,6 +10,9 @@
 
 #endregion "copyright"
 
+using NINA.Astrometry;
+using NINA.Joko.Plugin.Orbitals.Calculations;
+using NINA.Joko.Plugin.Orbitals.Enums;
 using System;
 using System.ComponentModel;
 
@@ -29,6 +32,19 @@ namespace NINA.Joko.Plugin.Orbitals.Utility {
                 }
             }
             return value.ToString();
+        }
+
+        public static SiderealShiftTrackingRate ApplyQuirks(this SiderealShiftTrackingRate rate, QuirksModeEnum value) {
+            if (value == QuirksModeEnum.None) {
+                return rate;
+            } else if (value == QuirksModeEnum.EQMOD) {
+                // EQMOD interprets RA tracking rate in arcsec/sec units instead of RA sec/sidereal second. To counteract this, multiply
+                // by the sidereal rate
+                return SiderealShiftTrackingRate.Create(
+                    raDegreesPerHour: rate.RADegreesPerHour * AstrometricConstants.SIDEREAL_RATE_ARCSEC_PER_SI_SEC,
+                    decDegreesPerHour: rate.DecDegreesPerHour);
+            }
+            throw new ArgumentException($"Quirks mode {value} not expected");
         }
     }
 }
