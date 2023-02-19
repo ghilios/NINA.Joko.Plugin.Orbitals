@@ -88,46 +88,46 @@
                                 <StackPanel Orientation="Horizontal">
                                     <Border MinHeight="25">
                                         <TextBlock
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="{ns:Loc LblTarget}" />
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="{ns:Loc LblTarget}" />
                                     </Border>
                                     <StackPanel Margin="5,0,0,0" Orientation="Horizontal">
                                         <TextBlock
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="{Binding Target.TargetName}" />
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="{Binding Target.TargetName}" />
                                         <TextBlock
-                                        Margin="5,0,5,0"
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="|" />
+                                            Margin="5,0,5,0"
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="|" />
                                         <TextBlock
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="{Binding Target.DeepSkyObject.Coordinates.RAString}" />
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="{Binding Target.DeepSkyObject.Coordinates.RAString}" />
                                         <TextBlock
-                                        Margin="5,0,5,0"
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="|" />
+                                            Margin="5,0,5,0"
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="|" />
                                         <TextBlock
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="{Binding Target.DeepSkyObject.Coordinates.DecString}" />
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="{Binding Target.DeepSkyObject.Coordinates.DecString}" />
                                         <TextBlock
-                                        Margin="5,0,5,0"
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="|" />
+                                            Margin="5,0,5,0"
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="|" />
                                         <TextBlock
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="{Binding Target.Rotation}" />
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="{Binding Target.Rotation}" />
                                         <TextBlock
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="°" />
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="°" />
                                         <StackPanel.Style>
                                             <Style TargetType="StackPanel">
                                                 <Style.Triggers>
@@ -158,14 +158,14 @@
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
                                 <ComboBox
-                                Grid.Row="0"
-                                Grid.Column="0"
-                                MinWidth="80"
-                                Margin="10,5,0,5"
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Center"
-                                ItemsSource="{Binding Source={util:EnumBindingSource {x:Type enums:OrbitalObjectTypeEnum}}}"
-                                SelectedItem="{Binding ObjectType}">
+                                    Grid.Row="0"
+                                    Grid.Column="0"
+                                    MinWidth="80"
+                                    Margin="10,5,0,5"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Center"
+                                    ItemsSource="{Binding Source={util:EnumBindingSource {x:Type enums:OrbitalObjectTypeEnum}}}"
+                                    SelectedItem="{Binding ObjectType}">
                                     <ComboBox.ItemTemplate>
                                         <DataTemplate>
                                             <TextBlock Text="{Binding Converter={StaticResource O_EnumStaticDescriptionValueConverter}}" />
@@ -173,98 +173,98 @@
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
                                 <ninactrl:AutoCompleteBox
-                                Grid.Row="0"
-                                Grid.Column="1"
-                                MinWidth="200"
-                                Margin="10,5,0,5"
-                                VerticalAlignment="Center"
-                                VerticalContentAlignment="Center"
-                                Foreground="{StaticResource PrimaryBrush}"
-                                HintText="{Binding Text, Source={StaticResource SelectedObjectName_Hint}}"
-                                PopupBackground="{StaticResource TertiaryBackgroundBrush}"
-                                SearchResult="{Binding OrbitalSearchVM.TargetSearchResult.Result}"
-                                SelectedSearchResult="{Binding OrbitalSearchVM.SelectedTargetSearchResult, Mode=TwoWay}"
-                                ShowPopup="{Binding OrbitalSearchVM.ShowPopup, Mode=TwoWay}"
-                                Text="{Binding OrbitalSearchVM.TargetName, UpdateSourceTrigger=PropertyChanged}">
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    MinWidth="200"
+                                    Margin="10,5,0,5"
+                                    VerticalAlignment="Center"
+                                    VerticalContentAlignment="Center"
+                                    Foreground="{StaticResource PrimaryBrush}"
+                                    HintText="{Binding Text, Source={StaticResource SelectedObjectName_Hint}}"
+                                    PopupBackground="{StaticResource TertiaryBackgroundBrush}"
+                                    SearchResult="{Binding OrbitalSearchVM.TargetSearchResult.Result}"
+                                    SelectedSearchResult="{Binding OrbitalSearchVM.SelectedTargetSearchResult, Mode=TwoWay}"
+                                    ShowPopup="{Binding OrbitalSearchVM.ShowPopup, Mode=TwoWay}"
+                                    Text="{Binding OrbitalSearchVM.TargetName, UpdateSourceTrigger=PropertyChanged}">
                                     <ninactrl:AutoCompleteBox.Background>
                                         <SolidColorBrush Opacity="0.05" Color="{Binding Color, Source={StaticResource PrimaryBrush}}" />
                                     </ninactrl:AutoCompleteBox.Background>
                                 </ninactrl:AutoCompleteBox>
                                 <TextBlock
-                                Grid.Row="1"
-                                Grid.Column="0"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="RA" />
+                                    Grid.Row="1"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="RA" />
                                 <TextBlock
-                                Grid.Row="1"
-                                Grid.Column="1"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="{Binding Target.InputCoordinates.Coordinates.RAString, Mode=OneWay}" />
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="{Binding Target.InputCoordinates.Coordinates.RAString, Mode=OneWay}" />
                                 <TextBlock
-                                Grid.Row="2"
-                                Grid.Column="0"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="Dec" />
+                                    Grid.Row="2"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="Dec" />
                                 <TextBlock
-                                Grid.Row="2"
-                                Grid.Column="1"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="{Binding Target.InputCoordinates.Coordinates.DecString, Mode=OneWay}" />
+                                    Grid.Row="2"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="{Binding Target.InputCoordinates.Coordinates.DecString, Mode=OneWay}" />
                                 <TextBlock
-                                Grid.Row="3"
-                                Grid.Column="0"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="RA Shift Rate" />
+                                    Grid.Row="3"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="RA Shift Rate" />
                                 <TextBlock
-                                Grid.Row="3"
-                                Grid.Column="1"
-                                Margin="5"
-                                VerticalAlignment="Center">
-                                <Run Text="{Binding ShiftTrackingRate.RASecondsPerSiderealSecond, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="sec/sidereal sec" />
+                                    Grid.Row="3"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    VerticalAlignment="Center">
+                                    <Run Text="{Binding ShiftTrackingRate.RASecondsPerSiderealSecond, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="sec/sidereal sec" />
                                 </TextBlock>
                                 <TextBlock
-                                Grid.Row="4"
-                                Grid.Column="0"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="Dec Shift Rate" />
+                                    Grid.Row="4"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="Dec Shift Rate" />
                                 <TextBlock
-                                Grid.Row="4"
-                                Grid.Column="1"
-                                Margin="5"
-                                VerticalAlignment="Center">
-                                <Run Text="{Binding ShiftTrackingRate.DecArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
+                                    Grid.Row="4"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    VerticalAlignment="Center">
+                                    <Run Text="{Binding ShiftTrackingRate.DecArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
                                 </TextBlock>
                                 <TextBlock
-                                Grid.Row="5"
-                                Grid.Column="0"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="Distance" />
+                                    Grid.Row="5"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="Distance" />
                                 <TextBlock
-                                Grid.Row="5"
-                                Grid.Column="1"
-                                Margin="5"
-                                VerticalAlignment="Center">
-                                <Run Text="{Binding DistanceAU, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="au" />
+                                    Grid.Row="5"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    VerticalAlignment="Center">
+                                    <Run Text="{Binding DistanceAU, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="au" />
                                 </TextBlock>
                                 <alt:AltitudeChart
-                                Grid.Row="0"
-                                Grid.RowSpan="6"
-                                Grid.Column="2"
-                                MinWidth="400"
-                                MinHeight="120"
-                                Margin="10,0,0,0"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Stretch"
-                                AnnotateAltitudeAxis="False"
-                                DataContext="{Binding Target.DeepSkyObject}"
-                                NighttimeData="{Binding Source={StaticResource nighttimeProxy}, Path=Data}" />
+                                    Grid.Row="0"
+                                    Grid.RowSpan="6"
+                                    Grid.Column="2"
+                                    MinWidth="400"
+                                    MinHeight="120"
+                                    Margin="10,0,0,0"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
+                                    AnnotateAltitudeAxis="False"
+                                    DataContext="{Binding Target.DeepSkyObject}"
+                                    NighttimeData="{Binding Source={StaticResource nighttimeProxy}, Path=Data}" />
                             </Grid>
                         </ninactrl:DetachingExpander>
                     </Border>
@@ -753,46 +753,46 @@
                                 <StackPanel Orientation="Horizontal">
                                     <Border MinHeight="25">
                                         <TextBlock
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="{ns:Loc LblTarget}" />
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="{ns:Loc LblTarget}" />
                                     </Border>
                                     <StackPanel Margin="5,0,0,0" Orientation="Horizontal">
                                         <TextBlock
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="{Binding Target.TargetName}" />
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="{Binding Target.TargetName}" />
                                         <TextBlock
-                                        Margin="5,0,5,0"
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="|" />
+                                            Margin="5,0,5,0"
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="|" />
                                         <TextBlock
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="{Binding Target.DeepSkyObject.Coordinates.RAString}" />
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="{Binding Target.DeepSkyObject.Coordinates.RAString}" />
                                         <TextBlock
-                                        Margin="5,0,5,0"
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="|" />
+                                            Margin="5,0,5,0"
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="|" />
                                         <TextBlock
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="{Binding Target.DeepSkyObject.Coordinates.DecString}" />
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="{Binding Target.DeepSkyObject.Coordinates.DecString}" />
                                         <TextBlock
-                                        Margin="5,0,5,0"
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="|" />
+                                            Margin="5,0,5,0"
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="|" />
                                         <TextBlock
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="{Binding Target.Rotation}" />
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="{Binding Target.Rotation}" />
                                         <TextBlock
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource ButtonForegroundBrush}"
-                                        Text="°" />
+                                            VerticalAlignment="Center"
+                                            Foreground="{StaticResource ButtonForegroundBrush}"
+                                            Text="°" />
                                         <StackPanel.Style>
                                             <Style TargetType="StackPanel">
                                                 <Style.Triggers>
@@ -824,103 +824,106 @@
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
                                 <TextBlock
-                                Grid.Row="1"
-                                Grid.Column="0"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="RA" />
+                                    Grid.Row="1"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="RA" />
                                 <TextBlock
-                                Grid.Row="1"
-                                Grid.Column="1"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="{Binding Target.InputCoordinates.Coordinates.RAString, Mode=OneWay}" />
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="{Binding Target.InputCoordinates.Coordinates.RAString, Mode=OneWay}" />
                                 <TextBlock
-                                Grid.Row="2"
-                                Grid.Column="0"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="Dec" />
+                                    Grid.Row="2"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="Dec" />
                                 <TextBlock
-                                Grid.Row="2"
-                                Grid.Column="1"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="{Binding Target.InputCoordinates.Coordinates.DecString, Mode=OneWay}" />
+                                    Grid.Row="2"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="{Binding Target.InputCoordinates.Coordinates.DecString, Mode=OneWay}" />
                                 <TextBlock
-                                Grid.Row="3"
-                                Grid.Column="0"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="RA Shift Rate" />
+                                    Grid.Row="3"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="RA Shift Rate" />
                                 <TextBlock
-                                Grid.Row="3"
-                                Grid.Column="1"
-                                Margin="5"
-                                VerticalAlignment="Center">
-                                <Run Text="{Binding ShiftTrackingRate.RASecondsPerSiderealSecond, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="sec/sidereal sec" />
+                                    Grid.Row="3"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    VerticalAlignment="Center">
+                                    <Run Text="{Binding ShiftTrackingRate.RASecondsPerSiderealSecond, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="sec/sidereal sec" />
                                 </TextBlock>
                                 <TextBlock
-                                Grid.Row="4"
-                                Grid.Column="0"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="Dec Shift Rate" />
+                                    Grid.Row="4"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="Dec Shift Rate" />
                                 <TextBlock
-                                Grid.Row="4"
-                                Grid.Column="1"
-                                Margin="5"
-                                VerticalAlignment="Center">
-                                <Run Text="{Binding ShiftTrackingRate.DecArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
+                                    Grid.Row="4"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    VerticalAlignment="Center">
+                                    <Run Text="{Binding ShiftTrackingRate.DecArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
                                 </TextBlock>
                                 <TextBlock
-                                Grid.Row="5"
-                                Grid.Column="0"
-                                Margin="5"
-                                VerticalAlignment="Center"
-                                Text="Distance" />
+                                    Grid.Row="5"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="Distance" />
                                 <TextBlock
-                                Grid.Row="5"
-                                Grid.Column="1"
-                                Margin="5"
-                                VerticalAlignment="Center">
-                                <Run Text="{Binding DistanceAU, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="au" />
+                                    Grid.Row="5"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    VerticalAlignment="Center">
+                                    <Run Text="{Binding DistanceAU, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="au" />
                                 </TextBlock>
                                 <StackPanel
-                                Grid.Row="6"
-                                Grid.Column="0"
-                                Grid.ColumnSpan="2"
-                                VerticalAlignment="Center"
-                                Orientation="Horizontal"
-                                Margin="5"
-                                Visibility="{Binding Invalid, Converter={StaticResource BooleanToVisibilityCollapsedConverter}}">
+                                    Grid.Row="6"
+                                    Grid.Column="0"
+                                    Grid.ColumnSpan="2"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Orientation="Horizontal"
+                                    Visibility="{Binding Invalid, Converter={StaticResource BooleanToVisibilityCollapsedConverter}}">
                                     <Border
-                                    Width="20"
-                                    Height="20"
-                                    Margin="5,0,5,0"
-                                    Background="{StaticResource NotificationErrorBrush}"
-                                    BorderBrush="Transparent"
-                                    CornerRadius="10">
+                                        Width="20"
+                                        Height="20"
+                                        Margin="5,0,5,0"
+                                        Background="{StaticResource NotificationErrorBrush}"
+                                        BorderBrush="Transparent"
+                                        CornerRadius="10">
                                         <Path
-                                        HorizontalAlignment="Right"
-                                        Data="{StaticResource ExclamationCircledSVG}"
-                                        Fill="{StaticResource ButtonForegroundBrush}"
-                                        Stretch="Uniform" />
+                                            HorizontalAlignment="Right"
+                                            Data="{StaticResource ExclamationCircledSVG}"
+                                            Fill="{StaticResource ButtonForegroundBrush}"
+                                            Stretch="Uniform" />
                                     </Border>
-                                    <TextBlock Margin="5" Text="JWST data is out of date" VerticalAlignment="Center" />
+                                    <TextBlock
+                                        Margin="5"
+                                        VerticalAlignment="Center"
+                                        Text="JWST data is out of date" />
                                 </StackPanel>
                                 <alt:AltitudeChart
-                                Grid.Row="0"
-                                Grid.RowSpan="7"
-                                Grid.Column="2"
-                                MinWidth="400"
-                                MinHeight="120"
-                                Margin="10,0,0,0"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Stretch"
-                                AnnotateAltitudeAxis="False"
-                                DataContext="{Binding Target.DeepSkyObject}"
-                                NighttimeData="{Binding Source={StaticResource nighttimeProxy}, Path=Data}" />
+                                    Grid.Row="0"
+                                    Grid.RowSpan="7"
+                                    Grid.Column="2"
+                                    MinWidth="400"
+                                    MinHeight="120"
+                                    Margin="10,0,0,0"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
+                                    AnnotateAltitudeAxis="False"
+                                    DataContext="{Binding Target.DeepSkyObject}"
+                                    NighttimeData="{Binding Source={StaticResource nighttimeProxy}, Path=Data}" />
                             </Grid>
                         </ninactrl:DetachingExpander>
                     </Border>
