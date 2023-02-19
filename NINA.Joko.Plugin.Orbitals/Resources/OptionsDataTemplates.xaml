@@ -30,7 +30,7 @@
             </Grid.RowDefinitions>
             <Grid.Resources>
                 <TextBlock x:Key="OrbitalRefreshTime_Tooltip" Text="How frequently, in seconds, the coordinates for an orbital object in the sequencer is updated. Setting this too low can negatively impact machine performance." />
-                <TextBlock x:Key="QuirksMode_Tooltip" Text="Most people should keep this at None. EQMOD currently needs a 1/15.0411x adjustment to RA Tracking Rate." />
+                <TextBlock x:Key="QuirksMode_Tooltip" Text="Most people should keep this at None. EQMOD currently needs a 15.0411x adjustment to RA Tracking Rate." />
             </Grid.Resources>
             <TextBlock
                 Grid.Row="0"
@@ -64,7 +64,7 @@
                 Name="PART_QuirksModeEnumList"
                 Grid.Row="1" Grid.Column="2"
                 MinWidth="80"
-                Margin="10,5,0,5"
+                Margin="5,5,0,0"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Center"
                 ToolTip="{StaticResource QuirksMode_Tooltip}"
