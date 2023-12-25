@@ -10,18 +10,18 @@
 
 #endregion "copyright"
 
-using NINA.Joko.Plugin.Orbitals.Enums;
+using NINA.Joko.Plugin.Orbitals.Converters;
 using System.ComponentModel;
 
-namespace NINA.Joko.Plugin.Orbitals.Interfaces {
+namespace NINA.Joko.Plugin.Orbitals.Enums {
 
-    public interface IOrbitalsOptions : INotifyPropertyChanged {
-        int OrbitalPositionRefreshTime_sec { get; set; }
+    [TypeConverter(typeof(EnumStaticDescriptionValueConverter))]
+    public enum OrbitalElementsAccessorEnum {
 
-        QuirksModeEnum QuirksMode { get; set; }
+        [Description("JPL")]
+        JPL = 0,
 
-        OrbitalElementsAccessorEnum CometAccessor { get; set; }
-
-        void ResetDefaults();
+        [Description("MPC")]
+        MPC = 1
     }
 }

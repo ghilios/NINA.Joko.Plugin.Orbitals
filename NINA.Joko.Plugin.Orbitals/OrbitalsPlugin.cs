@@ -48,11 +48,15 @@ namespace NINA.Joko.Plugin.Orbitals {
             }
 
             if (OrbitalElementsAccessor == null) {
-                OrbitalElementsAccessor = new OrbitalElementsAccessor();
+                OrbitalElementsAccessor = new OrbitalElementsAccessor(OrbitalsOptions);
             }
 
             if (JPLAccessor == null) {
                 JPLAccessor = new JPLAccessor();
+            }
+
+            if (MPCAccessor == null) {
+                MPCAccessor = new MPCAccessor();
             }
 
             if (SystemCultureInfo == null) {
@@ -69,6 +73,8 @@ namespace NINA.Joko.Plugin.Orbitals {
         public static OrbitalElementsAccessor OrbitalElementsAccessor { get; private set; }
 
         public static JPLAccessor JPLAccessor { get; private set; }
+
+        public static MPCAccessor MPCAccessor { get; private set; }
 
         public static CultureInfo SystemCultureInfo { get; private set; }
 
