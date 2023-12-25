@@ -10,18 +10,16 @@
 
 #endregion "copyright"
 
-using NINA.Joko.Plugin.Orbitals.Enums;
-using System.ComponentModel;
+using NINA.Joko.Plugin.Orbitals.Calculations;
+using System;
+using System.Threading.Tasks;
 
 namespace NINA.Joko.Plugin.Orbitals.Interfaces {
 
-    public interface IOrbitalsOptions : INotifyPropertyChanged {
-        int OrbitalPositionRefreshTime_sec { get; set; }
+    public interface IMPCAccessor {
 
-        QuirksModeEnum QuirksMode { get; set; }
+        Task<DateTime> GetCometElementsLastModified();
 
-        OrbitalElementsAccessorEnum CometAccessor { get; set; }
-
-        void ResetDefaults();
+        Task<MPCCometResponse> GetCometElements();
     }
 }

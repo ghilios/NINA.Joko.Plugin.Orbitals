@@ -143,6 +143,7 @@ namespace TestApp {
             Console.WriteLine($"Elapsed: {stopWatch.Elapsed}");
             */
 
+            /*
             var jplAccessor = new JPLAccessor();
             var startTime = new DateTime(2022, 3, 25, 12, 0, 0, DateTimeKind.Utc);
             var jwstTable = await jplAccessor.GetJWSTVectorTable(startTime - TimeSpan.FromHours(1), TimeSpan.FromDays(1));
@@ -156,6 +157,30 @@ namespace TestApp {
                 Console.WriteLine($"{AstroUtil.GetJulianDate(queryTime)} -> {orbitalPV.Coordinates}");
                 queryTime += interval;
             }
+            */
+
+            /*
+            String example = "0062P         2023 12 25.1079  1.264990  0.624678   47.2939   68.6709    4.7380  20231223   8.0 10.0  62P/Tsuchinshan                                          MPEC 2023-Y70";
+            using (var sr = new StreamReader(GenerateStreamFromString(example))) {
+                var mpcAccessor = new MPCCometResponse(sr);
+                var results = mpcAccessor.Response;
+            }
+            */
+
+            var mpcAccessor = new MPCAccessor();
+            var lastModified = await mpcAccessor.GetCometElementsLastModified();
+            var cometElements = await mpcAccessor.GetCometElements();
+            var orbitalElements = cometElements.Response.Select(r => r.ToOrbitalElements()).ToList();
+            Console.WriteLine();
+        }
+
+        public static Stream GenerateStreamFromString(string s) {
+            var stream = new MemoryStream();
+            var writer = new StreamWriter(stream);
+            writer.Write(s);
+            writer.Flush();
+            stream.Position = 0;
+            return stream;
         }
     }
 }

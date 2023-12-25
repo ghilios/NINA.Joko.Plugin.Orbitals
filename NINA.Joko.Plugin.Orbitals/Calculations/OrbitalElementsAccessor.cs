@@ -54,13 +54,27 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             }
         }
 
+        private readonly IOrbitalsOptions options;
         private readonly object backendLock = new object();
         private readonly Dictionary<OrbitalObjectTypeEnum, OrbitalElementsBackend> backendsByType = new Dictionary<OrbitalObjectTypeEnum, OrbitalElementsBackend>();
         private PVTable jwstVectorTable;
 
-        public OrbitalElementsAccessor() {
+        public OrbitalElementsAccessor(IOrbitalsOptions options) {
+            this.options = options;
             foreach (var objectType in Enum.GetValues(typeof(OrbitalObjectTypeEnum)).Cast<OrbitalObjectTypeEnum>()) {
-                backendsByType.Add(objectType, OrbitalElementsBackend.Create(objectType, DateTime.MinValue, Enumerable.Empty<OrbitalElements>(), CancellationToken.None));
+                backendsByType.Add(objectType, CreateDefaultBackend(objectType));
+            }
+
+            options.PropertyChanged += Options_PropertyChanged;
+        }
+
+        private static OrbitalElementsBackend CreateDefaultBackend(OrbitalObjectTypeEnum objectType) {
+            return OrbitalElementsBackend.Create(objectType, DateTime.MinValue, Enumerable.Empty<OrbitalElements>(), CancellationToken.None);
+        }
+
+        private void Options_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e) {
+            if (e.PropertyName == nameof(IOrbitalsOptions.CometAccessor)) {
+                LoadObjectType(OrbitalObjectTypeEnum.Comet, CancellationToken.None);
             }
         }
 
@@ -87,10 +101,21 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             }
         }
 
+        private OrbitalElementsAccessorEnum GetAccessor(OrbitalObjectTypeEnum objectType) {
+            if (objectType == OrbitalObjectTypeEnum.Comet) {
+                return this.options.CometAccessor;
+            } else {
+                return OrbitalElementsAccessorEnum.JPL;
+            }
+        }
+
         private void LoadObjectType(OrbitalObjectTypeEnum objectType, CancellationToken ct) {
             var path = GetObjectTypeSavePath(objectType);
             if (!File.Exists(path)) {
                 Logger.Info($"No {objectType} orbital elements loaded since no file was found at {path}");
+                var backend = CreateDefaultBackend(objectType);
+                UpdateBackend(objectType, backend);
+                OnUpdated(objectType, backend);
                 return;
             }
 
@@ -248,8 +273,13 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             return new OrbitalPositionVelocity(asof, startApparentPosition, startCoordinates, trackingRate);
         }
 
-        private static string GetObjectTypeSavePath(OrbitalObjectTypeEnum objectType) {
-            return Path.Combine(OrbitalsPlugin.OrbitalElementsDirectory, $"{objectType}Elements.bin.gz");
+        private string GetObjectTypeSavePath(OrbitalObjectTypeEnum objectType) {
+            String prefix = "";
+            if (GetAccessor(objectType) == OrbitalElementsAccessorEnum.MPC) {
+                prefix = "MPC_";
+            }
+
+            return Path.Combine(OrbitalsPlugin.OrbitalElementsDirectory, $"{prefix}{objectType}Elements.bin.gz");
         }
 
         private static string GetJWSTSavePath() {

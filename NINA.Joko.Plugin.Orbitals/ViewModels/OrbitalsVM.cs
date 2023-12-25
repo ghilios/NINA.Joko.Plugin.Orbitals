@@ -16,6 +16,7 @@ using NINA.Core.Enum;
 using NINA.Core.Model;
 using NINA.Core.Utility;
 using NINA.Core.Utility.Notification;
+using NINA.Equipment.Equipment.MyGuider;
 using NINA.Equipment.Interfaces.Mediator;
 using NINA.Equipment.Interfaces.ViewModel;
 using NINA.Joko.Plugin.Orbitals.Calculations;
@@ -45,6 +46,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private readonly IApplicationStatusMediator applicationStatusMediator;
         private readonly IOrbitalsOptions orbitalsOptions;
         private readonly IJPLAccessor jplAccessor;
+        private readonly IMPCAccessor mpcAccessor;
         private readonly IOrbitalElementsAccessor orbitalElementsAccessor;
         private readonly IProgress<ApplicationStatus> progress;
         private bool initialLoadComplete;
@@ -58,7 +60,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             IFramingAssistantVM framingAssistantVM,
             IApplicationMediator applicationMediator,
             IApplicationStatusMediator applicationStatusMediator)
-            : this(profileService, nighttimeCalculator, guiderMediator, telescopeMediator, framingAssistantVM, applicationMediator, applicationStatusMediator, OrbitalsPlugin.OrbitalsOptions, OrbitalsPlugin.JPLAccessor, OrbitalsPlugin.OrbitalElementsAccessor, new OrbitalSearchVM(OrbitalsPlugin.OrbitalElementsAccessor)) {
+            : this(profileService, nighttimeCalculator, guiderMediator, telescopeMediator, framingAssistantVM, applicationMediator, applicationStatusMediator, OrbitalsPlugin.OrbitalsOptions, OrbitalsPlugin.JPLAccessor, OrbitalsPlugin.MPCAccessor, OrbitalsPlugin.OrbitalElementsAccessor, new OrbitalSearchVM(OrbitalsPlugin.OrbitalElementsAccessor)) {
         }
 
         public OrbitalsVM(
@@ -71,6 +73,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             IApplicationStatusMediator applicationStatusMediator,
             IOrbitalsOptions orbitalsOptions,
             IJPLAccessor jplAccessor,
+            IMPCAccessor mpcAccessor,
             IOrbitalElementsAccessor orbitalElementsAccessor,
             IOrbitalSearchVM orbitalSearchVM) : base(profileService) {
             this.Title = "Orbitals";
@@ -88,6 +91,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             this.applicationStatusMediator = applicationStatusMediator;
             this.orbitalsOptions = orbitalsOptions;
             this.jplAccessor = jplAccessor;
+            this.mpcAccessor = mpcAccessor;
             this.orbitalElementsAccessor = orbitalElementsAccessor;
             this.OrbitalSearchVM = orbitalSearchVM;
             this.progress = ProgressFactory.Create(applicationStatusMediator, "Orbitals");
@@ -120,6 +124,13 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
             this.ResetOffsetCommand = new RelayCommand(ResetOffset, (o) => SelectedOrbitalsObject != null && (RAOffset != 0.0d || DecOffset != 0.0d));
             this.SetOffsetCommand = new RelayCommand(SetOffset, (o) => SelectedOrbitalsObject != null && telescopeMediator.GetInfo().Connected);
+
+            orbitalsOptions.PropertyChanged += OrbitalsOptions_PropertyChanged;
+        }
+
+        private void OrbitalsOptions_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e) {
+            if (e.PropertyName == nameof(IOrbitalsOptions.CometAccessor)) {
+            }
         }
 
         private Task<bool> SendToFramingWizardCommandAction(object o) {
@@ -363,6 +374,8 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             }
         }
 
+        public IOrbitalsOptions Options => orbitalsOptions;
+
         public IOrbitalSearchVM OrbitalSearchVM { get; private set; }
 
         public ICommand CancelUpdateCometElementsCommand { get; private set; }
@@ -516,15 +529,26 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
             var task = Task.Run(async () => {
                 try {
-                    var availableModifiedDate = await jplAccessor.GetCometElementsLastModified();
+                    DateTime availableModifiedDate;
+                    if (orbitalsOptions.CometAccessor == OrbitalElementsAccessorEnum.JPL) {
+                        availableModifiedDate = await jplAccessor.GetCometElementsLastModified();
+                    } else {
+                        availableModifiedDate = await mpcAccessor.GetCometElementsLastModified();
+                    }
+
                     var localModifiedDate = orbitalElementsAccessor.GetLastUpdated(OrbitalObjectTypeEnum.Comet);
                     if (availableModifiedDate < localModifiedDate) {
                         Notification.ShowInformation($"{OrbitalObjectTypeEnum.Comet.ToDescriptionString()} elements already up to date");
                         return true;
                     }
 
-                    var elements = await jplAccessor.GetCometElements();
-                    await orbitalElementsAccessor.Update(OrbitalObjectTypeEnum.Comet, elements.Response, progress, cts.Token);
+                    if (orbitalsOptions.CometAccessor == OrbitalElementsAccessorEnum.JPL) {
+                        var elements = await jplAccessor.GetCometElements();
+                        await orbitalElementsAccessor.Update(OrbitalObjectTypeEnum.Comet, elements.Response, progress, cts.Token);
+                    } else {
+                        var elements = await mpcAccessor.GetCometElements();
+                        await orbitalElementsAccessor.Update(OrbitalObjectTypeEnum.Comet, elements.Response, progress, cts.Token);
+                    }
                     return true;
                 } catch (OperationCanceledException) {
                     return false;

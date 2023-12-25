@@ -382,6 +382,7 @@
     <Compile Include="Calculations\AstrometricConstants.cs" />
     <Compile Include="Calculations\JPLAccessor.cs" />
     <Compile Include="Calculations\Kepler.cs" />
+    <Compile Include="Calculations\MPCAccessor.cs" />
     <Compile Include="Calculations\OrbitalElementsAccessor.cs" />
     <Compile Include="Calculations\OrbitalElementsObject.cs" />
     <Compile Include="Calculations\OrbitalsObjectBase.cs" />
@@ -389,11 +390,13 @@
     <Compile Include="Calculations\SolarSystemBodyObject.cs" />
     <Compile Include="Converters\DateTimeMinToNeverConverter.cs" />
     <Compile Include="Converters\EnumStaticDescriptionValueConverter.cs" />
+    <Compile Include="Enums\OrbitalElementsAccessorEnum.cs" />
     <Compile Include="Enums\OrbitalObjectTypeEnum.cs" />
     <Compile Include="Enums\QuirksModeEnum.cs" />
     <Compile Include="Enums\SearchObjectTypeEnum.cs" />
     <Compile Include="Enums\SolarSystemBody.cs" />
     <Compile Include="Interfaces\IJPLAccessor.cs" />
+    <Compile Include="Interfaces\IMPCAccessor.cs" />
     <Compile Include="Interfaces\IOrbitalElementsAccessor.cs" />
     <Compile Include="Interfaces\IOrbitalElementsSource.cs" />
     <Compile Include="Interfaces\IOrbitalSearchVM.cs" />

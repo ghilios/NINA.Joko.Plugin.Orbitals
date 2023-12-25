@@ -35,11 +35,13 @@ namespace NINA.Joko.Plugin.Orbitals {
         private void InitializeOptions() {
             orbitalPositionRefreshTime_sec = optionsAccessor.GetValueInt32(nameof(OrbitalPositionRefreshTime_sec), 20);
             quirksMode = optionsAccessor.GetValueEnum(nameof(QuirksMode), QuirksModeEnum.None);
+            cometAccessor = optionsAccessor.GetValueEnum(nameof(CometAccessor), OrbitalElementsAccessorEnum.MPC);
         }
 
         public void ResetDefaults() {
             OrbitalPositionRefreshTime_sec = 20;
             QuirksMode = QuirksModeEnum.None;
+            CometAccessor = OrbitalElementsAccessorEnum.MPC;
         }
 
         private int orbitalPositionRefreshTime_sec;
@@ -63,6 +65,19 @@ namespace NINA.Joko.Plugin.Orbitals {
                 if (quirksMode != value) {
                     quirksMode = value;
                     optionsAccessor.SetValueEnum(nameof(QuirksMode), quirksMode);
+                    RaisePropertyChanged();
+                }
+            }
+        }
+
+        private OrbitalElementsAccessorEnum cometAccessor;
+
+        public OrbitalElementsAccessorEnum CometAccessor {
+            get => cometAccessor;
+            set {
+                if (cometAccessor != value) {
+                    cometAccessor = value;
+                    optionsAccessor.SetValueEnum(nameof(CometAccessor), cometAccessor);
                     RaisePropertyChanged();
                 }
             }
