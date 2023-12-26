@@ -243,14 +243,14 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             if (columnValue.Length == 0) {
                 return null;
             }
-            return double.Parse(columnValue);
+            return double.Parse(columnValue, CultureInfo.InvariantCulture);
         }
 
         private static double ParseDouble(String row, int length, ref int rowIndex, ref int columnNumber, ref string columnPortion) {
             columnPortion = row.Substring(rowIndex, length);
             rowIndex += length;
             columnNumber += 1;
-            return double.Parse(columnPortion.Trim());
+            return double.Parse(columnPortion.Trim(), CultureInfo.InvariantCulture);
         }
 
         private static string ParseString(String row, int length, ref int rowIndex, ref int columnNumber, ref string columnPortion) {
