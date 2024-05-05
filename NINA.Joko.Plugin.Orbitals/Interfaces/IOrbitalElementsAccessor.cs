@@ -78,6 +78,8 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
 
         Task Update(OrbitalObjectTypeEnum objectType, IEnumerable<IOrbitalElementsSource> elements, IProgress<ApplicationStatus> progress, CancellationToken ct);
 
+        void Clear(OrbitalObjectTypeEnum objectType);
+
         OrbitalPositionVelocity GetSolarSystemBodyPV(DateTime asof, SolarSystemBody solarSystemBody);
 
         OrbitalPositionVelocity GetObjectPV(DateTime asof, OrbitalElements orbitalElements, Angle latitude, Angle longitude, double elevation);
@@ -89,6 +91,8 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
         PVTable GetJWSTVectorTable();
 
         DateTime GetJWSTValidUntil();
+
+        Task WaitUntilLoaded(CancellationToken ct);
 
         event EventHandler<OrbitalElementsObjectTypeUpdatedEventArgs> Updated;
 

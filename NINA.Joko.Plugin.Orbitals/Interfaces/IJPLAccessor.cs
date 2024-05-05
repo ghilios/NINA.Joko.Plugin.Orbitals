@@ -12,24 +12,25 @@
 
 using NINA.Joko.Plugin.Orbitals.Calculations;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NINA.Joko.Plugin.Orbitals.Interfaces {
 
     public interface IJPLAccessor {
 
-        Task<DateTime> GetCometElementsLastModified();
+        Task<DateTime> GetCometElementsLastModified(CancellationToken ct);
 
-        Task<DateTime> GetUnnumberedAsteroidsElementsLastModified();
+        Task<DateTime> GetUnnumberedAsteroidsElementsLastModified(CancellationToken ct);
 
-        Task<DateTime> GetNumberedAsteroidsLastModified();
+        Task<DateTime> GetNumberedAsteroidsLastModified(CancellationToken ct);
 
-        Task<JPLCometResponse> GetCometElements();
+        Task<JPLCometResponse> GetCometElements(CancellationToken ct);
 
-        Task<JPLNumberedAsteroidResponse> GetNumberedAsteroidElements();
+        Task<JPLNumberedAsteroidResponse> GetNumberedAsteroidElements(CancellationToken ct);
 
-        Task<JPLUnnumberedAsteroidResponse> GetUnnumberedAsteroidElements();
+        Task<JPLUnnumberedAsteroidResponse> GetUnnumberedAsteroidElements(CancellationToken ct);
 
-        Task<JPLVectorTable> GetJWSTVectorTable(DateTime asof, TimeSpan lookahead);
+        Task<JPLVectorTable> GetJWSTVectorTable(DateTime asof, TimeSpan lookahead, CancellationToken ct);
     }
 }

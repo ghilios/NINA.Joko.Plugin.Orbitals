@@ -122,6 +122,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
                         OrbitalSearchVM.SetTargetNameWithoutSearch("");
                     } else {
                         try {
+                            orbitalElementsAccessor.WaitUntilLoaded(CancellationToken.None).Wait();
                             var orbitalElements = orbitalElementsAccessor.Get(ObjectType, value);
                             if (orbitalElements != null) {
                                 TargetObject.OrbitalElements = orbitalElements;
@@ -164,6 +165,8 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
 
             clone.TargetObject.OrbitalElements = TargetObject.OrbitalElements;
             clone.Target.PositionAngle = this.Target.PositionAngle;
+            clone.OrbitalSearchVM.ObjectType = this.OrbitalSearchVM.ObjectType;
+            clone.OrbitalSearchVM.SetTargetNameWithoutSearch(this.OrbitalSearchVM.TargetName);
 
             foreach (var item in clone.Items) {
                 item.AttachNewParent(clone);

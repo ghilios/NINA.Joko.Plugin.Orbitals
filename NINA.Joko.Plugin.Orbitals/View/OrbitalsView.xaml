@@ -10,6 +10,7 @@
     xmlns:localvm="clr-namespace:NINA.Joko.Plugin.Orbitals.ViewModels"
     xmlns:alt="clr-namespace:NINA.WPF.Base.View;assembly=NINA.WPF.Base"
     xmlns:ninactrl="clr-namespace:NINA.CustomControlLibrary;assembly=NINA.CustomControlLibrary"
+    xmlns:oconverters="clr-namespace:NINA.Joko.Plugin.Orbitals.Converters"
     x:Name="UC"
     d:DataContext="{d:DesignInstance localvm:OrbitalsVM,
                                      IsDesignTimeCreatable=False}"
@@ -63,6 +64,9 @@
                     <!-- Update Button -->
                     <ColumnDefinition Width="Auto" />
 
+                    <!-- Clear Button -->
+                    <ColumnDefinition Width="Auto" />
+
                     <!-- Last Updated -->
                     <ColumnDefinition Width="Auto" />
 
@@ -90,15 +94,27 @@
                     CancelToolTip="{ns:Loc LblCancel}"
                     Command="{Binding UpdateCometElementsCommand}"
                     ToolTip="{StaticResource UpdateCometElements_Tooltip}" />
-                <TextBlock
+                <Button
                     Grid.Row="0" Grid.Column="2"
+                    Margin="5,5,0,5"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Command="{Binding ClearCometElementsCommand}">
+                    <TextBlock
+                        Margin="10,5,10,5"
+                        Foreground="{StaticResource ButtonForegroundBrush}"
+                        Text="Clear"
+                        TextWrapping="Wrap" />
+                </Button>
+                <TextBlock
+                    Grid.Row="0" Grid.Column="3"
                     Margin="5"
                     VerticalAlignment="Center">
                     <Run Text="Last Updated: " /><Run Text="{Binding CometLastUpdated, Mode=OneWay, Converter={StaticResource O_DateTimeMinToNeverConverter}}" />
                 </TextBlock>
                 <ComboBox
                     Name="PART_CometAccessorEnumList"
-                    Grid.Row="0" Grid.Column="3"
+                    Grid.Row="0" Grid.Column="4"
                     MinWidth="80"
                     Margin="10,5,0,5"
                     HorizontalAlignment="Left"
@@ -132,8 +148,20 @@
                     CancelToolTip="{ns:Loc LblCancel}"
                     Command="{Binding UpdateNumberedAsteroidElementsCommand}"
                     ToolTip="{StaticResource UpdateNumberedAsteroidElements_Tooltip}" />
-                <TextBlock
+                <Button
                     Grid.Row="1" Grid.Column="2"
+                    Margin="5,5,0,5"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Command="{Binding ClearNumberedAsteroidElementsCommand}">
+                    <TextBlock
+                        Margin="10,5,10,5"
+                        Foreground="{StaticResource ButtonForegroundBrush}"
+                        Text="Clear"
+                        TextWrapping="Wrap" />
+                </Button>
+                <TextBlock
+                    Grid.Row="1" Grid.Column="3"
                     Margin="5"
                     VerticalAlignment="Center">
                     <Run Text="Last Updated: " /><Run Text="{Binding NumberedAsteroidLastUpdated, Mode=OneWay, Converter={StaticResource O_DateTimeMinToNeverConverter}}" />
@@ -159,8 +187,20 @@
                     CancelToolTip="{ns:Loc LblCancel}"
                     Command="{Binding UpdateUnnumberedAsteroidElementsCommand}"
                     ToolTip="{StaticResource UpdateUnnumberedAsteroidElements_Tooltip}" />
-                <TextBlock
+                <Button
                     Grid.Row="2" Grid.Column="2"
+                    Margin="5,5,0,5"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Command="{Binding ClearUnnumberedAsteroidElementsCommand}">
+                    <TextBlock
+                        Margin="10,5,10,5"
+                        Foreground="{StaticResource ButtonForegroundBrush}"
+                        Text="Clear"
+                        TextWrapping="Wrap" />
+                </Button>
+                <TextBlock
+                    Grid.Row="2" Grid.Column="3"
                     Margin="5"
                     VerticalAlignment="Center">
                     <Run Text="Last Updated: " /><Run Text="{Binding UnnumberedAsteroidLastUpdated, Mode=OneWay, Converter={StaticResource O_DateTimeMinToNeverConverter}}" />
@@ -187,7 +227,7 @@
                     Command="{Binding UpdateJWSTVectorTableCommand}"
                     ToolTip="{StaticResource UpdateJWSTVectorTable_Tooltip}" />
                 <TextBlock
-                    Grid.Row="3" Grid.Column="2"
+                    Grid.Row="3" Grid.Column="3"
                     Margin="5"
                     VerticalAlignment="Center">
                     <Run Text="Valid Until: " /><Run Text="{Binding JWSTVectorTableValidUntil, Mode=OneWay, Converter={StaticResource O_DateTimeMinToNeverConverter}}" />
@@ -200,6 +240,7 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
@@ -476,6 +517,213 @@
                                 Text="Clear Offset" />
                         </Button>
                     </WrapPanel>
+                </Grid>
+            </Border>
+
+            <Border
+                Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3"
+                Visibility="{Binding SelectedOrbitalElementsObject, Converter={StaticResource NullToVisibilityCollapsedConverter}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock
+                        Grid.Row="0" Grid.Column="1"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="Epoch"
+                        FontWeight="DemiBold" />
+                    <TextBlock
+                        Grid.Row="0" Grid.Column="2"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="{Binding SelectedOrbitalElementsObject.OrbitalElements.Epoch_jd, Mode=OneWay, Converter={StaticResource O_JulianToDateTimeConverter}}" />
+                    <TextBlock
+                        Grid.Row="1" Grid.Column="1"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="Epoch (Julian)"
+                        FontWeight="DemiBold" />
+                    <TextBlock
+                        Grid.Row="1" Grid.Column="2"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="{Binding SelectedOrbitalElementsObject.OrbitalElements.Epoch_jd, StringFormat=\{0:0.####\}, Mode=OneWay}" />
+                    <TextBlock
+                        Grid.Row="2" Grid.Column="1"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="Perihelion Distance"
+                        FontWeight="DemiBold" />
+                    <TextBlock
+                        Grid.Row="2" Grid.Column="2"
+                        Margin="5"
+                        VerticalAlignment="Center">
+                        <Run Text="{Binding  SelectedOrbitalElementsObject.OrbitalElements.q_Perihelion_au, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="au" />
+                    </TextBlock>
+                    <TextBlock
+                        Grid.Row="3" Grid.Column="1"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="Eccentricity"
+                        FontWeight="DemiBold" />
+                    <TextBlock
+                        Grid.Row="3" Grid.Column="2"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="{Binding SelectedOrbitalElementsObject.OrbitalElements.e_Eccentricity, StringFormat=\{0:0.####\}, Mode=OneWay}" />
+                    <TextBlock
+                        Grid.Row="4" Grid.Column="1"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="Inclination"
+                        FontWeight="DemiBold" />
+                    <TextBlock
+                        Grid.Row="4" Grid.Column="2"
+                        Margin="5"
+                        VerticalAlignment="Center">
+                        <Run Text="{Binding  SelectedOrbitalElementsObject.OrbitalElements.i_Inclination_rad, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="rad /" />
+                        <Run Text="{Binding SelectedOrbitalElementsObject.OrbitalElements.i_Inclination_rad, StringFormat=\{0:0.####\}, Converter={StaticResource O_RadianToDegreeConverter}, Mode=OneWay}" /><Run Text="°" />
+                    </TextBlock>
+                    <TextBlock
+                        Grid.Row="5" Grid.Column="1"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="Arg of Perihelion"
+                        FontWeight="DemiBold" />
+                    <TextBlock
+                        Grid.Row="5" Grid.Column="2"
+                        Margin="5"
+                        VerticalAlignment="Center">
+                        <Run Text="{Binding SelectedOrbitalElementsObject.OrbitalElements.w_ArgOfPerihelion_rad, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="rad /" />
+                        <Run Text="{Binding SelectedOrbitalElementsObject.OrbitalElements.w_ArgOfPerihelion_rad, StringFormat=\{0:0.####\}, Converter={StaticResource O_RadianToDegreeConverter}, Mode=OneWay}" /><Run Text="°" />
+                    </TextBlock>
+                    <TextBlock
+                        Grid.Row="6" Grid.Column="1"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="Longitude of Ascending Node"
+                        FontWeight="DemiBold" />
+                    <TextBlock
+                        Grid.Row="6" Grid.Column="2"
+                        Margin="5"
+                        VerticalAlignment="Center">
+                        <Run Text="{Binding SelectedOrbitalElementsObject.OrbitalElements.node_LongitudeOfAscending_rad, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="rad /" />
+                        <Run Text="{Binding SelectedOrbitalElementsObject.OrbitalElements.node_LongitudeOfAscending_rad, StringFormat=\{0:0.####\}, Converter={StaticResource O_RadianToDegreeConverter}, Mode=OneWay}" /><Run Text="°" />
+                    </TextBlock>
+                    <TextBlock
+                        Grid.Row="0" Grid.Column="4"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="Periapsis"
+                        FontWeight="DemiBold" />
+                    <TextBlock
+                        Grid.Row="0" Grid.Column="5"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="{Binding SelectedOrbitalElementsObject.OrbitalElements.tp_PeriapsisTime_jd, Mode=OneWay, Converter={StaticResource O_JulianToDateTimeConverter}}" />
+                    <TextBlock
+                        Grid.Row="1" Grid.Column="4"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="Periapsis (Julian)"
+                        FontWeight="DemiBold" />
+                    <TextBlock
+                        Grid.Row="1" Grid.Column="5"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="{Binding SelectedOrbitalElementsObject.OrbitalElements.tp_PeriapsisTime_jd, StringFormat=\{0:0.####\}, Mode=OneWay}" />
+                    <TextBlock
+                        Grid.Row="2" Grid.Column="4"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="Mean Anomaly at Epoch"
+                        FontWeight="DemiBold" />
+                    <TextBlock
+                        Grid.Row="2" Grid.Column="5"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="{Binding SelectedOrbitalElementsObject.OrbitalElements.M_MeanAnomalyAtEpoch, StringFormat=\{0:0.####\}, Mode=OneWay}" />
+                    <TextBlock
+                        Grid.Row="3" Grid.Column="4"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="Semi-Major Axis"
+                        FontWeight="DemiBold" />
+                    <TextBlock
+                        Grid.Row="3" Grid.Column="5"
+                        Margin="5"
+                        VerticalAlignment="Center">
+                        <Run Text="{Binding  SelectedOrbitalElementsObject.OrbitalElements.a_SemiMajorAxis_au, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="au" />
+                    </TextBlock>
+                    <TextBlock
+                        Grid.Row="4" Grid.Column="4"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="Mean Anomaly"
+                        FontWeight="DemiBold" />
+                    <TextBlock
+                        Grid.Row="4" Grid.Column="5"
+                        Margin="5"
+                        VerticalAlignment="Center">
+                        <Run Text="{Binding SelectedOrbitalPosition.M_MeanAnomaly_rad, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="rad /" />
+                        <Run Text="{Binding SelectedOrbitalPosition.M_MeanAnomaly_rad, StringFormat=\{0:0.####\}, Converter={StaticResource O_RadianToDegreeConverter}, Mode=OneWay}" /><Run Text="°" />
+                    </TextBlock>
+                    <TextBlock
+                        Grid.Row="5" Grid.Column="4"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="Eccentric Anomaly"
+                        FontWeight="DemiBold" />
+                    <TextBlock
+                        Grid.Row="5" Grid.Column="5"
+                        Margin="5"
+                        VerticalAlignment="Center">
+                        <Run Text="{Binding SelectedOrbitalPosition.e_EccentricAnomaly_rad, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="rad /" />
+                        <Run Text="{Binding SelectedOrbitalPosition.e_EccentricAnomaly_rad, StringFormat=\{0:0.####\}, Converter={StaticResource O_RadianToDegreeConverter}, Mode=OneWay}" /><Run Text="°" />
+                    </TextBlock>
+                    <TextBlock
+                        Grid.Row="6" Grid.Column="4"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="True Anomaly"
+                        FontWeight="DemiBold" />
+                    <TextBlock
+                        Grid.Row="6" Grid.Column="5"
+                        Margin="5"
+                        VerticalAlignment="Center">
+                        <Run Text="{Binding SelectedOrbitalPosition.v0_TrueAnomaly_rad, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="rad /" />
+                        <Run Text="{Binding SelectedOrbitalPosition.v0_TrueAnomaly_rad, StringFormat=\{0:0.####\}, Converter={StaticResource O_RadianToDegreeConverter}, Mode=OneWay}" /><Run Text="°" />
+                    </TextBlock>
+                    <TextBlock
+                        Grid.Row="7" Grid.Column="4"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="Distance"
+                        FontWeight="DemiBold" />
+                    <TextBlock
+                        Grid.Row="7" Grid.Column="5"
+                        Margin="5"
+                        VerticalAlignment="Center">
+                        <Run Text="{Binding SelectedOrbitalPosition.Distance_au, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="au" />
+                    </TextBlock>
                 </Grid>
             </Border>
         </Grid>

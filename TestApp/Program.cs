@@ -21,6 +21,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using static NINA.Joko.Plugin.Orbitals.Calculations.Kepler;
 
@@ -166,10 +167,33 @@ namespace TestApp {
             }
             */
 
+            var cometName = "C/2024 C4 (ATLAS)";
             var mpcAccessor = new MPCAccessor();
-            var lastModified = await mpcAccessor.GetCometElementsLastModified();
-            var cometElements = await mpcAccessor.GetCometElements();
-            var orbitalElements = cometElements.Response.Select(r => r.ToOrbitalElements()).ToList();
+            var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            var lastModified = await mpcAccessor.GetCometElementsLastModified(timeoutCts.Token);
+            var cometElements = await mpcAccessor.GetCometElements(timeoutCts.Token);
+            var allElements = cometElements.Response.Select(r => r.ToOrbitalElements()).ToList();
+            var comet = allElements.Find(oe => oe.Name.StartsWith(cometName));
+
+            var jplAccessor = new JPLAccessor();
+            timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            var jplLastModified = await jplAccessor.GetCometElementsLastModified(timeoutCts.Token);
+
+            var jplCometElements = await jplAccessor.GetCometElements(timeoutCts.Token);
+            var jplAllElements = jplCometElements.Response.Select(r => r.ToOrbitalElements()).ToList();
+            var jplComet = jplAllElements.Find(oe => oe.Name.StartsWith(cometName));
+
+            var asOfJd = AstroUtil.GetJulianDate(DateTime.Now);
+            //var asOfJd = 2460433.5d;
+            var mpcCometEpoch = NOVAS.JulianToDateTime(comet.Epoch_jd);
+            var jplCometEpoch = NOVAS.JulianToDateTime(jplComet.Epoch_jd);
+
+            // var mpcOrbitalElements = Kepler.CalculateOrbitalElements(jplComet, jplComet.Epoch_jd);
+            //var jplOrbitalElements = Kepler.CalculateOrbitalElements(jplComet, asOfJd);
+            var mpcOrbitalPosition = Kepler.CalculateOrbitalElements(jplComet, asOfJd);
+            var orbitalApparentPosition = Kepler.GetApparentPosition(mpcOrbitalPosition, NOVAS.Body.Earth, latitude, longitude, elevation);
+            var orbitalCoordinates = orbitalApparentPosition.ToPolar();
+
             Console.WriteLine();
         }
 

@@ -12,14 +12,15 @@
 
 using NINA.Joko.Plugin.Orbitals.Calculations;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NINA.Joko.Plugin.Orbitals.Interfaces {
 
     public interface IMPCAccessor {
 
-        Task<DateTime> GetCometElementsLastModified();
+        Task<DateTime> GetCometElementsLastModified(CancellationToken ct);
 
-        Task<MPCCometResponse> GetCometElements();
+        Task<MPCCometResponse> GetCometElements(CancellationToken ct);
     }
 }

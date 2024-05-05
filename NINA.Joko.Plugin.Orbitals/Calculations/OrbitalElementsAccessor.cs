@@ -17,6 +17,7 @@ using NINA.Core.Utility.Notification;
 using NINA.Joko.Plugin.Orbitals.Enums;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
 using NINA.Joko.Plugin.Orbitals.Utility;
+using Nito.AsyncEx;
 using System;
 using System.Collections.Generic;
 using System.Data.Linq;
@@ -54,12 +55,14 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             }
         }
 
+        private readonly AsyncManualResetEvent loadedEvent;
         private readonly IOrbitalsOptions options;
         private readonly object backendLock = new object();
         private readonly Dictionary<OrbitalObjectTypeEnum, OrbitalElementsBackend> backendsByType = new Dictionary<OrbitalObjectTypeEnum, OrbitalElementsBackend>();
         private PVTable jwstVectorTable;
 
         public OrbitalElementsAccessor(IOrbitalsOptions options) {
+            this.loadedEvent = new AsyncManualResetEvent(false);
             this.options = options;
             foreach (var objectType in Enum.GetValues(typeof(OrbitalObjectTypeEnum)).Cast<OrbitalObjectTypeEnum>()) {
                 backendsByType.Add(objectType, CreateDefaultBackend(objectType));
@@ -151,7 +154,12 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                 await Task.WhenAll(tasks);
             } finally {
                 progress?.Report(new ApplicationStatus() { Source = "Orbitals" });
+                this.loadedEvent.Set();
             }
+        }
+
+        public async Task WaitUntilLoaded(CancellationToken ct) {
+            await this.loadedEvent.WaitAsync(ct);
         }
 
         private void UpdateBackend(OrbitalObjectTypeEnum objectType, OrbitalElementsBackend backend) {
@@ -161,6 +169,17 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                 }
                 backendsByType[objectType] = backend;
             }
+        }
+
+        private void ClearBackend(OrbitalObjectTypeEnum objectType) {
+            var newBackend = CreateDefaultBackend(objectType);
+            lock (backendLock) {
+                if (backendsByType.TryGetValue(objectType, out var existingBackend)) {
+                    existingBackend?.Dispose();
+                }
+                backendsByType[objectType] = newBackend;
+            }
+            OnUpdated(objectType, newBackend);
         }
 
         public IEnumerable<OrbitalElements> Search(OrbitalObjectTypeEnum objectType, string searchString, int? limit = null) {
@@ -379,6 +398,21 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             var nextCoordinates = nextApparentPosition.RotateEcliptic(AstrometricConstants.J2000MeanObliquity).ToPolar();
             var trackingRate = SiderealShiftTrackingRate.Create(startCoordinates, nextCoordinates, TimeSpan.FromSeconds(1));
             return new OrbitalPositionVelocity(asof, startApparentGeocentricPosition, startCoordinates, trackingRate);
+        }
+
+        public void Clear(OrbitalObjectTypeEnum objectType) {
+            var path = GetObjectTypeSavePath(objectType);
+            if (!File.Exists(path)) {
+                return;
+            }
+
+            try {
+                File.Delete(path);
+                ClearBackend(objectType);
+            } catch (Exception e) {
+                Logger.Error($"Failed to clear {objectType}", e);
+                Notification.ShowError($"Failed to clear {objectType}. {e.Message}");
+            }
         }
     }
 }

@@ -21,6 +21,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using static NINA.Joko.Plugin.Orbitals.Calculations.Kepler;
 
@@ -211,11 +212,28 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
         public event EventHandler<JPLParseErrorDetail> ParseError;
 
-        public static async Task<JPLCometResponse> GetFromHttpUri(string uri) {
+        public static async Task<JPLCometResponse> GetFromHttpUri(string uri, CancellationToken ct) {
             var client = new HttpClient();
-            var cometsStream = await client.GetStreamAsync(uri);
-            var streamReader = new StreamReader(cometsStream);
-            return new JPLCometResponse(streamReader, new List<IDisposable> { cometsStream, client });
+            Stream cometsStream = null;
+            MemoryStream memoryStream = null;
+
+            try {
+                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
+                client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
+                client.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate, br, zstd");
+                client.DefaultRequestHeaders.Add("Accept-Language", "en-GB,en;q=0.9,en-US;q=0.8");
+                cometsStream = await client.GetStreamAsync(uri, ct);
+                memoryStream = new MemoryStream();
+                await cometsStream.CopyToAsync(memoryStream, ct);
+                memoryStream.Seek(0, SeekOrigin.Begin);
+                var streamReader = new StreamReader(memoryStream);
+                return new JPLCometResponse(streamReader, new List<IDisposable> { memoryStream, cometsStream, client });
+            } catch (Exception) {
+                client.Dispose();
+                memoryStream?.Dispose();
+                cometsStream?.Dispose();
+                throw;
+            }
         }
     }
 
@@ -272,13 +290,16 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
         public event EventHandler<JPLParseErrorDetail> ParseError;
 
-        public static async Task<JPLUnnumberedAsteroidResponse> GetFromHttpUri(string uri) {
+        public static async Task<JPLUnnumberedAsteroidResponse> GetFromHttpUri(string uri, CancellationToken ct) {
             var client = new HttpClient();
-            var stream = await client.GetStreamAsync(uri);
+            var stream = await client.GetStreamAsync(uri, ct);
             if (uri.EndsWith(".gz")) {
                 stream = new GZipStream(stream, CompressionMode.Decompress, false);
             }
-            var streamReader = new StreamReader(stream);
+            var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream, ct);
+            memoryStream.Seek(0, SeekOrigin.Begin);
+            var streamReader = new StreamReader(memoryStream);
             return new JPLUnnumberedAsteroidResponse(streamReader, new List<IDisposable> { stream, client });
         }
     }
@@ -337,14 +358,27 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
         public event EventHandler<JPLParseErrorDetail> ParseError;
 
-        public static async Task<JPLNumberedAsteroidResponse> GetFromHttpUri(string uri) {
-            var client = new HttpClient();
-            var stream = await client.GetStreamAsync(uri);
-            if (uri.EndsWith(".gz")) {
-                stream = new GZipStream(stream, CompressionMode.Decompress, false);
+        public static async Task<JPLNumberedAsteroidResponse> GetFromHttpUri(string uri, CancellationToken ct) {
+            HttpClient client = new HttpClient();
+            Stream stream = null;
+            MemoryStream memoryStream = null;
+            try {
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
+                stream = await client.GetStreamAsync(uri, ct);
+                if (uri.EndsWith(".gz")) {
+                    stream = new GZipStream(stream, CompressionMode.Decompress, false);
+                }
+                memoryStream = new MemoryStream();
+                await stream.CopyToAsync(memoryStream, ct);
+                memoryStream.Seek(0, SeekOrigin.Begin);
+                var streamReader = new StreamReader(memoryStream);
+                return new JPLNumberedAsteroidResponse(streamReader, new List<IDisposable> { memoryStream, stream, client });
+            } catch (Exception) {
+                client.Dispose();
+                memoryStream?.Dispose();
+                stream?.Dispose();
+                throw;
             }
-            var streamReader = new StreamReader(stream);
-            return new JPLNumberedAsteroidResponse(streamReader, new List<IDisposable> { stream, client });
         }
     }
 
@@ -356,45 +390,45 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         public const string unnumbered_asteroids_url = "https://ssd.jpl.nasa.gov/dat/ELEMENTS.UNNUM.gz";
         public const string numbered_asteroids_url = "https://ssd.jpl.nasa.gov/dat/ELEMENTS.NUMBR.gz";
 
-        public Task<DateTime> GetCometElementsLastModified() {
-            return GetLastModifiedFromURL(comets_url);
+        public Task<DateTime> GetCometElementsLastModified(CancellationToken ct) {
+            return GetLastModifiedFromURL(comets_url, ct);
         }
 
-        public Task<DateTime> GetUnnumberedAsteroidsElementsLastModified() {
-            return GetLastModifiedFromURL(unnumbered_asteroids_url);
+        public Task<DateTime> GetUnnumberedAsteroidsElementsLastModified(CancellationToken ct) {
+            return GetLastModifiedFromURL(unnumbered_asteroids_url, ct);
         }
 
-        public Task<DateTime> GetNumberedAsteroidsLastModified() {
-            return GetLastModifiedFromURL(numbered_asteroids_url);
+        public Task<DateTime> GetNumberedAsteroidsLastModified(CancellationToken ct) {
+            return GetLastModifiedFromURL(numbered_asteroids_url, ct);
         }
 
-        private async Task<DateTime> GetLastModifiedFromURL(string url) {
+        private async Task<DateTime> GetLastModifiedFromURL(string url, CancellationToken ct) {
             using (var client = new HttpClient()) {
                 var headMessage = new HttpRequestMessage(HttpMethod.Head, url);
-                var result = await client.SendAsync(headMessage);
+                var result = await client.SendAsync(headMessage, ct);
                 var lastModified = result.Content.Headers.LastModified;
                 return lastModified?.UtcDateTime ?? DateTime.MinValue;
             }
         }
 
-        public Task<JPLCometResponse> GetCometElements() {
-            return JPLCometResponse.GetFromHttpUri(comets_url);
+        public Task<JPLCometResponse> GetCometElements(CancellationToken ct) {
+            return JPLCometResponse.GetFromHttpUri(comets_url, ct);
         }
 
-        public Task<JPLNumberedAsteroidResponse> GetNumberedAsteroidElements() {
-            return JPLNumberedAsteroidResponse.GetFromHttpUri(numbered_asteroids_url);
+        public Task<JPLNumberedAsteroidResponse> GetNumberedAsteroidElements(CancellationToken ct) {
+            return JPLNumberedAsteroidResponse.GetFromHttpUri(numbered_asteroids_url, ct);
         }
 
-        public Task<JPLUnnumberedAsteroidResponse> GetUnnumberedAsteroidElements() {
-            return JPLUnnumberedAsteroidResponse.GetFromHttpUri(unnumbered_asteroids_url);
+        public Task<JPLUnnumberedAsteroidResponse> GetUnnumberedAsteroidElements(CancellationToken ct) {
+            return JPLUnnumberedAsteroidResponse.GetFromHttpUri(unnumbered_asteroids_url, ct);
         }
 
-        public async Task<JPLVectorTable> GetJWSTVectorTable(DateTime asof, TimeSpan lookahead) {
+        public async Task<JPLVectorTable> GetJWSTVectorTable(DateTime asof, TimeSpan lookahead, CancellationToken ct) {
             var startDate = asof - TimeSpan.FromHours(1);
             var endDate = asof + lookahead;
             var queryString = $"https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND='JWST'&OBJ_DATA='NO'&MAKE_EPHEM='YES'&EPHEM_TYPE='VECTOR'&CENTER='500@399'&START_TIME='{startDate.ToString(CultureInfo.InvariantCulture)}'&STOP_TIME='{endDate.ToString(CultureInfo.InvariantCulture)}'&STEP_SIZE='1%20h'&QUANTITIES='1'&OUT_UNITS='AU-D'";
             using (var client = new HttpClient()) {
-                var data = await client.GetStringAsync(queryString);
+                var data = await client.GetStringAsync(queryString, ct);
                 var startOfEntry = "$$SOE";
                 var endOfEntry = "$$EOE";
 

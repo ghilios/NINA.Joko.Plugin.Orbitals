@@ -11,10 +11,10 @@
 #endregion "copyright"
 
 using NINA.Astrometry;
-using NINA.Joko.Plugin.Orbitals.Utility;
 using ProtoBuf;
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
@@ -169,8 +169,11 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             public string Name { get; private set; }
             public double AsOf_jd { get; private set; }
             public double M_MeanAnomaly_rad { get; set; } = double.NaN;
+            public double M_MeanAnomaly_deg => AstroUtil.ToDegree(M_MeanAnomaly_rad);
             public double e_EccentricAnomaly_rad { get; set; } = double.NaN;
+            public double e_EccentricAnomaly_deg => AstroUtil.ToDegree(e_EccentricAnomaly_rad);
             public double v0_TrueAnomaly_rad { get; set; } = double.NaN;
+            public double v0_TrueAnomaly_deg => AstroUtil.ToDegree(v0_TrueAnomaly_rad);
             public double Distance_au { get; set; } = double.NaN;
             public RectangularCoordinates EclipticCoordinates { get; set; }
 
@@ -202,6 +205,36 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                 new RectangularCoordinates(vel[0], vel[1], vel[2]));
         }
 
+        private struct PosVector {
+            private double X;
+            private double Y;
+            private double Z;
+
+            public static PosVector From(RectangularCoordinates coord) {
+                return new PosVector() { X = coord.X, Y = coord.Y, Z = coord.Z };
+            }
+
+            public RectangularCoordinates ToRectangularCoordinates() {
+                return new RectangularCoordinates(X, Y, Z);
+            }
+        }
+
+        [DllImport("NOVAS31lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "equ2ecl_vec")]
+        private static extern short NOVAS_Equ2Ecl_vec(
+            double tjd,
+            NOVAS.CoordinateSystem coordSys,
+            NOVAS.Accuracy accuracy,
+            PosVector pos,
+            ref PosVector outputPos);
+
+        [DllImport("NOVAS31lib.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "ecl2equ_vec")]
+        private static extern short NOVAS_Ecl2Equ_vec(
+            double tjd,
+            NOVAS.CoordinateSystem coordSys,
+            NOVAS.Accuracy accuracy,
+            PosVector pos,
+            ref PosVector outputPos);
+
         public static RectangularCoordinates GetApparentPosition(
             OrbitalPosition orbitalPosition,
             NOVAS.Body orbitalCenterBody,
@@ -212,11 +245,12 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             var asof = NOVAS.JulianToDateTime(orbitalPosition.AsOf_jd);
             var pvOnSurface = GetPVOnEarthSurface(asof, latitude, longitude, elevation);
 
-            // NOVAS returns ecliptic coordinates. Reverse the ecliptic rotation to get to equatorial so we can subtract from the orbital position
-            var earthPositionEquatorial = centerPosition.Position.RotateEcliptic(-AstrometricConstants.J2000MeanObliquity);
-
-            var earthSurfacePosition = orbitalPosition.EclipticCoordinates - earthPositionEquatorial - pvOnSurface.Position.RotateEcliptic(-AstrometricConstants.J2000MeanObliquity);
-            return earthSurfacePosition.RotateEcliptic(AstrometricConstants.J2000MeanObliquity);
+            var outputV = default(PosVector);
+            NOVAS_Equ2Ecl_vec(SOFA.J2000_jd, NOVAS.CoordinateSystem.CIOOfDate, NOVAS.Accuracy.Full, PosVector.From(centerPosition.Position), ref outputV);
+            var earthEclipticPosition = outputV.ToRectangularCoordinates();
+            var objectPosition = orbitalPosition.EclipticCoordinates - (earthEclipticPosition + pvOnSurface.Position);
+            NOVAS_Ecl2Equ_vec(SOFA.J2000_jd, NOVAS.CoordinateSystem.CIOOfDate, NOVAS.Accuracy.Full, PosVector.From(objectPosition), ref outputV);
+            return outputV.ToRectangularCoordinates();
         }
 
         public static OrbitalPosition CalculateOrbitalElements(
@@ -240,6 +274,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                     if (ecc > 1) {
                         semiMajorAxis *= -1;
                     }
+                    orbitalElements.a_SemiMajorAxis_au = semiMajorAxis;
                 } else {
                     semiMajorAxis = orbitalElements.a_SemiMajorAxis_au.Value;
                 }
@@ -249,13 +284,16 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
                 // n^2 * a^3 = mu
                 var n2 = gravParam / (semiMajorAxis * semiMajorAxis * semiMajorAxis);
+
+                // Units of n is radians per day
                 var n = Math.Sqrt(n2);
 
                 if (!orbitalElements.M_MeanAnomalyAtEpoch.HasValue) {
                     // Mean anomaly needs to be populated
-
                     var daysSincePeriapsis = asOf_jd - orbitalElements.tp_PeriapsisTime_jd.Value;
                     orbitalPosition.M_MeanAnomaly_rad = n * daysSincePeriapsis;
+                    var daysSinceEpoch = asOf_jd - orbitalElements.Epoch_jd;
+                    orbitalElements.M_MeanAnomalyAtEpoch = orbitalPosition.M_MeanAnomaly_rad - n * daysSinceEpoch;
                 } else {
                     var daysSinceEpoch = asOf_jd - orbitalElements.Epoch_jd;
                     orbitalPosition.M_MeanAnomaly_rad = orbitalElements.M_MeanAnomalyAtEpoch.Value + n * daysSinceEpoch;

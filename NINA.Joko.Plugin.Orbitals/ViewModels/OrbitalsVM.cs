@@ -36,6 +36,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using static NINA.Joko.Plugin.Orbitals.Calculations.Kepler;
 using RelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
 namespace NINA.Joko.Plugin.Orbitals.ViewModels {
@@ -114,11 +115,20 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             this.UpdateCometElementsCommand = new AsyncRelayCommand(UpdateCometElements, () => InitialLoadComplete);
             this.UpdateCometElementsCommand.RegisterPropertyChangeNotification(this, nameof(InitialLoadComplete));
 
+            this.ClearCometElementsCommand = new AsyncRelayCommand(ClearCometElements, () => InitialLoadComplete);
+            this.ClearCometElementsCommand.RegisterPropertyChangeNotification(this, nameof(InitialLoadComplete));
+
             this.UpdateNumberedAsteroidElementsCommand = new AsyncRelayCommand(UpdateNumberedAsteroids, () => InitialLoadComplete);
             this.UpdateNumberedAsteroidElementsCommand.RegisterPropertyChangeNotification(this, nameof(InitialLoadComplete));
 
+            this.ClearNumberedAsteroidElementsCommand = new AsyncRelayCommand(ClearNumberedAsteroids, () => InitialLoadComplete);
+            this.ClearNumberedAsteroidElementsCommand.RegisterPropertyChangeNotification(this, nameof(InitialLoadComplete));
+
             this.UpdateUnnumberedAsteroidElementsCommand = new AsyncRelayCommand(UpdateUnnumberedAsteroids, () => InitialLoadComplete);
             this.UpdateUnnumberedAsteroidElementsCommand.RegisterPropertyChangeNotification(this, nameof(InitialLoadComplete));
+
+            this.ClearUnnumberedAsteroidElementsCommand = new AsyncRelayCommand(ClearUnnumberedAsteroids, () => InitialLoadComplete);
+            this.ClearUnnumberedAsteroidElementsCommand.RegisterPropertyChangeNotification(this, nameof(InitialLoadComplete));
 
             this.UpdateJWSTVectorTableCommand = new AsyncRelayCommand(UpdateJWSTVectorTable, () => InitialLoadComplete);
             this.UpdateJWSTVectorTableCommand.RegisterPropertyChangeNotification(this, nameof(InitialLoadComplete));
@@ -152,8 +162,6 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         }
 
         private void OrbitalsOptions_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e) {
-            if (e.PropertyName == nameof(IOrbitalsOptions.CometAccessor)) {
-            }
         }
 
         private Task<bool> SendToFramingWizardCommandAction() {
@@ -353,6 +361,32 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             get => selectedOrbitalsObject;
             private set {
                 selectedOrbitalsObject = value;
+                SelectedOrbitalElementsObject = value as OrbitalElementsObject;
+                RaisePropertyChanged();
+            }
+        }
+
+        private OrbitalElementsObject selectedOrbitalElementsObject;
+
+        public OrbitalElementsObject SelectedOrbitalElementsObject {
+            get => selectedOrbitalElementsObject;
+            private set {
+                selectedOrbitalElementsObject = value;
+                if (value != null) {
+                    SelectedOrbitalPosition = Kepler.CalculateOrbitalElements(value.OrbitalElements, AstroUtil.GetJulianDate(DateTime.Now));
+                } else {
+                    SelectedOrbitalPosition = null;
+                }
+                RaisePropertyChanged();
+            }
+        }
+
+        private OrbitalPosition selectedOrbitalPosition;
+
+        public OrbitalPosition SelectedOrbitalPosition {
+            get => selectedOrbitalPosition;
+            set {
+                selectedOrbitalPosition = value;
                 RaisePropertyChanged();
             }
         }
@@ -415,13 +449,19 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
         public AsyncRelayCommand UpdateCometElementsCommand { get; private set; }
 
+        public AsyncRelayCommand ClearCometElementsCommand { get; private set; }
+
         public AsyncRelayCommand CancelUpdateNumberedAsteroidElementsCommand { get; private set; }
 
         public AsyncRelayCommand UpdateNumberedAsteroidElementsCommand { get; private set; }
 
+        public AsyncRelayCommand ClearNumberedAsteroidElementsCommand { get; private set; }
+
         public AsyncRelayCommand CancelUpdateUnnumberedAsteroidElementsCommand { get; private set; }
 
         public AsyncRelayCommand UpdateUnnumberedAsteroidElementsCommand { get; private set; }
+
+        public AsyncRelayCommand ClearUnnumberedAsteroidElementsCommand { get; private set; }
 
         public AsyncRelayCommand CancelUpdateJWSTVectorTableCommand { get; private set; }
 
@@ -536,7 +576,8 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
             var task = Task.Run(async () => {
                 try {
-                    var vectorTable = await jplAccessor.GetJWSTVectorTable(DateTime.Now - TimeSpan.FromDays(1), TimeSpan.FromDays(8));
+                    var ct = cts.Token;
+                    var vectorTable = await jplAccessor.GetJWSTVectorTable(DateTime.Now - TimeSpan.FromDays(1), TimeSpan.FromDays(8), ct);
                     await orbitalElementsAccessor.UpdateJWST(vectorTable.ToPVTable(), progress, cts.Token);
                     return true;
                 } catch (OperationCanceledException) {
@@ -563,10 +604,11 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             var task = Task.Run(async () => {
                 try {
                     DateTime availableModifiedDate;
+                    var ct = cts.Token;
                     if (orbitalsOptions.CometAccessor == OrbitalElementsAccessorEnum.JPL) {
-                        availableModifiedDate = await jplAccessor.GetCometElementsLastModified();
+                        availableModifiedDate = await jplAccessor.GetCometElementsLastModified(ct);
                     } else {
-                        availableModifiedDate = await mpcAccessor.GetCometElementsLastModified();
+                        availableModifiedDate = await mpcAccessor.GetCometElementsLastModified(ct);
                     }
 
                     var localModifiedDate = orbitalElementsAccessor.GetLastUpdated(OrbitalObjectTypeEnum.Comet);
@@ -576,10 +618,10 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                     }
 
                     if (orbitalsOptions.CometAccessor == OrbitalElementsAccessorEnum.JPL) {
-                        var elements = await jplAccessor.GetCometElements();
+                        var elements = await jplAccessor.GetCometElements(ct);
                         await orbitalElementsAccessor.Update(OrbitalObjectTypeEnum.Comet, elements.Response, progress, cts.Token);
                     } else {
-                        var elements = await mpcAccessor.GetCometElements();
+                        var elements = await mpcAccessor.GetCometElements(ct);
                         await orbitalElementsAccessor.Update(OrbitalObjectTypeEnum.Comet, elements.Response, progress, cts.Token);
                     }
                     return true;
@@ -595,6 +637,16 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             return task;
         }
 
+        public Task<bool> ClearCometElements() {
+            if (updateCometElementsTask != null && !updateCometElementsTask.IsCompleted) {
+                Logger.Error("Update already in progress");
+                return Task.FromResult(false);
+            }
+
+            orbitalElementsAccessor.Clear(OrbitalObjectTypeEnum.Comet);
+            return Task.FromResult(true);
+        }
+
         public Task<bool> UpdateNumberedAsteroids() {
             if (updateNumberedAsteroidsTask != null && !updateNumberedAsteroidsTask.IsCompleted) {
                 Logger.Error("Update already in progress");
@@ -606,14 +658,15 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
             var task = Task.Run(async () => {
                 try {
-                    var availableModifiedDate = await jplAccessor.GetNumberedAsteroidsLastModified();
+                    var ct = cts.Token;
+                    var availableModifiedDate = await jplAccessor.GetNumberedAsteroidsLastModified(ct);
                     var localModifiedDate = orbitalElementsAccessor.GetLastUpdated(OrbitalObjectTypeEnum.NumberedAsteroids);
                     if (availableModifiedDate < localModifiedDate) {
                         Notification.ShowInformation($"{OrbitalObjectTypeEnum.NumberedAsteroids.ToDescriptionString()} elements already up to date");
                         return true;
                     }
 
-                    var elements = await jplAccessor.GetNumberedAsteroidElements();
+                    var elements = await jplAccessor.GetNumberedAsteroidElements(ct);
                     await orbitalElementsAccessor.Update(OrbitalObjectTypeEnum.NumberedAsteroids, elements.Response, progress, cts.Token);
                     return true;
                 } catch (OperationCanceledException) {
@@ -628,6 +681,16 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             return task;
         }
 
+        public Task<bool> ClearNumberedAsteroids() {
+            if (updateNumberedAsteroidsTask != null && !updateNumberedAsteroidsTask.IsCompleted) {
+                Logger.Error("Update already in progress");
+                return Task.FromResult(false);
+            }
+
+            orbitalElementsAccessor.Clear(OrbitalObjectTypeEnum.NumberedAsteroids);
+            return Task.FromResult(true);
+        }
+
         public Task<bool> UpdateUnnumberedAsteroids() {
             if (updateUnnumberedAsteroidsTask != null && !updateUnnumberedAsteroidsTask.IsCompleted) {
                 Logger.Error("Update already in progress");
@@ -639,14 +702,15 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
             var task = Task.Run(async () => {
                 try {
-                    var availableModifiedDate = await jplAccessor.GetUnnumberedAsteroidsElementsLastModified();
+                    var ct = cts.Token;
+                    var availableModifiedDate = await jplAccessor.GetUnnumberedAsteroidsElementsLastModified(ct);
                     var localModifiedDate = orbitalElementsAccessor.GetLastUpdated(OrbitalObjectTypeEnum.UnnumberedAsteroids);
                     if (availableModifiedDate < localModifiedDate) {
                         Notification.ShowInformation($"{OrbitalObjectTypeEnum.UnnumberedAsteroids.ToDescriptionString()} elements already up to date");
                         return true;
                     }
 
-                    var elements = await jplAccessor.GetUnnumberedAsteroidElements();
+                    var elements = await jplAccessor.GetUnnumberedAsteroidElements(ct);
                     await orbitalElementsAccessor.Update(OrbitalObjectTypeEnum.UnnumberedAsteroids, elements.Response, progress, cts.Token);
                     return true;
                 } catch (OperationCanceledException) {
@@ -659,6 +723,16 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             }, cts.Token);
             updateUnnumberedAsteroidsTask = task;
             return task;
+        }
+
+        public Task<bool> ClearUnnumberedAsteroids() {
+            if (updateUnnumberedAsteroidsTask != null && !updateUnnumberedAsteroidsTask.IsCompleted) {
+                Logger.Error("Update already in progress");
+                return Task.FromResult(false);
+            }
+
+            orbitalElementsAccessor.Clear(OrbitalObjectTypeEnum.UnnumberedAsteroids);
+            return Task.FromResult(true);
         }
 
         private async Task<bool> CancelUpdateElements(Task<bool> updateTask, CancellationTokenSource cts) {

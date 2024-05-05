@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using static NINA.Joko.Plugin.Orbitals.Calculations.Kepler;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
 using NINA.Astrometry;
+using System.Threading;
 
 namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
@@ -165,6 +166,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                             tpYear = yearOfPerihelionPassage,
                             tpMonth = monthOfPerihelionPassage,
                             tpDay_tt = dayOfPerihelionPassageTT,
+                            eccentricity = eccentricity,
                             perihelionDistance_au = perihelionDistanceAU,
                             argOfPerihelion_deg = argOfPerihelionDeg,
                             longOfAscendingNode_deg = longitudeOfNodeDeg,
@@ -266,29 +268,42 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
         public event EventHandler<MPCParseErrorDetail> ParseError;
 
-        public static async Task<MPCCometResponse> GetFromHttpUri(string uri) {
+        public static async Task<MPCCometResponse> GetFromHttpUri(string uri, CancellationToken ct) {
             var client = new HttpClient();
-            var cometsStream = await client.GetStreamAsync(uri);
-            var streamReader = new StreamReader(cometsStream);
-            return new MPCCometResponse(streamReader, new List<IDisposable> { cometsStream, client });
+            Stream cometsStream = null;
+            MemoryStream memoryStream = null;
+
+            try {
+                cometsStream = await client.GetStreamAsync(uri);
+                memoryStream = new MemoryStream();
+                await cometsStream.CopyToAsync(memoryStream, ct);
+                memoryStream.Seek(0, SeekOrigin.Begin);
+                var streamReader = new StreamReader(memoryStream);
+                return new MPCCometResponse(streamReader, new List<IDisposable> { memoryStream, cometsStream, client });
+            } catch (Exception) {
+                client.Dispose();
+                memoryStream?.Dispose();
+                cometsStream?.Dispose();
+                throw;
+            }
         }
     }
 
     public class MPCAccessor : IMPCAccessor {
         public const string comets_url = "https://www.minorplanetcenter.net/iau/MPCORB/CometEls.txt";
 
-        public Task<MPCCometResponse> GetCometElements() {
-            return MPCCometResponse.GetFromHttpUri(comets_url);
+        public Task<MPCCometResponse> GetCometElements(CancellationToken ct) {
+            return MPCCometResponse.GetFromHttpUri(comets_url, ct);
         }
 
-        public Task<DateTime> GetCometElementsLastModified() {
-            return GetLastModifiedFromURL(comets_url);
+        public Task<DateTime> GetCometElementsLastModified(CancellationToken ct) {
+            return GetLastModifiedFromURL(comets_url, ct);
         }
 
-        private async Task<DateTime> GetLastModifiedFromURL(string url) {
+        private async Task<DateTime> GetLastModifiedFromURL(string url, CancellationToken ct) {
             using (var client = new HttpClient()) {
                 var headMessage = new HttpRequestMessage(HttpMethod.Head, url);
-                var result = await client.SendAsync(headMessage);
+                var result = await client.SendAsync(headMessage, ct);
                 var lastModified = result.Content.Headers.LastModified;
                 return lastModified?.UtcDateTime ?? DateTime.MinValue;
             }

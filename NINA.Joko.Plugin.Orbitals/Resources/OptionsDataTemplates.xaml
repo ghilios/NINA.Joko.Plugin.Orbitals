@@ -16,6 +16,8 @@
     mc:Ignorable="d">
     <oconverters:EnumStaticDescriptionValueConverter x:Key="O_EnumStaticDescriptionValueConverter" />
     <oconverters:DateTimeMinToNeverConverter x:Key="O_DateTimeMinToNeverConverter" />
+    <oconverters:JulianToDateTimeConverter x:Key="O_JulianToDateTimeConverter" />
+    <oconverters:RadianToDegreeConverter x:Key="O_RadianToDegreeConverter" />
 
     <TextBlock x:Key="SelectedObjectName_Hint" Text="Name of the object (eg, C/2021 O3 (PANSTARRS))" />
     <DataTemplate x:Key="Orbitals_Options_Content">

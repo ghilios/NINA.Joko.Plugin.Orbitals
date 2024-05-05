@@ -29,6 +29,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
         public OrbitalSearchVM(IOrbitalElementsAccessor orbitalElementsAccessor) {
             this.orbitalElementsAccessor = orbitalElementsAccessor;
+            this.objectType = OrbitalObjectTypeEnum.Comet;
         }
 
         private NotifyTask<List<IAutoCompleteItem>> targetSearchResult;
@@ -62,22 +63,24 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         public string TargetName {
             get => targetName;
             set {
-                ShowPopup = false;
-                targetName = value;
-                if (!SkipSearch) {
-                    if (TargetName.Length > 2) {
-                        targetSearchCts?.Cancel();
-                        targetSearchCts?.Dispose();
-                        targetSearchCts = new CancellationTokenSource();
+                if (value != null && targetName != value) {
+                    ShowPopup = false;
+                    targetName = value;
+                    if (!SkipSearch) {
+                        if (TargetName.Length > 2) {
+                            targetSearchCts?.Cancel();
+                            targetSearchCts?.Dispose();
+                            targetSearchCts = new CancellationTokenSource();
 
-                        if (TargetSearchResult != null) {
-                            TargetSearchResult.PropertyChanged -= TargetSearchResult_PropertyChanged;
+                            if (TargetSearchResult != null) {
+                                TargetSearchResult.PropertyChanged -= TargetSearchResult_PropertyChanged;
+                            }
+                            TargetSearchResult = NotifyTask.Create(SearchObjects(ObjectType, TargetName, targetSearchCts.Token));
+                            TargetSearchResult.PropertyChanged += TargetSearchResult_PropertyChanged;
                         }
-                        TargetSearchResult = NotifyTask.Create(SearchObjects(ObjectType, TargetName, targetSearchCts.Token));
-                        TargetSearchResult.PropertyChanged += TargetSearchResult_PropertyChanged;
                     }
+                    RaisePropertyChanged();
                 }
-                RaisePropertyChanged();
             }
         }
 
