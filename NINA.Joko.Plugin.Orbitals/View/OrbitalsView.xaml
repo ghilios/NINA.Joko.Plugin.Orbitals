@@ -449,6 +449,18 @@
                         Text="{Binding RAOffset, Converter={StaticResource HoursToHMSConverter}}">
                     </TextBlock>
                     <TextBlock
+                        Grid.Row="5" Grid.Column="1"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="Max Exposure"
+                        FontWeight="DemiBold" />
+                    <TextBlock
+                        Grid.Row="5" Grid.Column="2"
+                        Margin="5"
+                        VerticalAlignment="Center">
+                        <Run Text="{Binding MaxExposureSeconds, StringFormat=\{0:0.###\}, Mode=OneWay}" /> <Run Text="sec" />
+                    </TextBlock>
+                    <TextBlock
                         Grid.Row="5" Grid.Column="4"
                         Margin="5"
                         VerticalAlignment="Center"
@@ -599,7 +611,6 @@
                         Grid.Row="4" Grid.Column="2"
                         Margin="5"
                         VerticalAlignment="Center">
-                        <Run Text="{Binding  SelectedOrbitalElementsObject.OrbitalElements.i_Inclination_rad, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="rad /" />
                         <Run Text="{Binding SelectedOrbitalElementsObject.OrbitalElements.i_Inclination_rad, StringFormat=\{0:0.####\}, Converter={StaticResource O_RadianToDegreeConverter}, Mode=OneWay}" /><Run Text="°" />
                     </TextBlock>
                     <TextBlock
@@ -612,7 +623,6 @@
                         Grid.Row="5" Grid.Column="2"
                         Margin="5"
                         VerticalAlignment="Center">
-                        <Run Text="{Binding SelectedOrbitalElementsObject.OrbitalElements.w_ArgOfPerihelion_rad, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="rad /" />
                         <Run Text="{Binding SelectedOrbitalElementsObject.OrbitalElements.w_ArgOfPerihelion_rad, StringFormat=\{0:0.####\}, Converter={StaticResource O_RadianToDegreeConverter}, Mode=OneWay}" /><Run Text="°" />
                     </TextBlock>
                     <TextBlock
@@ -625,7 +635,6 @@
                         Grid.Row="6" Grid.Column="2"
                         Margin="5"
                         VerticalAlignment="Center">
-                        <Run Text="{Binding SelectedOrbitalElementsObject.OrbitalElements.node_LongitudeOfAscending_rad, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="rad /" />
                         <Run Text="{Binding SelectedOrbitalElementsObject.OrbitalElements.node_LongitudeOfAscending_rad, StringFormat=\{0:0.####\}, Converter={StaticResource O_RadianToDegreeConverter}, Mode=OneWay}" /><Run Text="°" />
                     </TextBlock>
                     <TextBlock
@@ -659,8 +668,9 @@
                     <TextBlock
                         Grid.Row="2" Grid.Column="5"
                         Margin="5"
-                        VerticalAlignment="Center"
-                        Text="{Binding SelectedOrbitalElementsObject.OrbitalElements.M_MeanAnomalyAtEpoch, StringFormat=\{0:0.####\}, Mode=OneWay}" />
+                        VerticalAlignment="Center">
+                        <Run Text="{Binding SelectedOrbitalElementsObject.OrbitalElements.M_MeanAnomalyAtEpoch, StringFormat=\{0:0.####\}, Converter={StaticResource O_RadianToDegreeConverter}, Mode=OneWay}" /><Run Text="°" />
+                    </TextBlock>
                     <TextBlock
                         Grid.Row="3" Grid.Column="4"
                         Margin="5"
@@ -683,7 +693,6 @@
                         Grid.Row="4" Grid.Column="5"
                         Margin="5"
                         VerticalAlignment="Center">
-                        <Run Text="{Binding SelectedOrbitalPosition.M_MeanAnomaly_rad, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="rad /" />
                         <Run Text="{Binding SelectedOrbitalPosition.M_MeanAnomaly_rad, StringFormat=\{0:0.####\}, Converter={StaticResource O_RadianToDegreeConverter}, Mode=OneWay}" /><Run Text="°" />
                     </TextBlock>
                     <TextBlock
@@ -696,7 +705,6 @@
                         Grid.Row="5" Grid.Column="5"
                         Margin="5"
                         VerticalAlignment="Center">
-                        <Run Text="{Binding SelectedOrbitalPosition.e_EccentricAnomaly_rad, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="rad /" />
                         <Run Text="{Binding SelectedOrbitalPosition.e_EccentricAnomaly_rad, StringFormat=\{0:0.####\}, Converter={StaticResource O_RadianToDegreeConverter}, Mode=OneWay}" /><Run Text="°" />
                     </TextBlock>
                     <TextBlock
@@ -709,7 +717,6 @@
                         Grid.Row="6" Grid.Column="5"
                         Margin="5"
                         VerticalAlignment="Center">
-                        <Run Text="{Binding SelectedOrbitalPosition.v0_TrueAnomaly_rad, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="rad /" />
                         <Run Text="{Binding SelectedOrbitalPosition.v0_TrueAnomaly_rad, StringFormat=\{0:0.####\}, Converter={StaticResource O_RadianToDegreeConverter}, Mode=OneWay}" /><Run Text="°" />
                     </TextBlock>
                     <TextBlock

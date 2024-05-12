@@ -20,6 +20,7 @@ using static NINA.Joko.Plugin.Orbitals.Calculations.Kepler;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
 using NINA.Astrometry;
 using System.Threading;
+using NINA.Joko.Plugin.Orbitals.Utility;
 
 namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
@@ -269,7 +270,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         public event EventHandler<MPCParseErrorDetail> ParseError;
 
         public static async Task<MPCCometResponse> GetFromHttpUri(string uri, CancellationToken ct) {
-            var client = new HttpClient();
+            HttpClient client = HttpClientUtil.newHttpClient();
             Stream cometsStream = null;
             MemoryStream memoryStream = null;
 
@@ -301,7 +302,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         }
 
         private async Task<DateTime> GetLastModifiedFromURL(string url, CancellationToken ct) {
-            using (var client = new HttpClient()) {
+            using (HttpClient client = HttpClientUtil.newHttpClient()) {
                 var headMessage = new HttpRequestMessage(HttpMethod.Head, url);
                 var result = await client.SendAsync(headMessage, ct);
                 var lastModified = result.Content.Headers.LastModified;

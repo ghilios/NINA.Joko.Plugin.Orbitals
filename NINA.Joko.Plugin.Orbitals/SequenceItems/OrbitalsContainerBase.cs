@@ -1,4 +1,16 @@
-﻿using ASCOM.Astrometry;
+﻿#region "copyright"
+
+/*
+    Copyright © 2021 - 2021 George Hilios <ghilios+NINA@googlemail.com>
+
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this
+    file, You can obtain one at http://mozilla.org/MPL/2.0/.
+*/
+
+#endregion "copyright"
+
+using ASCOM.Astrometry;
 using Newtonsoft.Json;
 using NINA.Astrometry;
 using NINA.Astrometry.Interfaces;
@@ -21,7 +33,8 @@ using System.Threading.Tasks;
 using System.Windows;
 
 namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
-    abstract public class OrbitalsContainerBase<T> : SequenceContainer, IDeepSkyObjectContainer where T : OrbitalsObjectBase {
+
+    public abstract class OrbitalsContainerBase<T> : SequenceContainer, IDeepSkyObjectContainer where T : OrbitalsObjectBase {
         protected readonly IProfileService profileService;
         protected readonly INighttimeCalculator nighttimeCalculator;
         protected readonly IOrbitalsOptions orbitalsOptions;
@@ -41,17 +54,14 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         }
 
         protected void PostConstruction() {
-            coordinateUpdateCts = new CancellationTokenSource();
-            coordinateUpdateTask = Task.Run(() => CoordinateUpdateLoop(coordinateUpdateCts.Token));
-
             OffsetCoordinates = new InputCoordinatesEx();
 
             WeakEventManager<IProfileService, EventArgs>.AddHandler(profileService, nameof(profileService.LocationChanged), ProfileService_LocationChanged);
             WeakEventManager<IProfileService, EventArgs>.AddHandler(profileService, nameof(profileService.HorizonChanged), ProfileService_HorizonChanged);
         }
 
-
         private bool offsetExpanded = false;
+
         [JsonProperty]
         public bool OffsetExpanded {
             get => offsetExpanded;
@@ -81,6 +91,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         }
 
         private bool deserializing = false;
+
         [OnDeserializing]
         public void OnOrbitalsDeserializing(StreamingContext context) {
             deserializing = true;
@@ -178,9 +189,11 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         private void ProfileService_HorizonChanged(object sender, EventArgs e) {
             Target?.DeepSkyObject?.SetCustomHorizon(profileService.ActiveProfile.AstrometrySettings.Horizon);
         }
+
         private void ProfileService_LocationChanged(object sender, EventArgs e) {
             Target?.SetPosition(Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Latitude), Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Longitude));
         }
+
         public NighttimeData NighttimeData { get; private set; }
 
         [JsonProperty]
@@ -216,6 +229,23 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
                 Invalid = false;
             }
             return base.Validate();
+        }
+
+        public override void AfterParentChanged() {
+            if (Parent != null) {
+                if (coordinateUpdateTask == null) {
+                    coordinateUpdateCts = new CancellationTokenSource();
+                    coordinateUpdateTask = Task.Run(() => CoordinateUpdateLoop(coordinateUpdateCts.Token));
+                }
+            } else {
+                if (coordinateUpdateTask != null) {
+                    coordinateUpdateCts?.Cancel();
+                    coordinateUpdateCts = null;
+                    coordinateUpdateTask = null;
+                }
+            }
+
+            base.AfterParentChanged();
         }
     }
 }

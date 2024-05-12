@@ -14,6 +14,7 @@ using FlatFiles;
 using FlatFiles.TypeMapping;
 using NINA.Astrometry;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
+using NINA.Joko.Plugin.Orbitals.Utility;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -213,15 +214,11 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         public event EventHandler<JPLParseErrorDetail> ParseError;
 
         public static async Task<JPLCometResponse> GetFromHttpUri(string uri, CancellationToken ct) {
-            var client = new HttpClient();
+            HttpClient client = HttpClientUtil.newHttpClient();
             Stream cometsStream = null;
             MemoryStream memoryStream = null;
 
             try {
-                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
-                client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
-                client.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate, br, zstd");
-                client.DefaultRequestHeaders.Add("Accept-Language", "en-GB,en;q=0.9,en-US;q=0.8");
                 cometsStream = await client.GetStreamAsync(uri, ct);
                 memoryStream = new MemoryStream();
                 await cometsStream.CopyToAsync(memoryStream, ct);
@@ -291,7 +288,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         public event EventHandler<JPLParseErrorDetail> ParseError;
 
         public static async Task<JPLUnnumberedAsteroidResponse> GetFromHttpUri(string uri, CancellationToken ct) {
-            var client = new HttpClient();
+            HttpClient client = HttpClientUtil.newHttpClient();
             var stream = await client.GetStreamAsync(uri, ct);
             if (uri.EndsWith(".gz")) {
                 stream = new GZipStream(stream, CompressionMode.Decompress, false);
@@ -359,11 +356,10 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         public event EventHandler<JPLParseErrorDetail> ParseError;
 
         public static async Task<JPLNumberedAsteroidResponse> GetFromHttpUri(string uri, CancellationToken ct) {
-            HttpClient client = new HttpClient();
+            HttpClient client = HttpClientUtil.newHttpClient();
             Stream stream = null;
             MemoryStream memoryStream = null;
             try {
-                client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
                 stream = await client.GetStreamAsync(uri, ct);
                 if (uri.EndsWith(".gz")) {
                     stream = new GZipStream(stream, CompressionMode.Decompress, false);
@@ -403,7 +399,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         }
 
         private async Task<DateTime> GetLastModifiedFromURL(string url, CancellationToken ct) {
-            using (var client = new HttpClient()) {
+            using (HttpClient client = HttpClientUtil.newHttpClient()) {
                 var headMessage = new HttpRequestMessage(HttpMethod.Head, url);
                 var result = await client.SendAsync(headMessage, ct);
                 var lastModified = result.Content.Headers.LastModified;
@@ -427,7 +423,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             var startDate = asof - TimeSpan.FromHours(1);
             var endDate = asof + lookahead;
             var queryString = $"https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND='JWST'&OBJ_DATA='NO'&MAKE_EPHEM='YES'&EPHEM_TYPE='VECTOR'&CENTER='500@399'&START_TIME='{startDate.ToString(CultureInfo.InvariantCulture)}'&STOP_TIME='{endDate.ToString(CultureInfo.InvariantCulture)}'&STEP_SIZE='1%20h'&QUANTITIES='1'&OUT_UNITS='AU-D'";
-            using (var client = new HttpClient()) {
+            using (HttpClient client = HttpClientUtil.newHttpClient()) {
                 var data = await client.GetStringAsync(queryString, ct);
                 var startOfEntry = "$$SOE";
                 var endOfEntry = "$$EOE";

@@ -297,6 +297,11 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                 } else {
                     var daysSinceEpoch = asOf_jd - orbitalElements.Epoch_jd;
                     orbitalPosition.M_MeanAnomaly_rad = orbitalElements.M_MeanAnomalyAtEpoch.Value + n * daysSinceEpoch;
+
+                    if (!orbitalElements.tp_PeriapsisTime_jd.HasValue) {
+                        var daysSincePeriapsis = orbitalPosition.M_MeanAnomaly_rad / n;
+                        orbitalElements.tp_PeriapsisTime_jd = asOf_jd - daysSincePeriapsis;
+                    }
                 }
 
                 var meanAnomaly = orbitalPosition.M_MeanAnomaly_rad;
@@ -336,6 +341,10 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                     // tan(v/2) = ((e + 1)/(e - 1))^(1/2) * tanh(E/2)
                     var term1 = Math.Sqrt((ecc + 1d) / (ecc - 1d)) * Math.Tanh(orbitalPosition.e_EccentricAnomaly_rad / 2d);
                     orbitalPosition.v0_TrueAnomaly_rad = AstrometricConstants.NormalizeRadians(2d * Math.Atan(term1));
+                }
+
+                if (!orbitalElements.q_Perihelion_au.HasValue) {
+                    orbitalElements.q_Perihelion_au = (1 + ecc) * orbitalElements.a_SemiMajorAxis_au.Value;
                 }
             } else {
                 // Parabolic orbit. Use Barker's equation

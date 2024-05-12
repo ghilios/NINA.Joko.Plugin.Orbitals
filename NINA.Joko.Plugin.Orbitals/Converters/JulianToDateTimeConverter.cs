@@ -21,7 +21,7 @@ namespace NINA.Joko.Plugin.Orbitals.Converters {
 
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
             double jd;
-            if (double.TryParse(value.ToString(), out jd)) {
+            if (value != null && double.TryParse(value.ToString(), out jd)) {
                 return NOVAS.JulianToDateTime(jd).ToString();
             } else {
                 return string.Empty;

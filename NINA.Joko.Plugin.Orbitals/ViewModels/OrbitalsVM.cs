@@ -10,7 +10,6 @@
 
 #endregion "copyright"
 
-using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NINA.Astrometry;
 using NINA.Astrometry.Interfaces;
@@ -48,11 +47,11 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private readonly ITelescopeMediator telescopeMediator;
         private readonly IFramingAssistantVM framingAssistantVM;
         private readonly IApplicationMediator applicationMediator;
-        private readonly IApplicationStatusMediator applicationStatusMediator;
         private readonly IOrbitalsOptions orbitalsOptions;
         private readonly IJPLAccessor jplAccessor;
         private readonly IMPCAccessor mpcAccessor;
         private readonly IOrbitalElementsAccessor orbitalElementsAccessor;
+        private readonly IProfileService profileService;
         private readonly IProgress<ApplicationStatus> progress;
         private bool initialLoadComplete;
 
@@ -93,12 +92,12 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             this.telescopeMediator = telescopeMediator;
             this.framingAssistantVM = framingAssistantVM;
             this.applicationMediator = applicationMediator;
-            this.applicationStatusMediator = applicationStatusMediator;
             this.orbitalsOptions = orbitalsOptions;
             this.jplAccessor = jplAccessor;
             this.mpcAccessor = mpcAccessor;
             this.orbitalElementsAccessor = orbitalElementsAccessor;
             this.OrbitalSearchVM = orbitalSearchVM;
+            this.profileService = profileService;
             this.progress = ProgressFactory.Create(applicationStatusMediator, "Orbitals");
             this.orbitalElementsAccessor.Updated += OrbitalElementsAccessor_Updated;
             this.orbitalElementsAccessor.VectorTableUpdated += OrbitalElementsAccessor_VectorTableUpdated;
@@ -441,6 +440,16 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             }
         }
 
+        private double maxExposureSeconds = double.NaN;
+
+        public double MaxExposureSeconds {
+            get => maxExposureSeconds;
+            private set {
+                maxExposureSeconds = value;
+                RaisePropertyChanged();
+            }
+        }
+
         public IOrbitalsOptions Options => orbitalsOptions;
 
         public IOrbitalSearchVM OrbitalSearchVM { get; private set; }
@@ -519,6 +528,13 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 TargetCoordinates = SelectedOrbitalsObject.Coordinates;
                 ShiftTrackingRate = SelectedOrbitalsObject.ShiftTrackingRate;
                 DistanceAU = SelectedOrbitalsObject.Position.Distance;
+                double arcsecPerSecondMovement = Math.Sqrt((ShiftTrackingRate.RAArcsecsPerSec * ShiftTrackingRate.RAArcsecsPerSec) + (ShiftTrackingRate.DecArcsecsPerSec * ShiftTrackingRate.DecArcsecsPerSec));
+                double pixelSize = this.profileService.ActiveProfile.CameraSettings.PixelSize;
+                if (pixelSize > 0.0d && arcsecPerSecondMovement > 0.0d) {
+                    MaxExposureSeconds = pixelSize / arcsecPerSecondMovement;
+                } else {
+                    MaxExposureSeconds = double.NaN;
+                }
             } catch (Exception e) {
                 Notification.ShowError($"Failed to load {objectType}. {e.Message}");
                 Logger.Error($"Failed to load {objectType}", e);

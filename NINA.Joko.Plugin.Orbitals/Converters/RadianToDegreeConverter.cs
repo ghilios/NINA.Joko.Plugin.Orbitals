@@ -21,7 +21,7 @@ namespace NINA.Joko.Plugin.Orbitals.Converters {
 
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
             double rad;
-            if (double.TryParse(value.ToString(), out rad)) {
+            if (value != null && double.TryParse(value.ToString(), out rad)) {
                 return AstroUtil.ToDegree(rad);
             } else {
                 return null;
