@@ -529,9 +529,9 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 ShiftTrackingRate = SelectedOrbitalsObject.ShiftTrackingRate;
                 DistanceAU = SelectedOrbitalsObject.Position.Distance;
                 double arcsecPerSecondMovement = Math.Sqrt((ShiftTrackingRate.RAArcsecsPerSec * ShiftTrackingRate.RAArcsecsPerSec) + (ShiftTrackingRate.DecArcsecsPerSec * ShiftTrackingRate.DecArcsecsPerSec));
-                double pixelSize = this.profileService.ActiveProfile.CameraSettings.PixelSize;
-                if (pixelSize > 0.0d && arcsecPerSecondMovement > 0.0d) {
-                    MaxExposureSeconds = pixelSize / arcsecPerSecondMovement;
+                double pixelScale = AstroUtil.ArcsecPerPixel(profileService.ActiveProfile.CameraSettings.PixelSize, profileService.ActiveProfile.TelescopeSettings.FocalLength);
+                if (pixelScale > 0.0d && arcsecPerSecondMovement > 0.0d) {
+                    MaxExposureSeconds = pixelScale / arcsecPerSecondMovement;
                 } else {
                     MaxExposureSeconds = double.NaN;
                 }
