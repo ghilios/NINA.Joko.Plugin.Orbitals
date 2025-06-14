@@ -29,10 +29,14 @@
             <Grid.RowDefinitions>
                 <RowDefinition />
                 <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
             </Grid.RowDefinitions>
             <Grid.Resources>
                 <TextBlock x:Key="OrbitalRefreshTime_Tooltip" Text="How frequently, in seconds, the coordinates for an orbital object in the sequencer is updated. Setting this too low can negatively impact machine performance." />
+                <TextBlock x:Key="TLERefreshTime_Tooltip" Text="How frequently, in seconds, the coordinates for a TLE object in the sequencer is updated. Rapidly moving satellites benefit from having more frequent updates." />
                 <TextBlock x:Key="QuirksMode_Tooltip" Text="Most people should keep this at None. EQMOD currently needs a 15.0411x adjustment to RA Tracking Rate." />
+                <TextBlock x:Key="TLETrackStartWaitTime_Tooltip" Text="Satellites tend to move quickly, so slew ahead to the position a satellite will be by this amount of time, and wait to start tracking until the object arrives there. This value should be set based on the speed of your mount and dome." />
             </Grid.Resources>
             <TextBlock
                 Grid.Row="0"
@@ -60,11 +64,53 @@
                 Grid.Column="0"
                 Margin="5,5,0,0"
                 VerticalAlignment="Center"
+                Text="TLE Position Refresh Time"
+                ToolTip="{StaticResource TLERefreshTime_Tooltip}" />
+            <ninactrl:UnitTextBox
+                Grid.Row="1"
+                Grid.Column="1"
+                MinWidth="80"
+                Margin="5,5,0,0"
+                HorizontalAlignment="Left"
+                ToolTip="{StaticResource TLERefreshTime_Tooltip}"
+                Unit="secs">
+                <Binding Path="TLEPositionRefreshTime_sec" UpdateSourceTrigger="LostFocus">
+                    <Binding.ValidationRules>
+                        <orules:PositiveIntegerRule />
+                    </Binding.ValidationRules>
+                </Binding>
+            </ninactrl:UnitTextBox>
+            <TextBlock
+                Grid.Row="2"
+                Grid.Column="0"
+                Margin="5,5,0,0"
+                VerticalAlignment="Center"
+                Text="TLE Track Wait Time"
+                ToolTip="{StaticResource TLETrackStartWaitTime_Tooltip}" />
+            <ninactrl:UnitTextBox
+                Grid.Row="2"
+                Grid.Column="1"
+                MinWidth="80"
+                Margin="5,5,0,0"
+                HorizontalAlignment="Left"
+                ToolTip="{StaticResource TLETrackStartWaitTime_Tooltip}"
+                Unit="secs">
+                <Binding Path="TLETrackStartWaitTime_sec" UpdateSourceTrigger="LostFocus">
+                    <Binding.ValidationRules>
+                        <orules:PositiveIntegerRule />
+                    </Binding.ValidationRules>
+                </Binding>
+            </ninactrl:UnitTextBox>
+            <TextBlock
+                Grid.Row="3"
+                Grid.Column="0"
+                Margin="5,5,0,0"
+                VerticalAlignment="Center"
                 Text="Quirks Mode"
                 ToolTip="{StaticResource QuirksMode_Tooltip}" />
             <ComboBox
                 Name="PART_QuirksModeEnumList"
-                Grid.Row="1" Grid.Column="2"
+                Grid.Row="3" Grid.Column="2"
                 MinWidth="80"
                 Margin="5,5,0,0"
                 HorizontalAlignment="Left"

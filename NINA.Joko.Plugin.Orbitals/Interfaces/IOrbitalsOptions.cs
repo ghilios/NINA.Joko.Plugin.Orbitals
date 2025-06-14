@@ -18,6 +18,10 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
     public interface IOrbitalsOptions : INotifyPropertyChanged {
         int OrbitalPositionRefreshTime_sec { get; set; }
 
+        int TLEPositionRefreshTime_sec { get; set; }
+
+        int TLETrackStartWaitTime_sec { get; set; }
+
         QuirksModeEnum QuirksMode { get; set; }
 
         OrbitalElementsAccessorEnum CometAccessor { get; set; }

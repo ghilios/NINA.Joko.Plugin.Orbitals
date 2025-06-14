@@ -12,7 +12,6 @@
 
 using NINA.Astrometry;
 using NINA.Core.Model;
-using NINA.Core.Utility.Notification;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
 using NINA.Profile.Interfaces;
 using System;
@@ -27,7 +26,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             IOrbitalElementsAccessor orbitalElementsAccessor,
             string objectName,
             CustomHorizon customHorizon,
-            IProfileService profileService) : base(objectName, customHorizon) {
+            IProfileService profileService) : base(objectName, customHorizon, TimeSpan.FromSeconds(1)) {
             this.orbitalElementsAccessor = orbitalElementsAccessor;
             this.profileService = profileService;
             Moon = new MoonInfo(Coordinates);
@@ -41,7 +40,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                 var latitude = Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Latitude);
                 var longitude = Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Longitude);
                 var elevation = profileService.ActiveProfile.AstrometrySettings.Elevation;
-                var pv = orbitalElementsAccessor.GetPVFromTable(at, pvTable, latitude, longitude, elevation);
+                var pv = orbitalElementsAccessor.GetPVFromTable(at, pvTable, latitude, longitude, elevation, rateDriftDelta);
                 if (pv != null) {
                     return pv;
                 }

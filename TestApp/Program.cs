@@ -13,16 +13,21 @@
 using NINA.Astrometry;
 using NINA.Joko.Plugin.Orbitals.Calculations;
 using NINA.Joko.Plugin.Orbitals.Utility;
+using SGPdotNET.CoordinateSystem;
+using SGPdotNET.Observation;
+using SGPdotNET.TLE;
 using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using static NINA.Equipment.Equipment.MyGPS.PegasusAstro.UnityApi.DriverUranusReport;
 using static NINA.Joko.Plugin.Orbitals.Calculations.Kepler;
 
 namespace TestApp {
@@ -30,6 +35,27 @@ namespace TestApp {
     internal class Program {
 
         private static async Task Main(string[] args) {
+            var tcpClient = new System.Net.Sockets.TcpClient("192.168.88.67", 3490);
+            var stream = tcpClient.GetStream();
+            var reader = new System.IO.StreamReader(stream);
+            var writer = new System.IO.StreamWriter(stream);
+            writer.Write("#:GVP#");
+            writer.Flush();
+
+            while (true) {
+                int value = reader.Read();
+                char charValue = (char)value;
+                System.Console.Write(charValue);
+                if (charValue == '#') {
+                    break;
+                }
+            }
+            System.Console.WriteLine();
+
+            double f = -1.1234567;
+            string s = f.ToString("+000.0000;-000.0000", (IFormatProvider)CultureInfo.InvariantCulture);
+            Console.WriteLine(s);
+
             /*
             var accessor = new JPLAccessor();
             var lmd = await accessor.GetNumberedAsteroidsLastModified();
@@ -167,6 +193,7 @@ namespace TestApp {
             }
             */
 
+            /*
             var cometName = "C/2024 C4 (ATLAS)";
             var mpcAccessor = new MPCAccessor();
             var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
@@ -193,7 +220,32 @@ namespace TestApp {
             var mpcOrbitalPosition = Kepler.CalculateOrbitalElements(jplComet, asOfJd);
             var orbitalApparentPosition = Kepler.GetApparentPosition(mpcOrbitalPosition, NOVAS.Body.Earth, latitude, longitude, elevation);
             var orbitalCoordinates = orbitalApparentPosition.ToPolar();
+            */
+            var tleString1 = "1 25544U 98067A   25108.16196759  .00021659  00000+0  39076-3 0  9990";
+            var tleString2 = "2 25544  51.6381 244.3378 0005375  52.1060 306.6862 15.49672979505843";
 
+            var tle = new Tle(tleString1, tleString2);
+
+            var sat = new Satellite(tle);
+            var location = new GeodeticCoordinate(
+                SGPdotNET.Util.Angle.FromRadians(latitude.Radians),
+                SGPdotNET.Util.Angle.FromRadians(longitude.Radians),
+                0);
+            var groundStation = new GroundStation(location);
+
+            while (true) {
+                var now = DateTime.UtcNow;
+                var observation = groundStation.Observe(sat, now);
+                var tc1 = new TopocentricCoordinates(
+                    Angle.ByRadians(observation.Azimuth.Radians),
+                    Angle.ByRadians(observation.Elevation.Radians),
+                    latitude,
+                    longitude);
+                var eq1 = tc1.Transform(Epoch.JNOW);
+
+                Console.WriteLine($"{now}: {eq1}. Alt={observation.Elevation.Degrees}, Az={observation.Azimuth.Degrees}");
+                Thread.Sleep(2000);
+            }
             Console.WriteLine();
         }
 

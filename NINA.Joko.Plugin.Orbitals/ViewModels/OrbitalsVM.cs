@@ -19,6 +19,7 @@ using NINA.Core.Utility;
 using NINA.Core.Utility.Notification;
 using NINA.Equipment.Equipment.MyGuider;
 using NINA.Equipment.Equipment.MyTelescope;
+using NINA.Equipment.Interfaces;
 using NINA.Equipment.Interfaces.Mediator;
 using NINA.Equipment.Interfaces.ViewModel;
 using NINA.Joko.Plugin.Orbitals.Calculations;
@@ -29,12 +30,12 @@ using NINA.Profile.Interfaces;
 using NINA.WPF.Base.Interfaces.Mediator;
 using NINA.WPF.Base.Interfaces.ViewModel;
 using NINA.WPF.Base.ViewModel;
+using SGPdotNET.TLE;
 using System;
 using System.ComponentModel.Composition;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Input;
 using static NINA.Joko.Plugin.Orbitals.Calculations.Kepler;
 using RelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
@@ -54,6 +55,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private readonly IProfileService profileService;
         private readonly IProgress<ApplicationStatus> progress;
         private bool initialLoadComplete;
+        private Task<bool> refreshTask;
 
         [ImportingConstructor]
         public OrbitalsVM(
@@ -137,17 +139,25 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             this.CancelUpdateUnnumberedAsteroidElementsCommand = new AsyncRelayCommand(o => CancelUpdateElements(updateUnnumberedAsteroidsTask, updateUnnumberedAsteroidsCts));
             this.CancelUpdateJWSTVectorTableCommand = new AsyncRelayCommand(o => CancelUpdateElements(updateJWSTVectorTableTask, updateJWSTVectorTableCts));
 
-            this.LoadSelectionCommand = new RelayCommand(LoadSelection, CanLoad);
-            this.LoadSelectionCommand.RegisterPropertyChangeNotification(this, nameof(SearchObjectType));
+            this.LoadSelectionCommand = new RelayCommand(LoadSelectionClicked, CanLoad);
+            this.LoadSelectionCommand.RegisterPropertyChangeNotification(this, nameof(SearchObjectType), nameof(ManualTLEInput));
             this.LoadSelectionCommand.RegisterPropertyChangeNotification(OrbitalSearchVM, nameof(OrbitalSearchVM.SelectedOrbitalElements));
 
             this.SendToFramingWizardCommand = new AsyncRelayCommand(SendToFramingWizardCommandAction, () => SelectedOrbitalsObject != null);
             this.SendToFramingWizardCommand.RegisterPropertyChangeNotification(this, nameof(SelectedOrbitalsObject));
 
+            this.SlewAndTrackCommand = new AsyncRelayCommand(SlewAndTrackCommandAction, CanSlewAndTrack);
+            this.SlewAndTrackCommand.RegisterPropertyChangeNotification(this, nameof(SelectedOrbitalsObject));
+            this.SlewAndTrackCommand.RegisterPropertyChangeNotification(telescopeMediator.GetInfo(), nameof(TelescopeInfo.Connected));
+
+            this.CancelSlewAndTrackCommand = new AsyncRelayCommand(CancelSlewAndTrack);
+
             this.SetTrackingRateCommand = new RelayCommand(SetTrackingRateCommandAction, CanSetTrackingRate);
+            this.SetTrackingRateCommand.RegisterPropertyChangeNotification(this, nameof(SelectedOrbitalsObject));
             this.SetTrackingRateCommand.RegisterPropertyChangeNotification(telescopeMediator.GetInfo(), nameof(TelescopeInfo.Connected), nameof(TelescopeInfo.CanSetRightAscensionRate), nameof(TelescopeInfo.CanSetDeclinationRate));
 
             this.SetGuiderShiftCommand = new AsyncRelayCommand(SetGuiderShiftCommandAction, CanSetGuiderShift);
+            this.SetGuiderShiftCommand.RegisterPropertyChangeNotification(this, nameof(SelectedOrbitalsObject));
             this.SetGuiderShiftCommand.RegisterPropertyChangeNotification(guiderMediator.GetInfo(), nameof(GuiderInfo.Connected), nameof(GuiderInfo.CanSetShiftRate));
 
             this.ResetOffsetCommand = new RelayCommand(ResetOffset, () => SelectedOrbitalsObject != null && (RAOffset != 0.0d || DecOffset != 0.0d));
@@ -186,6 +196,200 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             });
         }
 
+        private CancellationTokenSource slewAndTrackCts;
+
+        private Task<bool> SlewAndTrackCommandAction() {
+            var newSlewAndTrackCts = new CancellationTokenSource();
+            CancellationToken ct = newSlewAndTrackCts.Token;
+
+            var existingRefreshTask = refreshTask;
+
+            return Task.Run(async () => {
+                Logger.Info("Starting SlewAndTrackCommandAction");
+
+                if (SelectedOrbitalsObject == null) {
+                    Notification.ShowWarning("No orbital object selected");
+                    return false;
+                }
+                var telescopeInfo = telescopeMediator.GetInfo();
+                if (!telescopeInfo.Connected) {
+                    Notification.ShowWarning("Telescope not connected");
+                    return false;
+                }
+
+                ToggleRefreshEnabled(false);
+                if (existingRefreshTask != null) {
+                    Logger.Info("Waiting for existing refresh task to terminate");
+                    await existingRefreshTask.WaitAsync(ct);
+                    Logger.Info("Existing refresh task terminated");
+                }
+
+                slewAndTrackCts = newSlewAndTrackCts;
+
+                bool setTelescopeTracking = telescopeInfo.CanSetRightAscensionRate && telescopeInfo.CanSetDeclinationRate;
+                bool setGuiderTracking = CanSetGuiderShift();
+
+                try {
+                    bool slewAheadAndWait = SearchObjectType == SearchObjectTypeEnum.ManualTLE;
+                    DateTime slewAt = DateTime.UtcNow;
+                    if (slewAheadAndWait) {
+                        slewAt += TimeSpan.FromSeconds(orbitalsOptions.TLETrackStartWaitTime_sec);
+                    }
+
+                    var slewPosition = SelectedOrbitalsObject.PositionAt(slewAt);
+
+                    var adjustedCoordinates = slewPosition.Coordinates.Clone();
+                    adjustedCoordinates.RA += RAOffset;
+                    adjustedCoordinates.Dec += DecOffset;
+
+                    if (slewAheadAndWait) {
+                        // Slew to topocentric coordinates so that the scope is not tracking at its destination
+                        var latitude = Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Latitude);
+                        var longitude = Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Longitude);
+                        var elevation = profileService.ActiveProfile.AstrometrySettings.Elevation;
+                        var topocentricCoordinates = adjustedCoordinates.Transform(latitude, longitude, elevation, 0.0d, 0.0d, 0.0d, 0.0d, slewAt);
+
+                        telescopeMediator.SetTrackingEnabled(false);
+                        if (setTelescopeTracking) {
+                            telescopeMediator.SetCustomTrackingRate(SiderealShiftTrackingRate.Disabled);
+                        }
+                        Logger.Info($"Starting slew for SlewAndTrack, to {topocentricCoordinates}. Updated from {adjustedCoordinates} at {slewAt}");
+                        await telescopeMediator.SlewToTopocentricCoordinates(topocentricCoordinates, ct);
+                        Logger.Info($"Completed slew for SlewAndTrack. At {telescopeMediator.GetCurrentPosition()}");
+
+                        // Disable tracking again for good measure
+                        if (setTelescopeTracking) {
+                            telescopeMediator.SetCustomTrackingRate(SiderealShiftTrackingRate.Disabled);
+                        }
+                        telescopeMediator.SetTrackingEnabled(false);
+                        telescopeMediator.SetTrackingMode(TrackingMode.Stopped);
+                        Logger.Info($"Slewed to where object will be at {slewAt}. Waiting until then before resuming");
+
+                        var waitRemaining = slewAt - DateTime.UtcNow;
+                        if (waitRemaining < TimeSpan.Zero) {
+                            var warningMessage = "TLE object slew didn't complete before the wait period. Consider increasing the wait time in the plugin options.";
+                            Logger.Warning(warningMessage);
+                            Notification.ShowWarning(warningMessage);
+                        } else {
+                            await CoreUtil.Wait(waitRemaining, ct, this.progress, "Waiting for object to reach start");
+                            progress.Report(new ApplicationStatus { Status = string.Empty });
+                        }
+                    } else {
+                        await telescopeMediator.SlewToCoordinatesAsync(adjustedCoordinates, ct);
+                    }
+
+                    telescopeMediator.SetTrackingEnabled(true);
+                    if (setTelescopeTracking) {
+                        Logger.Info($"Setting custom tracking rate to RA: {slewPosition.TrackingRate.RASecondsPerSiderealSecond}, Dec: {slewPosition.TrackingRate.DecArcsecsPerSec}");
+                        telescopeMediator.SetTrackingMode(TrackingMode.Custom);
+                        if (!telescopeMediator.SetCustomTrackingRate(slewPosition.TrackingRate)) {
+                            throw new Exception("Failed to set custom tracking rate");
+                        }
+                    }
+
+                    telescopeInfo = telescopeMediator.GetInfo();
+                    Task pulseTask = null;
+                    if (telescopeInfo.CanPulseGuide) {
+                        pulseTask = Task.Run(() => {
+                            var currentCoordinates = telescopeInfo.Coordinates;
+                            if (telescopeInfo.GuideRateDeclinationArcsecPerSec != 0) {
+                                var decDifferenceDegrees = currentCoordinates.Dec - adjustedCoordinates.Dec;
+                                var decDifferenceArcsec = decDifferenceDegrees * 3600.0d;
+
+                                // South decreases Dec, North increases
+                                GuideDirections decPulseDirection = decDifferenceArcsec > 0.0d ? GuideDirections.guideSouth : GuideDirections.guideNorth;
+
+                                double seconds = Math.Abs(decDifferenceArcsec) / telescopeInfo.GuideRateDeclinationArcsecPerSec;
+                                Logger.Info($"Pulsing {decPulseDirection} to adjust Dec for {seconds} seconds. Rate={telescopeInfo.GuideRateDeclinationArcsecPerSec} arcsec/sec");
+                                telescopeMediator.PulseGuide(decPulseDirection, TimeSpan.FromSeconds(seconds).Milliseconds);
+                            }
+                            ct.ThrowIfCancellationRequested();
+                            if (telescopeInfo.GuideRateRightAscensionArcsecPerSec != 0) {
+                                var raDifferenceHours = currentCoordinates.RA - adjustedCoordinates.RA;
+                                var raDifferenceArcsec = raDifferenceHours * 54000.0d;
+
+                                // West decreases RA, East increases
+                                GuideDirections raPulseDirection = raDifferenceArcsec > 0.0d ? GuideDirections.guideWest : GuideDirections.guideEast;
+
+                                double seconds = Math.Abs(raDifferenceArcsec) / telescopeInfo.GuideRateRightAscensionArcsecPerSec;
+                                Logger.Info($"Pulsing {raPulseDirection} to adjust RA for {seconds} seconds. Rate={telescopeInfo.GuideRateRightAscensionArcsecPerSec} arcsec/sec");
+                                telescopeMediator.PulseGuide(raPulseDirection, TimeSpan.FromSeconds(seconds).Milliseconds);
+                            }
+                            ct.ThrowIfCancellationRequested();
+                        }, ct);
+                    }
+
+                    if (setGuiderTracking) {
+                        await guiderMediator.StartGuiding(false, this.progress, ct);
+                        await guiderMediator.SetShiftRate(slewPosition.TrackingRate, ct);
+                    }
+
+                    await pulseTask;
+                    int refreshTime = GetRefreshTime();
+                    refreshTask = Task.Run(async () => {
+                        try {
+                            while (!ct.IsCancellationRequested) {
+                                if (!CanSlewAndTrack()) {
+                                    throw new Exception("Can no longer slew and track");
+                                }
+
+                                LoadSelection();
+                                var slewPosition = SelectedOrbitalsObject.PositionAt(DateTime.UtcNow);
+                                if (setTelescopeTracking && !telescopeMediator.SetCustomTrackingRate(slewPosition.TrackingRate)) {
+                                    throw new Exception("Failed to set custom tracking rate");
+                                }
+                                if (setGuiderTracking) {
+                                    await guiderMediator.SetShiftRate(slewPosition.TrackingRate, ct);
+                                }
+                                await Task.Delay(TimeSpan.FromSeconds(refreshTime), ct);
+                            }
+                            return true;
+                        } catch (OperationCanceledException) {
+                            Logger.Info("Tracking for orbital element cancelled");
+                            RefreshEnabled = false;
+                            refreshCts = null;
+                            return false;
+                        } catch (Exception e) {
+                            Logger.Error("Failed to refresh tracking for orbital element", e);
+                            Notification.ShowError($"Failed to track orbital element. {e.Message}");
+                            RefreshEnabled = false;
+                            refreshCts = null;
+                            return false;
+                        } finally {
+                            if (setTelescopeTracking) {
+                                telescopeMediator.SetCustomTrackingRate(SiderealShiftTrackingRate.Disabled);
+                                telescopeMediator.SetTrackingMode(TrackingMode.Sidereal);
+                            }
+                            if (setGuiderTracking) {
+                                // Fire and forget
+                                _ = guiderMediator.SetShiftRate(SiderealShiftTrackingRate.Disabled, CancellationToken.None);
+                            }
+                        }
+                    }, ct);
+                    return await refreshTask;
+                } catch (Exception e) {
+                    Notification.ShowError($"Failed to initiate slew and track. {e.Message}");
+                    Logger.Error("Failed to initiate slew and track", e);
+                    return false;
+                } finally {
+                    progress.Report(new ApplicationStatus { Status = string.Empty });
+                }
+            });
+        }
+
+        private async Task<bool> CancelSlewAndTrack() {
+            try {
+                slewAndTrackCts?.Cancel();
+                var localSlewAndTrackTask = refreshTask;
+                if (refreshTask != null) {
+                    await refreshTask;
+                }
+                return true;
+            } catch (Exception) {
+                return false;
+            }
+        }
+
         private bool InitialLoadComplete {
             get => initialLoadComplete;
             set {
@@ -196,9 +400,14 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             }
         }
 
+        private bool CanSlewAndTrack() {
+            var info = telescopeMediator.GetInfo();
+            return info.Connected && SelectedOrbitalsObject != null;
+        }
+
         private bool CanSetTrackingRate() {
             var info = telescopeMediator.GetInfo();
-            return info.Connected && info.CanSetRightAscensionRate && info.CanSetDeclinationRate;
+            return info.Connected && info.CanSetRightAscensionRate && info.CanSetDeclinationRate && SelectedOrbitalsObject != null;
         }
 
         private void SetTrackingRateCommandAction() {
@@ -410,15 +619,9 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             }
         }
 
-        private double distanceAU = 0.0;
+        private Distance distance = new Distance(0.0d);
 
-        public double DistanceAU {
-            get => distanceAU;
-            private set {
-                distanceAU = value;
-                RaisePropertyChanged();
-            }
-        }
+        public Distance Distance => distance;
 
         private double raOffset = 0.0d;
 
@@ -447,6 +650,30 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             private set {
                 maxExposureSeconds = value;
                 RaisePropertyChanged();
+            }
+        }
+
+        private String manualTLEInput;
+
+        public String ManualTLEInput {
+            get => manualTLEInput;
+            set {
+                if (value != manualTLEInput) {
+                    manualTLEInput = value;
+                    RaisePropertyChanged();
+                }
+            }
+        }
+
+        private bool refreshEnabled;
+
+        public bool RefreshEnabled {
+            get => refreshEnabled;
+            set {
+                if (value != refreshEnabled) {
+                    refreshEnabled = value;
+                    RaisePropertyChanged();
+                }
             }
         }
 
@@ -482,6 +709,10 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
         public AsyncRelayCommand SendToFramingWizardCommand { get; private set; }
 
+        public AsyncRelayCommand SlewAndTrackCommand { get; private set; }
+
+        public AsyncRelayCommand CancelSlewAndTrackCommand { get; private set; }
+
         public RelayCommand SetTrackingRateCommand { get; private set; }
 
         public AsyncRelayCommand SetGuiderShiftCommand { get; private set; }
@@ -508,9 +739,16 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 return true;
             } else if (SearchObjectType == SearchObjectTypeEnum.JWST) {
                 return orbitalElementsAccessor.GetJWSTValidUntil() > DateTime.MinValue;
+            } else if (SearchObjectType == SearchObjectTypeEnum.ManualTLE) {
+                return TleUtil.ParseTle(ManualTLEInput, out var _);
             } else {
                 return OrbitalSearchVM.SelectedOrbitalElements != null;
             }
+        }
+
+        private void LoadSelectionClicked() {
+            ToggleRefreshEnabled(false);
+            LoadSelection();
         }
 
         private void LoadSelection() {
@@ -521,13 +759,15 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                     LoadSolarSystemObject(SelectedSolarSystemBody);
                 } else if (objectType == SearchObjectTypeEnum.JWST) {
                     LoadJWST();
+                } else if (objectType == SearchObjectTypeEnum.ManualTLE) {
+                    LoadManualTLE();
                 } else {
                     LoadOrbitalObject(OrbitalSearchVM.SelectedOrbitalElements);
                 }
 
                 TargetCoordinates = SelectedOrbitalsObject.Coordinates;
                 ShiftTrackingRate = SelectedOrbitalsObject.ShiftTrackingRate;
-                DistanceAU = SelectedOrbitalsObject.Position.Distance;
+                Distance.AU = SelectedOrbitalsObject.Position.Distance;
                 double arcsecPerSecondMovement = Math.Sqrt((ShiftTrackingRate.RAArcsecsPerSec * ShiftTrackingRate.RAArcsecsPerSec) + (ShiftTrackingRate.DecArcsecsPerSec * ShiftTrackingRate.DecArcsecsPerSec));
                 double pixelScale = AstroUtil.ArcsecPerPixel(profileService.ActiveProfile.CameraSettings.PixelSize, profileService.ActiveProfile.TelescopeSettings.FocalLength);
                 if (pixelScale > 0.0d && arcsecPerSecondMovement > 0.0d) {
@@ -551,6 +791,20 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             var pvTableObject = new PVTableObject(orbitalElementsAccessor, "James-Webb Space Telescope", profileService.ActiveProfile.AstrometrySettings.Horizon, profileService);
             pvTableObject.SetDateAndPosition(NighttimeCalculator.GetReferenceDate(DateTime.Now), latitude: profileService.ActiveProfile.AstrometrySettings.Latitude, longitude: profileService.ActiveProfile.AstrometrySettings.Longitude);
             SelectedOrbitalsObject = pvTableObject;
+        }
+
+        private void LoadManualTLE() {
+            try {
+                Tle tle = TleUtil.ParseTle(ManualTLEInput);
+                var epoch = telescopeMediator.GetInfo().EquatorialSystem;
+
+                var pvTableObject = new TLEObject(tle, profileService.ActiveProfile.AstrometrySettings.Horizon, profileService, epoch, TimeSpan.FromSeconds(orbitalsOptions.TLEPositionRefreshTime_sec));
+                pvTableObject.SetDateAndPosition(NighttimeCalculator.GetReferenceDate(DateTime.Now), latitude: profileService.ActiveProfile.AstrometrySettings.Latitude, longitude: profileService.ActiveProfile.AstrometrySettings.Longitude);
+                SelectedOrbitalsObject = pvTableObject;
+            } catch (Exception e) {
+                Logger.Error(e, "Failed to load manual TLE");
+                Notification.ShowError(e.Message);
+            }
         }
 
         private void LoadOrbitalObject(Kepler.OrbitalElements orbitalElements) {
@@ -749,6 +1003,52 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
             orbitalElementsAccessor.Clear(OrbitalObjectTypeEnum.UnnumberedAsteroids);
             return Task.FromResult(true);
+        }
+
+        private int GetRefreshTime() {
+            if (SearchObjectType == SearchObjectTypeEnum.ManualTLE) {
+                return orbitalsOptions.TLEPositionRefreshTime_sec;
+            } else {
+                return orbitalsOptions.OrbitalPositionRefreshTime_sec;
+            }
+        }
+
+        private CancellationTokenSource refreshCts;
+
+        public void ToggleRefreshEnabled(bool status) {
+            refreshCts?.Cancel();
+            slewAndTrackCts?.Cancel();
+            refreshCts = null;
+            slewAndTrackCts = null;
+            refreshTask = null;
+
+            if (status) {
+                var cts = new CancellationTokenSource();
+                refreshCts = cts;
+
+                int refreshTime = GetRefreshTime();
+                refreshTask = Task.Run(async () => {
+                    try {
+                        var ct = cts.Token;
+                        while (!ct.IsCancellationRequested) {
+                            LoadSelection();
+                            await Task.Delay(TimeSpan.FromSeconds(refreshTime), ct);
+                        }
+                        return true;
+                    } catch (OperationCanceledException) {
+                        RefreshEnabled = false;
+                        refreshCts = null;
+                        return false;
+                    } catch (Exception e) {
+                        Logger.Error("Failed to refresh orbital elements", e);
+                        Notification.ShowError($"Failed to refresh orbital elements. {e.Message}");
+                        RefreshEnabled = false;
+                        refreshCts = null;
+                        return false;
+                    }
+                }, cts.Token);
+            }
+            RefreshEnabled = status;
         }
 
         private async Task<bool> CancelUpdateElements(Task<bool> updateTask, CancellationTokenSource cts) {

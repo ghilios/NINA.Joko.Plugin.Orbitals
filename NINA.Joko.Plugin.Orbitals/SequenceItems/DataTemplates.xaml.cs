@@ -12,6 +12,7 @@
 
 using System.ComponentModel.Composition;
 using System.Windows;
+using System.Windows.Input;
 
 namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
 
@@ -23,6 +24,11 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
 
         public DataTemplates() {
             InitializeComponent();
+        }
+
+        private void ManualTLEContainerStackPanel_MouseDown(object sender, MouseButtonEventArgs e) {
+            // https://stackoverflow.com/questions/6489032/wpf-remove-focus-when-clicking-outside-of-a-textbox
+            Keyboard.ClearFocus();
         }
     }
 }

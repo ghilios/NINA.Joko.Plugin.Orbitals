@@ -24,7 +24,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         public SolarSystemBodyObject(
             IOrbitalElementsAccessor orbitalElementsAccessor,
             SolarSystemBody solarSystemBody,
-            CustomHorizon customHorizon) : base(solarSystemBody.ToString(), customHorizon) {
+            CustomHorizon customHorizon) : base(solarSystemBody.ToString(), customHorizon, TimeSpan.FromSeconds(1)) {
             this.orbitalElementsAccessor = orbitalElementsAccessor;
             this.solarSystemBody = solarSystemBody;
             Moon = new MoonInfo(Coordinates);
@@ -46,7 +46,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         }
 
         protected override OrbitalPositionVelocity CalculateObjectPosition(DateTime at) {
-            return orbitalElementsAccessor.GetSolarSystemBodyPV(at, SolarSystemBody);
+            return orbitalElementsAccessor.GetSolarSystemBodyPV(at, SolarSystemBody, rateDriftDelta);
         }
 
         public SolarSystemBodyObject Clone() {

@@ -11,6 +11,7 @@
 #endregion "copyright"
 
 using NINA.Astrometry;
+using NINA.Joko.Plugin.Orbitals.Utility;
 using ProtoBuf;
 using System;
 using System.Collections.Generic;
@@ -20,6 +21,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
     public static class Kepler {
         private const int MAX_ECCENTRIC_ANOMALY_ITERATIONS = 20;
+        private const int MAX_ECCENTRIC_ANOMALY_FIXED_POINT_ITERATIONS = 20_000;
 
         [ProtoContract(SkipConstructor = true)]
         public class GravitationalParameter {
@@ -174,17 +176,15 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             public double e_EccentricAnomaly_deg => AstroUtil.ToDegree(e_EccentricAnomaly_rad);
             public double v0_TrueAnomaly_rad { get; set; } = double.NaN;
             public double v0_TrueAnomaly_deg => AstroUtil.ToDegree(v0_TrueAnomaly_rad);
-            public double Distance_au { get; set; } = double.NaN;
+            public Distance Distance { get; } = new Distance(double.NaN);
             public RectangularCoordinates EclipticCoordinates { get; set; }
 
             public override string ToString() {
-                return $"{{{nameof(Name)}={Name}, {nameof(AsOf_jd)}={AsOf_jd.ToString()}, {nameof(M_MeanAnomaly_rad)}={M_MeanAnomaly_rad.ToString()}, {nameof(e_EccentricAnomaly_rad)}={e_EccentricAnomaly_rad.ToString()}, {nameof(v0_TrueAnomaly_rad)}={v0_TrueAnomaly_rad.ToString()}, {nameof(Distance_au)}={Distance_au.ToString()}, {nameof(EclipticCoordinates)}={EclipticCoordinates}}}";
+                return $"{{{nameof(Name)}={Name}, {nameof(AsOf_jd)}={AsOf_jd.ToString()}, {nameof(M_MeanAnomaly_rad)}={M_MeanAnomaly_rad.ToString()}, {nameof(e_EccentricAnomaly_rad)}={e_EccentricAnomaly_rad.ToString()}, {nameof(v0_TrueAnomaly_rad)}={v0_TrueAnomaly_rad.ToString()}, {"Distance_au"}={Distance.AU.ToString()}, {nameof(EclipticCoordinates)}={EclipticCoordinates}}}";
             }
         }
 
         public static RectangularPV GetPVOnEarthSurface(DateTime asof, Angle latitude, Angle longitude, double elevation) {
-            var jd = AstroUtil.GetJulianDate(asof);
-            var deltaT = AstroUtil.DeltaT(asof);
             var observer = new NOVAS.Observer() {
                 Where = 1,
                 OnSurf = new NOVAS.OnSurface() {
@@ -193,7 +193,12 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                     Height = elevation
                 }
             };
+            return GetPVFromObserver(asof, observer);
+        }
 
+        public static RectangularPV GetPVFromObserver(DateTime asof, NOVAS.Observer observer) {
+            var jd = AstroUtil.GetJulianDate(asof);
+            var deltaT = AstroUtil.DeltaT(asof);
             var pos = new double[3];
             var vel = new double[3];
             var result = NOVAS.NOVAS_geo_posvel(jd, deltaT, NOVAS.Accuracy.Full, observer, pos, vel);
@@ -314,29 +319,47 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                     // Solve M = E - e * sin(E), for E
                     while (Math.Abs(estimateError) > eccentricAnomalyTolerance && iterations++ < MAX_ECCENTRIC_ANOMALY_ITERATIONS) {
                         estimateError = estimate - ecc * Math.Sin(estimate) - meanAnomaly;
-                        estimate -= estimateError / (1.0d - ecc * Math.Cos(estimate));
+                        estimateError /= 1.0d - ecc * Math.Cos(estimate);
+                        estimate -= estimateError;
                     }
                 } else {
                     // Solve M = e * sinh(E) - E, for E
                     while (Math.Abs(estimateError) > eccentricAnomalyTolerance && iterations++ < MAX_ECCENTRIC_ANOMALY_ITERATIONS) {
                         estimateError = meanAnomaly + estimate - ecc * Math.Sinh(estimate);
-                        estimate += estimateError / (ecc * Math.Cosh(estimate) - 1.0d);
+                        estimateError /= ecc * Math.Cosh(estimate) - 1.0d;
+                        estimate += estimateError;
                     }
                 }
 
                 if (iterations >= MAX_ECCENTRIC_ANOMALY_ITERATIONS) {
-                    throw new Exception($"Maximum ({MAX_ECCENTRIC_ANOMALY_ITERATIONS}) iterations exceeded while calculating eccentric anomaly for {orbitalElements.Name}");
+                    // Newton's method didn't converge, so try using the Fixed Point method
+                    // This method is guaranteed to converge but is substantially slower
+                    // E_n_plus_1 = M + e*sin(E_n)
+
+                    estimateError = double.PositiveInfinity;
+                    estimate = meanAnomaly + ecc * Math.Sin(meanAnomaly);
+                    iterations = 0;
+                    while (Math.Abs(estimateError) > eccentricAnomalyTolerance && iterations++ < MAX_ECCENTRIC_ANOMALY_FIXED_POINT_ITERATIONS) {
+                        var nextEstimate = meanAnomaly + ecc * Math.Sin(estimate);
+                        estimateError = nextEstimate - estimate;
+                        estimate = nextEstimate;
+                    }
+
+                    if (iterations >= MAX_ECCENTRIC_ANOMALY_FIXED_POINT_ITERATIONS) {
+                        throw new Exception($"Maximum ({MAX_ECCENTRIC_ANOMALY_FIXED_POINT_ITERATIONS}) iterations exceeded while calculating eccentric anomaly for {orbitalElements.Name}");
+                    }
                 }
+
                 orbitalPosition.e_EccentricAnomaly_rad = estimate;
 
                 if (ecc < 1) {
-                    orbitalPosition.Distance_au = semiMajorAxis * (1.0d - ecc * Math.Cos(orbitalPosition.e_EccentricAnomaly_rad));
+                    orbitalPosition.Distance.AU = semiMajorAxis * (1.0d - ecc * Math.Cos(orbitalPosition.e_EccentricAnomaly_rad));
 
                     // tan(v/2) = ((1 + e)/(1 - e))^(1/2) * tan(E/2)
                     var term1 = Math.Sqrt((1d + ecc) / (1d - ecc)) * Math.Tan(orbitalPosition.e_EccentricAnomaly_rad / 2d);
                     orbitalPosition.v0_TrueAnomaly_rad = AstrometricConstants.NormalizeRadians(2d * Math.Atan(term1));
                 } else {
-                    orbitalPosition.Distance_au = semiMajorAxis * (ecc * Math.Cosh(orbitalPosition.e_EccentricAnomaly_rad) - 1.0d);
+                    orbitalPosition.Distance.AU = semiMajorAxis * (ecc * Math.Cosh(orbitalPosition.e_EccentricAnomaly_rad) - 1.0d);
 
                     // tan(v/2) = ((e + 1)/(e - 1))^(1/2) * tanh(E/2)
                     var term1 = Math.Sqrt((ecc + 1d) / (ecc - 1d)) * Math.Tanh(orbitalPosition.e_EccentricAnomaly_rad / 2d);
@@ -379,16 +402,16 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                 //
                 // r = 2q / (1 + cos(T))
                 var r = 2.0 * q / (1.0 + Math.Cos(v));
-                orbitalPosition.Distance_au = r;
+                orbitalPosition.Distance.AU = r;
             }
 
             var eclipticAngle = orbitalPosition.v0_TrueAnomaly_rad + orbitalElements.w_ArgOfPerihelion_rad;
             var longitudeOfAscendingNode = orbitalElements.node_LongitudeOfAscending_rad;
             var orbitalInclination = orbitalElements.i_Inclination_rad;
             orbitalPosition.EclipticCoordinates = new RectangularCoordinates(
-                orbitalPosition.Distance_au * (Math.Cos(eclipticAngle) * Math.Cos(longitudeOfAscendingNode) - Math.Sin(eclipticAngle) * Math.Sin(longitudeOfAscendingNode) * Math.Cos(orbitalInclination)),
-                orbitalPosition.Distance_au * (Math.Cos(eclipticAngle) * Math.Sin(longitudeOfAscendingNode) + Math.Sin(eclipticAngle) * Math.Cos(longitudeOfAscendingNode) * Math.Cos(orbitalInclination)),
-                orbitalPosition.Distance_au * Math.Sin(eclipticAngle) * Math.Sin(orbitalInclination));
+                orbitalPosition.Distance.AU * (Math.Cos(eclipticAngle) * Math.Cos(longitudeOfAscendingNode) - Math.Sin(eclipticAngle) * Math.Sin(longitudeOfAscendingNode) * Math.Cos(orbitalInclination)),
+                orbitalPosition.Distance.AU * (Math.Cos(eclipticAngle) * Math.Sin(longitudeOfAscendingNode) + Math.Sin(eclipticAngle) * Math.Cos(longitudeOfAscendingNode) * Math.Cos(orbitalInclination)),
+                orbitalPosition.Distance.AU * Math.Sin(eclipticAngle) * Math.Sin(orbitalInclination));
             return orbitalPosition;
         }
 

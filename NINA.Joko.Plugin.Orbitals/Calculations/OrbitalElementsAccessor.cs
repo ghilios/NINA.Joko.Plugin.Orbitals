@@ -269,27 +269,27 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             });
         }
 
-        public OrbitalPositionVelocity GetSolarSystemBodyPV(DateTime asof, SolarSystemBody solarSystemBody) {
+        public OrbitalPositionVelocity GetSolarSystemBodyPV(DateTime asof, SolarSystemBody solarSystemBody, TimeSpan rateDriftDelta) {
             var jdtt = AstroUtil.GetJulianDate(asof);
             var startPosition = NOVAS.BodyPositionAndVelocity(jdtt, solarSystemBody.ToNOVAS(), NOVAS.SolarSystemOrigin.SolarCenterOfMass);
             var earthPosition = NOVAS.BodyPositionAndVelocity(jdtt, NOVAS.Body.Earth, NOVAS.SolarSystemOrigin.SolarCenterOfMass);
             var earthCenteredPosition = startPosition.Position - earthPosition.Position;
             var startCoordinates = NOVAS.PlanetApparentCoordinates(jdtt, solarSystemBody.ToNOVAS());
-            var nextCoordinates = NOVAS.PlanetApparentCoordinates(jdtt + AstrometricConstants.JD_SEC, solarSystemBody.ToNOVAS());
-            var trackingRate = SiderealShiftTrackingRate.Create(startCoordinates, nextCoordinates, TimeSpan.FromSeconds(1));
-            return new OrbitalPositionVelocity(asof, earthCenteredPosition, startCoordinates, trackingRate);
+            var nextCoordinates = NOVAS.PlanetApparentCoordinates(jdtt + AstrometricConstants.JD_SEC * rateDriftDelta.TotalSeconds, solarSystemBody.ToNOVAS());
+            var trackingRate = SiderealShiftTrackingRate.Create(startCoordinates, nextCoordinates, rateDriftDelta);
+            return new OrbitalPositionVelocity(asof, earthCenteredPosition, null, startCoordinates, trackingRate);
         }
 
-        public OrbitalPositionVelocity GetObjectPV(DateTime asof, OrbitalElements orbitalElements, Angle latitude, Angle longitude, double elevation) {
+        public OrbitalPositionVelocity GetObjectPV(DateTime asof, OrbitalElements orbitalElements, Angle latitude, Angle longitude, double elevation, TimeSpan rateDriftDelta) {
             var jdtt = AstroUtil.GetJulianDate(asof);
             var startPosition = Kepler.CalculateOrbitalElements(orbitalElements, jdtt);
-            var nextPosition = Kepler.CalculateOrbitalElements(orbitalElements, jdtt + AstrometricConstants.JD_SEC);
+            var nextPosition = Kepler.CalculateOrbitalElements(orbitalElements, jdtt + AstrometricConstants.JD_SEC * rateDriftDelta.TotalSeconds);
             var startApparentPosition = Kepler.GetApparentPosition(startPosition, NOVAS.Body.Earth, latitude, longitude, elevation);
             var startCoordinates = startApparentPosition.ToPolar();
             var nextApparentPosition = Kepler.GetApparentPosition(nextPosition, NOVAS.Body.Earth, latitude, longitude, elevation);
             var nextCoordinates = nextApparentPosition.ToPolar();
-            var trackingRate = SiderealShiftTrackingRate.Create(startCoordinates, nextCoordinates, TimeSpan.FromSeconds(1));
-            return new OrbitalPositionVelocity(asof, startApparentPosition, startCoordinates, trackingRate);
+            var trackingRate = SiderealShiftTrackingRate.Create(startCoordinates, nextCoordinates, rateDriftDelta);
+            return new OrbitalPositionVelocity(asof, startApparentPosition, null, startCoordinates, trackingRate);
         }
 
         private string GetObjectTypeSavePath(OrbitalObjectTypeEnum objectType) {
@@ -355,7 +355,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         }
 
         public OrbitalPositionVelocity GetPVFromTable(
-            DateTime asof, PVTable vectorTable, Angle latitude, Angle longitude, double elevation) {
+            DateTime asof, PVTable vectorTable, Angle latitude, Angle longitude, double elevation, TimeSpan rateDriftDelta) {
             if (vectorTable == null || vectorTable.Rows.Count <= 1) {
                 return null;
             }
@@ -390,14 +390,14 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             var startApparentPosition = startApparentGeocentricPosition - startEarthPV.Position.RotateEcliptic(-AstrometricConstants.J2000MeanObliquity);
 
             daysSinceMostRecentEpoch += AstrometricConstants.JD_SEC;
-            var nextEarthPV = GetPVOnEarthSurface(asof + TimeSpan.FromSeconds(1), latitude, longitude, elevation);
+            var nextEarthPV = GetPVOnEarthSurface(asof + rateDriftDelta, latitude, longitude, elevation);
             var nextApparentGeocentricPosition = mostRecentPosition + mostRecentVelocity * daysSinceMostRecentEpoch + acceleration * daysSinceMostRecentEpoch * daysSinceMostRecentEpoch * 0.5;
             var nextApparentPosition = nextApparentGeocentricPosition - nextEarthPV.Position.RotateEcliptic(-AstrometricConstants.J2000MeanObliquity);
 
             var startCoordinates = startApparentPosition.RotateEcliptic(AstrometricConstants.J2000MeanObliquity).ToPolar();
             var nextCoordinates = nextApparentPosition.RotateEcliptic(AstrometricConstants.J2000MeanObliquity).ToPolar();
-            var trackingRate = SiderealShiftTrackingRate.Create(startCoordinates, nextCoordinates, TimeSpan.FromSeconds(1));
-            return new OrbitalPositionVelocity(asof, startApparentGeocentricPosition, startCoordinates, trackingRate);
+            var trackingRate = SiderealShiftTrackingRate.Create(startCoordinates, nextCoordinates, rateDriftDelta);
+            return new OrbitalPositionVelocity(asof, startApparentGeocentricPosition, null, startCoordinates, trackingRate);
         }
 
         public void Clear(OrbitalObjectTypeEnum objectType) {

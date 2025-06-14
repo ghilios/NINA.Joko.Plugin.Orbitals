@@ -28,7 +28,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             IOrbitalElementsAccessor orbitalElementsAccessor,
             OrbitalElements orbitalElements,
             CustomHorizon customHorizon,
-            IProfileService profileService) : base(orbitalElements?.Name ?? NotSetName, customHorizon) {
+            IProfileService profileService) : base(orbitalElements?.Name ?? NotSetName, customHorizon, TimeSpan.FromSeconds(1)) {
             this.orbitalElementsAccessor = orbitalElementsAccessor;
             this.orbitalElements = orbitalElements;
             this.profileService = profileService;
@@ -57,7 +57,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             var latitude = Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Latitude);
             var longitude = Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Longitude);
             var elevation = profileService.ActiveProfile.AstrometrySettings.Elevation;
-            return orbitalElementsAccessor.GetObjectPV(at, OrbitalElements, latitude, longitude, elevation);
+            return orbitalElementsAccessor.GetObjectPV(at, OrbitalElements, latitude, longitude, elevation, rateDriftDelta);
         }
 
         public OrbitalElementsObject Clone() {

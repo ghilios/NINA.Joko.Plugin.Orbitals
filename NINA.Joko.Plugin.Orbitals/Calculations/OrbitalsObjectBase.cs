@@ -21,10 +21,13 @@ using System.Linq;
 namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
     public abstract class OrbitalsObjectBase : SkyObjectBase {
+        protected readonly TimeSpan rateDriftDelta;
 
         public OrbitalsObjectBase(
             string name,
-            CustomHorizon customHorizon) : base(name, string.Empty, customHorizon) {
+            CustomHorizon customHorizon,
+            TimeSpan rateDriftDelta) : base(name, string.Empty, customHorizon) {
+            this.rateDriftDelta = rateDriftDelta;
         }
 
         public abstract MoonInfo Moon { get; protected set; }
@@ -51,27 +54,15 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         }
 
         public RectangularCoordinates Position {
-            get => PositionAt(DateTime.Now);
+            get => PositionAt(DateTime.Now).Position;
         }
 
-        public RectangularCoordinates PositionAt(DateTime at) {
-            var pv = GetObjectPosition(at);
-            return pv.Position;
+        public OrbitalPositionVelocity PositionAt(DateTime at) {
+            return GetObjectPosition(at);
         }
-
-        private DateTime lastObjectCalculationDateTime = DateTime.MinValue;
-        private OrbitalPositionVelocity lastObjectCalculation = null;
 
         private OrbitalPositionVelocity GetObjectPosition(DateTime at) {
-            var timeSinceCalculation = at - lastObjectCalculationDateTime;
-            if (lastObjectCalculation != null && Math.Abs(timeSinceCalculation.TotalSeconds) < 1.0) {
-                return lastObjectCalculation;
-            }
-
-            var pv = CalculateObjectPosition(at);
-            this.lastObjectCalculation = pv;
-            this.lastObjectCalculationDateTime = at;
-            return pv;
+            return CalculateObjectPosition(at);
         }
 
         public virtual void Update() {

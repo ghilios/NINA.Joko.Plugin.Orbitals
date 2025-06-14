@@ -10,7 +10,6 @@
 
 #endregion "copyright"
 
-using ASCOM.Astrometry;
 using Newtonsoft.Json;
 using NINA.Astrometry;
 using NINA.Astrometry.Interfaces;
@@ -19,15 +18,11 @@ using NINA.Core.Utility.Notification;
 using NINA.Joko.Plugin.Orbitals.Calculations;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
 using NINA.Joko.Plugin.Orbitals.Utility;
-using NINA.Profile;
 using NINA.Profile.Interfaces;
 using NINA.Sequencer.Container;
 using NINA.Sequencer.Container.ExecutionStrategy;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Serialization;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -115,18 +110,27 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         }
 
         private async Task CoordinateUpdateLoop(CancellationToken ct) {
-            while (!ct.IsCancellationRequested) {
-                RefreshCoordinates();
-
-                await Task.Delay(TimeSpan.FromSeconds(this.orbitalsOptions.OrbitalPositionRefreshTime_sec), ct);
+            try {
+                while (!ct.IsCancellationRequested) {
+                    RefreshCoordinates();
+                    await AfterRefreshCoordinates(ct);
+                    await Task.Delay(TimeSpan.FromSeconds(this.GetCoordinateRefreshTime()), ct);
+                }
+            } finally {
+                Logger.Info("Exited coordinate update loop");
             }
         }
 
-        protected T TargetObject => (T)Target.DeepSkyObject;
+        protected virtual int GetCoordinateRefreshTime() {
+            return this.orbitalsOptions.OrbitalPositionRefreshTime_sec;
+        }
+
+        public T TargetObject => (T)Target.DeepSkyObject;
 
         protected void RefreshCoordinates() {
             try {
-                var targetCoordinates = Target.DeepSkyObject.Coordinates.Clone();
+                var targetPosition = TargetObject.PositionAt(DateTime.UtcNow);
+                var targetCoordinates = targetPosition.Coordinates;
                 if (OffsetCoordinates != null) {
                     var newDec = targetCoordinates.Dec + offsetCoordinates.Coordinates.Dec;
                     var newRa = targetCoordinates.RA + offsetCoordinates.Coordinates.RA;
@@ -139,19 +143,31 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
                         targetCoordinates.RA = newRa;
                     }
                 }
+
+                Position = targetPosition;
                 Target.InputCoordinates.Coordinates = targetCoordinates;
                 ShiftTrackingRate = Target.DeepSkyObject.ShiftTrackingRate;
-                DistanceAU = TargetObject.Position.Distance;
+                Distance.AU = TargetObject.Position.Distance;
                 AfterParentChanged();
             } catch (Exception e) {
                 Logger.Error("Error while refreshing coordinates", e);
             }
         }
 
+        protected virtual Task AfterRefreshCoordinates(CancellationToken ct) {
+            return Task.CompletedTask;
+        }
+
         public override void Teardown() {
             base.Teardown();
 
             coordinateUpdateCts?.Cancel();
+        }
+
+        public override void Initialize() {
+            base.Initialize();
+
+            AfterParentChanged();
         }
 
         private SiderealShiftTrackingRate shiftTrackingRate = SiderealShiftTrackingRate.Disabled;
@@ -164,12 +180,16 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             }
         }
 
-        private double distanceAU = 0.0;
+        private Distance distance = new Distance(0.0d);
 
-        public double DistanceAU {
-            get => distanceAU;
+        public Distance Distance => distance;
+
+        private OrbitalPositionVelocity position;
+
+        public OrbitalPositionVelocity Position {
+            get => position;
             private set {
-                distanceAU = value;
+                position = value;
                 RaisePropertyChanged();
             }
         }

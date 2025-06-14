@@ -32,7 +32,10 @@ namespace NINA.Joko.Plugin.Orbitals.Enums {
         UnnumberedAsteroids = 3,
 
         [Description("James-Web Space Telescope")]
-        JWST = 4
+        JWST = 4,
+
+        [Description("TLE (Manual)")]
+        ManualTLE = 5
     }
 
     public static class SearchObjectTypeEnumExtensions {
@@ -42,6 +45,8 @@ namespace NINA.Joko.Plugin.Orbitals.Enums {
                 throw new ArgumentException("SolarSystemBody cannot be converted to OrbitalObjectTypeEnum");
             } else if (objectType == SearchObjectTypeEnum.JWST) {
                 throw new ArgumentException("JWST cannot be converted to OrbitalObjectTypeEnum");
+            } else if (objectType == SearchObjectTypeEnum.ManualTLE) {
+                throw new ArgumentException("ManualTLE cannot be converted to OrbitalObjectTypeEnum");
             }
 
             return (OrbitalObjectTypeEnum)objectType;

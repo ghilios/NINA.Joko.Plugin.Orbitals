@@ -34,12 +34,16 @@ namespace NINA.Joko.Plugin.Orbitals {
 
         private void InitializeOptions() {
             orbitalPositionRefreshTime_sec = optionsAccessor.GetValueInt32(nameof(OrbitalPositionRefreshTime_sec), 20);
+            tlePositionRefreshTime_sec = optionsAccessor.GetValueInt32(nameof(TLEPositionRefreshTime_sec), 5);
+            tleTrackStartWaitTime_sec = optionsAccessor.GetValueInt32(nameof(TLETrackStartWaitTime_sec), 30);
             quirksMode = optionsAccessor.GetValueEnum(nameof(QuirksMode), QuirksModeEnum.None);
             cometAccessor = optionsAccessor.GetValueEnum(nameof(CometAccessor), OrbitalElementsAccessorEnum.MPC);
         }
 
         public void ResetDefaults() {
             OrbitalPositionRefreshTime_sec = 20;
+            TLEPositionRefreshTime_sec = 5;
+            TLETrackStartWaitTime_sec = 30;
             QuirksMode = QuirksModeEnum.None;
             CometAccessor = OrbitalElementsAccessorEnum.MPC;
         }
@@ -52,6 +56,32 @@ namespace NINA.Joko.Plugin.Orbitals {
                 if (orbitalPositionRefreshTime_sec != value) {
                     orbitalPositionRefreshTime_sec = value;
                     optionsAccessor.SetValueInt32(nameof(OrbitalPositionRefreshTime_sec), orbitalPositionRefreshTime_sec);
+                    RaisePropertyChanged();
+                }
+            }
+        }
+
+        private int tlePositionRefreshTime_sec;
+
+        public int TLEPositionRefreshTime_sec {
+            get => tlePositionRefreshTime_sec;
+            set {
+                if (tlePositionRefreshTime_sec != value) {
+                    tlePositionRefreshTime_sec = value;
+                    optionsAccessor.SetValueInt32(nameof(TLEPositionRefreshTime_sec), tlePositionRefreshTime_sec);
+                    RaisePropertyChanged();
+                }
+            }
+        }
+
+        private int tleTrackStartWaitTime_sec;
+
+        public int TLETrackStartWaitTime_sec {
+            get => tleTrackStartWaitTime_sec;
+            set {
+                if (tleTrackStartWaitTime_sec != value) {
+                    tleTrackStartWaitTime_sec = value;
+                    optionsAccessor.SetValueInt32(nameof(TLETrackStartWaitTime_sec), tleTrackStartWaitTime_sec);
                     RaisePropertyChanged();
                 }
             }

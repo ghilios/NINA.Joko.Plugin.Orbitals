@@ -37,16 +37,19 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
         public static readonly OrbitalPositionVelocity NotSet = new OrbitalPositionVelocity(
             DateTime.MinValue,
             new RectangularCoordinates(0, 0, 0),
+            new TopocentricCoordinates(Angle.Zero, Angle.Zero, Angle.Zero, Angle.Zero),
             new Coordinates(Angle.Zero, Angle.Zero, Epoch.J2000),
             SiderealShiftTrackingRate.Disabled);
 
         public OrbitalPositionVelocity(
             DateTime asof,
             RectangularCoordinates position,
+            TopocentricCoordinates topoCoordinates,
             Coordinates coordinates,
             SiderealShiftTrackingRate trackingRate) {
             this.Asof = asof;
             this.Position = position;
+            this.TopoCoordinates = topoCoordinates;
             this.Coordinates = coordinates;
             this.TrackingRate = trackingRate;
         }
@@ -54,6 +57,8 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
         public DateTime Asof { get; private set; }
 
         public RectangularCoordinates Position { get; private set; }
+
+        public TopocentricCoordinates TopoCoordinates { get; private set; }
 
         public Coordinates Coordinates { get; private set; }
 
@@ -80,11 +85,11 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
 
         void Clear(OrbitalObjectTypeEnum objectType);
 
-        OrbitalPositionVelocity GetSolarSystemBodyPV(DateTime asof, SolarSystemBody solarSystemBody);
+        OrbitalPositionVelocity GetSolarSystemBodyPV(DateTime asof, SolarSystemBody solarSystemBody, TimeSpan rateDriftDelta);
 
-        OrbitalPositionVelocity GetObjectPV(DateTime asof, OrbitalElements orbitalElements, Angle latitude, Angle longitude, double elevation);
+        OrbitalPositionVelocity GetObjectPV(DateTime asof, OrbitalElements orbitalElements, Angle latitude, Angle longitude, double elevation, TimeSpan rateDriftDelta);
 
-        OrbitalPositionVelocity GetPVFromTable(DateTime asof, PVTable vectorTable, Angle latitude, Angle longitude, double elevation);
+        OrbitalPositionVelocity GetPVFromTable(DateTime asof, PVTable vectorTable, Angle latitude, Angle longitude, double elevation, TimeSpan rateDriftDelta);
 
         Task UpdateJWST(PVTable pvTable, IProgress<ApplicationStatus> progress, CancellationToken ct);
 
