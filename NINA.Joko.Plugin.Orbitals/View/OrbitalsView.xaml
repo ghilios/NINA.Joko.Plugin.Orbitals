@@ -64,6 +64,9 @@
                 <!--  Search Bar -->
                 <RowDefinition Height="Auto" />
 
+                <!--  Orbital Refresh -->
+                <RowDefinition Height="Auto" />
+
                 <!--  Altitude Chart -->
                 <RowDefinition Height="Auto" />
 
@@ -605,6 +608,7 @@
                 </Grid>
             </Border>
 
+            <!-- Properties Grid -->
             <Border
                 Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3"
                 Visibility="{Binding SelectedOrbitalElementsObject, Converter={StaticResource NullToVisibilityCollapsedConverter}}">
