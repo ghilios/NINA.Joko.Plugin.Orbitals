@@ -19,7 +19,8 @@ using System.Runtime.InteropServices;
 namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
     public static class Kepler {
-        private const int MAX_ECCENTRIC_ANOMALY_ITERATIONS = 20;
+        private const int MAX_ECCENTRIC_ANOMALY_ITERATIONS = 100;
+        private const int MAX_ECCENTRIC_ANOMALY_FIXED_POINT_ITERATIONS = 20_000;
 
         [ProtoContract(SkipConstructor = true)]
         public class GravitationalParameter {
@@ -306,28 +307,85 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
                 var meanAnomaly = orbitalPosition.M_MeanAnomaly_rad;
 
-                var estimate = meanAnomaly + ecc * Math.Sin(meanAnomaly);
-                double estimateError = double.PositiveInfinity;
+                double eccentricAnomaly = double.NaN;
 
                 int iterations = 0;
                 if (ecc < 1) {
                     // Solve M = E - e * sin(E), for E
+                    eccentricAnomaly = meanAnomaly + ecc * Math.Sin(meanAnomaly);
+                    double estimateError = double.PositiveInfinity;
                     while (Math.Abs(estimateError) > eccentricAnomalyTolerance && iterations++ < MAX_ECCENTRIC_ANOMALY_ITERATIONS) {
-                        estimateError = estimate - ecc * Math.Sin(estimate) - meanAnomaly;
-                        estimate -= estimateError / (1.0d - ecc * Math.Cos(estimate));
+                        estimateError = eccentricAnomaly - ecc * Math.Sin(eccentricAnomaly) - meanAnomaly;
+                        estimateError /= 1.0d - ecc * Math.Cos(eccentricAnomaly);
+                        eccentricAnomaly -= estimateError;
+                    }
+
+                    if (iterations >= MAX_ECCENTRIC_ANOMALY_ITERATIONS) {
+                        // Newton's method didn't converge, so try using the Fixed Point method
+                        // This method is guaranteed to converge but is substantially slower
+                        // E_n_plus_1 = M + e*sin(E_n)
+
+                        estimateError = double.PositiveInfinity;
+                        eccentricAnomaly = meanAnomaly + ecc * Math.Sin(meanAnomaly);
+                        iterations = 0;
+                        while (Math.Abs(estimateError) > eccentricAnomalyTolerance && iterations++ < MAX_ECCENTRIC_ANOMALY_FIXED_POINT_ITERATIONS) {
+                            var nextEstimate = meanAnomaly + ecc * Math.Sin(eccentricAnomaly);
+                            estimateError = nextEstimate - eccentricAnomaly;
+                            eccentricAnomaly = nextEstimate;
+                        }
+
+                        if (iterations >= MAX_ECCENTRIC_ANOMALY_FIXED_POINT_ITERATIONS) {
+                            throw new Exception($"Maximum ({MAX_ECCENTRIC_ANOMALY_FIXED_POINT_ITERATIONS}) iterations exceeded while calculating eccentric anomaly for {orbitalElements.Name}");
+                        }
+                    }
+
+                    // As a sanity check, ensure the calculation converged as expected
+                    // M = E - e * sin(E)
+                    var calculatedMeanAnomaly = eccentricAnomaly - ecc * Math.Sin(eccentricAnomaly);
+                    var calculationError = Math.Abs(calculatedMeanAnomaly - meanAnomaly);
+                    if (calculationError > eccentricAnomalyTolerance) {
+                        throw new Exception("Failed sanity check for eccentric anomaly correctness");
                     }
                 } else {
-                    // Solve M = e * sinh(E) - E, for E
+                    // M = e * sinh(E) - E
+                    // https://control.asu.edu/Classes/MAE462/462Lecture05.pdf slide 12
+                    // Solve E = E + (M - e * sinh(E) + H) / (e * cosh(E) - 1)
+                    eccentricAnomaly = AstroUtil.EuclidianModulus(meanAnomaly, Math.PI * 2.0d);
+                    double estimateError = double.PositiveInfinity;
                     while (Math.Abs(estimateError) > eccentricAnomalyTolerance && iterations++ < MAX_ECCENTRIC_ANOMALY_ITERATIONS) {
-                        estimateError = meanAnomaly + estimate - ecc * Math.Sinh(estimate);
-                        estimate += estimateError / (ecc * Math.Cosh(estimate) - 1.0d);
+                        estimateError = meanAnomaly - ecc * Math.Sinh(eccentricAnomaly) + eccentricAnomaly;
+                        estimateError /= ecc * Math.Cosh(eccentricAnomaly) - 1;
+                        eccentricAnomaly += estimateError;
+                    }
+
+                    if (iterations >= MAX_ECCENTRIC_ANOMALY_ITERATIONS) {
+                        // Newton's method didn't converge, so try using the Fixed Point method
+                        // This method is guaranteed to converge but is substantially slower
+                        // E_next = E - (e * sinh(E) - E - M) / (e * cosh(E) -1);
+                        estimateError = double.PositiveInfinity;
+                        eccentricAnomaly = meanAnomaly;
+                        iterations = 0;
+                        while (Math.Abs(estimateError) > eccentricAnomalyTolerance && iterations++ < MAX_ECCENTRIC_ANOMALY_FIXED_POINT_ITERATIONS) {
+                            var nextEstimate = eccentricAnomaly - (ecc * Math.Sinh(eccentricAnomaly) - eccentricAnomaly - meanAnomaly) / (ecc * Math.Cosh(eccentricAnomaly) - 1d);
+                            estimateError = nextEstimate - eccentricAnomaly;
+                            eccentricAnomaly = nextEstimate;
+                        }
+
+                        if (!double.IsFinite(eccentricAnomaly) || iterations >= MAX_ECCENTRIC_ANOMALY_FIXED_POINT_ITERATIONS) {
+                            throw new Exception($"Maximum ({MAX_ECCENTRIC_ANOMALY_FIXED_POINT_ITERATIONS}) iterations exceeded while calculating eccentric anomaly for {orbitalElements.Name}");
+                        }
+                    }
+
+                    // As a sanity check, ensure the calculation converged as expected
+                    // M = e * sinh(E) - E
+                    var calculatedMeanAnomaly = ecc * Math.Sinh(eccentricAnomaly) - eccentricAnomaly;
+                    var calculationError = Math.Abs(calculatedMeanAnomaly - meanAnomaly);
+                    if (!double.IsFinite(calculatedMeanAnomaly) ||  calculationError > eccentricAnomalyTolerance) {
+                        throw new Exception("Failed sanity check for eccentric anomaly correctness");
                     }
                 }
 
-                if (iterations >= MAX_ECCENTRIC_ANOMALY_ITERATIONS) {
-                    throw new Exception($"Maximum ({MAX_ECCENTRIC_ANOMALY_ITERATIONS}) iterations exceeded while calculating eccentric anomaly for {orbitalElements.Name}");
-                }
-                orbitalPosition.e_EccentricAnomaly_rad = estimate;
+                orbitalPosition.e_EccentricAnomaly_rad = eccentricAnomaly;
 
                 if (ecc < 1) {
                     orbitalPosition.Distance_au = semiMajorAxis * (1.0d - ecc * Math.Cos(orbitalPosition.e_EccentricAnomaly_rad));

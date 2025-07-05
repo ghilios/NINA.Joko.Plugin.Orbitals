@@ -30,6 +30,30 @@ namespace TestApp {
     internal class Program {
 
         private static async Task Main(string[] args) {
+            var accessor = new JPLAccessor();
+            var comets = await accessor.GetCometElements(CancellationToken.None);
+            var now = DateTime.UtcNow;
+            var nowJd = AstroUtil.GetJulianDate(now);
+            var latitude = Angle.ByDegree(41.292198d);
+            var longitude = Angle.ByDegree(-74.361229d);
+            double elevation = 300d;
+            using (var ms = new MemoryStream()) {
+                foreach (var cometElements in comets.Response) {
+                    var cometNameLower = cometElements.name.ToLowerInvariant();
+                    //var target = "c/2019 q4 (borisov)";
+                    //var target = "c/1962 c1 (seki-lines)";
+                    //if (cometNameLower != target) {
+                    //    continue;
+                    //}
+
+                    Console.WriteLine($"Solving for {cometNameLower}");
+                    var orbitalElements = cometElements.ToOrbitalElements();
+                    var orbitalPosition = Kepler.CalculateOrbitalElements(orbitalElements, nowJd);
+                    var orbitalApparentPosition = Kepler.GetApparentPosition(orbitalPosition, NOVAS.Body.Earth, latitude, longitude, elevation);
+                    var orbitalCoordinates = orbitalApparentPosition.ToPolar();
+                }
+            }
+
             /*
             var accessor = new JPLAccessor();
             var lmd = await accessor.GetNumberedAsteroidsLastModified();
@@ -81,10 +105,6 @@ namespace TestApp {
 
             Console.WriteLine(earthPosition);
             */
-
-            var latitude = Angle.ByDegree(41.292198);
-            var longitude = Angle.ByDegree(-74.361229);
-            var elevation = 0.0d;
 
             /*
             var date = DateTime.Now;
@@ -167,6 +187,7 @@ namespace TestApp {
             }
             */
 
+            /*
             var cometName = "C/2024 C4 (ATLAS)";
             var mpcAccessor = new MPCAccessor();
             var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
@@ -193,8 +214,33 @@ namespace TestApp {
             var mpcOrbitalPosition = Kepler.CalculateOrbitalElements(jplComet, asOfJd);
             var orbitalApparentPosition = Kepler.GetApparentPosition(mpcOrbitalPosition, NOVAS.Body.Earth, latitude, longitude, elevation);
             var orbitalCoordinates = orbitalApparentPosition.ToPolar();
+            */
+
+            /*
+            var tleString1 = "1 25544U 98067A   25108.16196759  .00021659  00000+0  39076-3 0  9990";
+            var tleString2 = "2 25544  51.6381 244.3378 0005375  52.1060 306.6862 15.49672979505843";
+
+            var tle = new Tle(tleString1, tleString2);
+
+            var sat = new Satellite(tle);
+            var location = new GeodeticCoordinate(
+                SGPdotNET.Util.Angle.FromRadians(latitude.Radians),
+                SGPdotNET.Util.Angle.FromRadians(longitude.Radians),
+                0);
+            var groundStation = new GroundStation(location);
+
+            while (true) {
+                var now = DateTime.UtcNow;
+                var observation = groundStation.Observe(sat, now);
+                var tc1 = new TopocentricCoordinates(
+                    Angle.ByRadians(observation.Azimuth.Radians),
+                    Angle.ByRadians(observation.Elevation.Radians),
+                    latitude,
+                    longitude);
+                var eq1 = tc1.Transform(Epoch.JNOW);
 
             Console.WriteLine();
+            */
         }
 
         public static Stream GenerateStreamFromString(string s) {
