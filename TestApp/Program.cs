@@ -35,26 +35,30 @@ namespace TestApp {
     internal class Program {
 
         private static async Task Main(string[] args) {
-            var tcpClient = new System.Net.Sockets.TcpClient("192.168.88.67", 3490);
-            var stream = tcpClient.GetStream();
-            var reader = new System.IO.StreamReader(stream);
-            var writer = new System.IO.StreamWriter(stream);
-            writer.Write("#:GVP#");
-            writer.Flush();
+            var accessor = new JPLAccessor();
+            var comets = await accessor.GetCometElements(CancellationToken.None);
+            var now = DateTime.UtcNow;
+            var nowJd = AstroUtil.GetJulianDate(now);
+            var latitude = Angle.ByDegree(41.292198d);
+            var longitude = Angle.ByDegree(-74.361229d);
+            double elevation = 300d;
+            using (var ms = new MemoryStream()) {
+                foreach (var cometElements in comets.Response) {
+                    var cometNameLower = cometElements.name.ToLowerInvariant();
+                    //var target = "c/2019 q4 (borisov)";
+                    //var target = "c/1962 c1 (seki-lines)";
+                    //if (cometNameLower != target) {
+                    //    continue;
+                    //}
 
-            while (true) {
-                int value = reader.Read();
-                char charValue = (char)value;
-                System.Console.Write(charValue);
-                if (charValue == '#') {
-                    break;
+                    Console.WriteLine($"Solving for {cometNameLower}");
+                    var orbitalElements = cometElements.ToOrbitalElements();
+                    var orbitalPosition = Kepler.CalculateOrbitalElements(orbitalElements, nowJd);
+                    var orbitalApparentPosition = Kepler.GetApparentPosition(orbitalPosition, NOVAS.Body.Earth, latitude, longitude, elevation);
+                    var orbitalCoordinates = orbitalApparentPosition.ToPolar();
                 }
             }
-            System.Console.WriteLine();
 
-            double f = -1.1234567;
-            string s = f.ToString("+000.0000;-000.0000", (IFormatProvider)CultureInfo.InvariantCulture);
-            Console.WriteLine(s);
 
             /*
             var accessor = new JPLAccessor();
@@ -107,10 +111,6 @@ namespace TestApp {
 
             Console.WriteLine(earthPosition);
             */
-
-            var latitude = Angle.ByDegree(41.292198);
-            var longitude = Angle.ByDegree(-74.361229);
-            var elevation = 0.0d;
 
             /*
             var date = DateTime.Now;
@@ -221,6 +221,8 @@ namespace TestApp {
             var orbitalApparentPosition = Kepler.GetApparentPosition(mpcOrbitalPosition, NOVAS.Body.Earth, latitude, longitude, elevation);
             var orbitalCoordinates = orbitalApparentPosition.ToPolar();
             */
+
+            /*
             var tleString1 = "1 25544U 98067A   25108.16196759  .00021659  00000+0  39076-3 0  9990";
             var tleString2 = "2 25544  51.6381 244.3378 0005375  52.1060 306.6862 15.49672979505843";
 
@@ -247,6 +249,7 @@ namespace TestApp {
                 Thread.Sleep(2000);
             }
             Console.WriteLine();
+            */
         }
 
         public static Stream GenerateStreamFromString(string s) {
