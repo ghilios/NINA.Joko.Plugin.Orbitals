@@ -19,8 +19,8 @@ using System.Runtime.InteropServices;
 
 // [MANDATORY] The assembly versioning
 //Should be incremented for each new release build of a plugin
-[assembly: AssemblyVersion("3.0.0.18")]
-[assembly: AssemblyFileVersion("3.0.0.18")]
+[assembly: AssemblyVersion("3.0.0.19")]
+[assembly: AssemblyFileVersion("3.0.0.19")]
 
 // [MANDATORY] The name of your plugin
 [assembly: AssemblyTitle("Orbitals")]
@@ -33,7 +33,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCompany("George Hilios (jokogeo)")]
 // The product name that this plugin is part of
 [assembly: AssemblyProduct("Orbitals")]
-[assembly: AssemblyCopyright("Copyright ©  2024")]
+[assembly: AssemblyCopyright("Copyright ©  2025")]
 
 // The minimum Version of N.I.N.A. that this plugin is compatible with
 [assembly: AssemblyMetadata("MinimumApplicationVersion", "3.0.0.9001")]

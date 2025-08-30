@@ -157,8 +157,8 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                         }
                         rowIndex += 2;
                         var absoluteMagnitude = ParseDoubleOptional(nextLine, 5, ref rowIndex, ref columnNumber, ref columnPortion);
-                        var slope = ParseDoubleOptional(nextLine, 6, ref rowIndex, ref columnNumber, ref columnPortion);
-                        var designationAndName = ParseString(nextLine, 57, ref rowIndex, ref columnNumber, ref columnPortion);
+                        var slope = ParseDoubleOptional(nextLine, 4, ref rowIndex, ref columnNumber, ref columnPortion);
+                        var designationAndName = ParseString(nextLine, 59, ref rowIndex, ref columnNumber, ref columnPortion);
                         var reference = ParseString(nextLine, -1, ref rowIndex, ref columnNumber, ref columnPortion);
                         var element = new MPCCometElements {
                             number = periodicCometNumber,
