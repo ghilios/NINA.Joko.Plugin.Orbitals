@@ -196,7 +196,7 @@
                                     Grid.Column="0"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="RA" />
+                                    Text="{ns:Loc LblRA}" />
                                 <TextBlock
                                     Grid.Row="1"
                                     Grid.Column="1"
@@ -208,7 +208,7 @@
                                     Grid.Column="0"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="Dec" />
+                                    Text="{ns:Loc LblDec}" />
                                 <TextBlock
                                     Grid.Row="2"
                                     Grid.Column="1"
@@ -549,7 +549,7 @@
                                     Grid.Column="0"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="RA" />
+                                    Text="{ns:Loc LblRA}" />
                                 <TextBlock
                                     Grid.Row="1"
                                     Grid.Column="1"
@@ -561,7 +561,7 @@
                                     Grid.Column="0"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="Dec" />
+                                    Text="{ns:Loc LblDec}" />
                                 <TextBlock
                                     Grid.Row="2"
                                     Grid.Column="1"
@@ -883,7 +883,7 @@
                                     Grid.Column="0"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="RA" />
+                                    Text="{ns:Loc LblRA}" />
                                 <TextBlock
                                     Grid.Row="1"
                                     Grid.Column="1"
@@ -895,7 +895,7 @@
                                     Grid.Column="0"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="Dec" />
+                                    Text="{ns:Loc LblDec}" />
                                 <TextBlock
                                     Grid.Row="2"
                                     Grid.Column="1"
@@ -1271,7 +1271,7 @@
                                     Grid.Column="0"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="RA" />
+                                    Text="{ns:Loc LblRA}" />
                                 <TextBlock
                                     Grid.Row="1"
                                     Grid.Column="1"
@@ -1295,7 +1295,7 @@
                                     Grid.Column="0"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="Dec" />
+                                    Text="{ns:Loc LblDec}" />
                                 <TextBlock
                                     Grid.Row="2"
                                     Grid.Column="1"
