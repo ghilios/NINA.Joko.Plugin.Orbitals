@@ -123,7 +123,7 @@
                                         <TextBlock
                                             VerticalAlignment="Center"
                                             Foreground="{StaticResource ButtonForegroundBrush}"
-                                            Text="{Binding Target.Rotation}" />
+                                            Text="{Binding Target.PositionAngle}" />
                                         <TextBlock
                                             VerticalAlignment="Center"
                                             Foreground="{StaticResource ButtonForegroundBrush}"
@@ -150,6 +150,7 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -253,6 +254,32 @@
                                     VerticalAlignment="Center">
                                     <Run Text="{Binding Distance.DisplayDistance, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="{Binding Distance.DisplayUnits, Mode=OneWay}" />
                                 </TextBlock>
+                                <TextBlock
+                                    Grid.Row="6"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="{ns:Loc LblRotation}" />
+                                <ninactrl:UnitTextBox
+                                    Grid.Row="6"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    Width="40"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Left"
+                                    Unit="°">
+                                    <ninactrl:UnitTextBox.Text>
+                                        <Binding Path="Target.PositionAngle" UpdateSourceTrigger="LostFocus">
+                                            <Binding.ValidationRules>
+                                                <rules:DoubleRangeRule>
+                                                    <rules:DoubleRangeRule.ValidRange>
+                                                        <rules:DoubleRangeChecker Maximum="360" Minimum="0" />
+                                                    </rules:DoubleRangeRule.ValidRange>
+                                                </rules:DoubleRangeRule>
+                                            </Binding.ValidationRules>
+                                        </Binding>
+                                    </ninactrl:UnitTextBox.Text>
+                                </ninactrl:UnitTextBox>
                                 <alt:AltitudeChart
                                     Grid.Row="0"
                                     Grid.RowSpan="6"
@@ -462,7 +489,7 @@
                                         <TextBlock
                                             VerticalAlignment="Center"
                                             Foreground="{StaticResource ButtonForegroundBrush}"
-                                            Text="{Binding Target.Rotation}" />
+                                            Text="{Binding Target.PositionAngle}" />
                                         <TextBlock
                                             VerticalAlignment="Center"
                                             Foreground="{StaticResource ButtonForegroundBrush}"
@@ -489,6 +516,7 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -579,6 +607,32 @@
                                     VerticalAlignment="Center">
                                     <Run Text="{Binding Distance.DisplayDistance, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="{Binding Distance.DisplayUnits, Mode=OneWay}" />
                                 </TextBlock>
+                                <TextBlock
+                                    Grid.Row="6"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="{ns:Loc LblRotation}" />
+                                <ninactrl:UnitTextBox
+                                    Grid.Row="6"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    Width="40"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Left"
+                                    Unit="°">
+                                    <ninactrl:UnitTextBox.Text>
+                                        <Binding Path="Target.PositionAngle" UpdateSourceTrigger="LostFocus">
+                                            <Binding.ValidationRules>
+                                                <rules:DoubleRangeRule>
+                                                    <rules:DoubleRangeRule.ValidRange>
+                                                        <rules:DoubleRangeChecker Maximum="360" Minimum="0" />
+                                                    </rules:DoubleRangeRule.ValidRange>
+                                                </rules:DoubleRangeRule>
+                                            </Binding.ValidationRules>
+                                        </Binding>
+                                    </ninactrl:UnitTextBox.Text>
+                                </ninactrl:UnitTextBox>
                                 <alt:AltitudeChart
                                     Grid.Row="0"
                                     Grid.RowSpan="6"
@@ -788,7 +842,7 @@
                                         <TextBlock
                                             VerticalAlignment="Center"
                                             Foreground="{StaticResource ButtonForegroundBrush}"
-                                            Text="{Binding Target.Rotation}" />
+                                            Text="{Binding Target.PositionAngle}" />
                                         <TextBlock
                                             VerticalAlignment="Center"
                                             Foreground="{StaticResource ButtonForegroundBrush}"
@@ -815,6 +869,7 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -912,6 +967,32 @@
                                         VerticalAlignment="Center"
                                         Text="JWST data is out of date" />
                                 </StackPanel>
+                                <TextBlock
+                                    Grid.Row="7"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="{ns:Loc LblRotation}" />
+                                <ninactrl:UnitTextBox
+                                    Grid.Row="7"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    Width="40"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Left"
+                                    Unit="°">
+                                    <ninactrl:UnitTextBox.Text>
+                                        <Binding Path="Target.PositionAngle" UpdateSourceTrigger="LostFocus">
+                                            <Binding.ValidationRules>
+                                                <rules:DoubleRangeRule>
+                                                    <rules:DoubleRangeRule.ValidRange>
+                                                        <rules:DoubleRangeChecker Maximum="360" Minimum="0" />
+                                                    </rules:DoubleRangeRule.ValidRange>
+                                                </rules:DoubleRangeRule>
+                                            </Binding.ValidationRules>
+                                        </Binding>
+                                    </ninactrl:UnitTextBox.Text>
+                                </ninactrl:UnitTextBox>
                                 <alt:AltitudeChart
                                     Grid.Row="0"
                                     Grid.RowSpan="7"
@@ -1121,7 +1202,7 @@
                                         <TextBlock
                                             VerticalAlignment="Center"
                                             Foreground="{StaticResource ButtonForegroundBrush}"
-                                            Text="{Binding Target.Rotation}" />
+                                            Text="{Binding Target.PositionAngle}" />
                                         <TextBlock
                                             VerticalAlignment="Center"
                                             Foreground="{StaticResource ButtonForegroundBrush}"
@@ -1150,6 +1231,7 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -1286,6 +1368,32 @@
                                     HorizontalAlignment="Left"
                                     IsEnabled="False"
                                     IsChecked="{Binding TrackingEnabled, Mode=OneWay}" />
+                                <TextBlock
+                                    Grid.Row="7"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
+                                    Text="{ns:Loc LblRotation}" />
+                                <ninactrl:UnitTextBox
+                                    Grid.Row="7"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    Width="40"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Left"
+                                    Unit="°">
+                                    <ninactrl:UnitTextBox.Text>
+                                        <Binding Path="Target.PositionAngle" UpdateSourceTrigger="LostFocus">
+                                            <Binding.ValidationRules>
+                                                <rules:DoubleRangeRule>
+                                                    <rules:DoubleRangeRule.ValidRange>
+                                                        <rules:DoubleRangeChecker Maximum="360" Minimum="0" />
+                                                    </rules:DoubleRangeRule.ValidRange>
+                                                </rules:DoubleRangeRule>
+                                            </Binding.ValidationRules>
+                                        </Binding>
+                                    </ninactrl:UnitTextBox.Text>
+                                </ninactrl:UnitTextBox>
                                 <alt:AltitudeChart
                                     Grid.Row="0"
                                     Grid.RowSpan="7"
