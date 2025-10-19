@@ -110,6 +110,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         }
 
         private async Task CoordinateUpdateLoop(CancellationToken ct) {
+            Logger.Info($"Entering coordinate update loop for {this.Name}");
             try {
                 while (!ct.IsCancellationRequested) {
                     RefreshCoordinates();
@@ -117,7 +118,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
                     await Task.Delay(TimeSpan.FromSeconds(this.GetCoordinateRefreshTime()), ct);
                 }
             } finally {
-                Logger.Info("Exited coordinate update loop");
+                Logger.Info($"Exited coordinate update loop for {this.Name}");
             }
         }
 
@@ -161,7 +162,12 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         public override void Teardown() {
             base.Teardown();
 
-            coordinateUpdateCts?.Cancel();
+            try {
+                coordinateUpdateCts?.Cancel();
+            } finally {
+                coordinateUpdateCts = null;
+                coordinateUpdateTask = null;
+            }
         }
 
         public override void Initialize() {
