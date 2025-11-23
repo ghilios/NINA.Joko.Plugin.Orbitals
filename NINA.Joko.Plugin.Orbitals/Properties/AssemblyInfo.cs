@@ -19,8 +19,8 @@ using System.Runtime.InteropServices;
 
 // [MANDATORY] The assembly versioning
 //Should be incremented for each new release build of a plugin
-[assembly: AssemblyVersion("3.1.0.2")]
-[assembly: AssemblyFileVersion("3.1.0.2")]
+[assembly: AssemblyVersion("3.1.0.3")]
+[assembly: AssemblyFileVersion("3.1.0.3")]
 
 // [MANDATORY] The name of your plugin
 [assembly: AssemblyTitle("Orbitals")]
@@ -36,7 +36,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCopyright("Copyright ©  2025")]
 
 // The minimum Version of N.I.N.A. that this plugin is compatible with
-[assembly: AssemblyMetadata("MinimumApplicationVersion", "3.2.0.1029")]
+[assembly: AssemblyMetadata("MinimumApplicationVersion", "3.2.0.9001")]
 
 // The license your plugin code is using
 [assembly: AssemblyMetadata("License", "MPL-2.0")]

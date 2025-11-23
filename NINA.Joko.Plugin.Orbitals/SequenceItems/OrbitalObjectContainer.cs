@@ -165,6 +165,8 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
 
             clone.TargetObject.OrbitalElements = TargetObject.OrbitalElements;
             clone.Target.PositionAngle = this.Target.PositionAngle;
+            clone.Target.TargetName = this.Target.TargetName;
+            clone.Target.InputCoordinates = this.Target.InputCoordinates;
             clone.OrbitalSearchVM.ObjectType = this.OrbitalSearchVM.ObjectType;
             clone.OrbitalSearchVM.SetTargetNameWithoutSearch(this.OrbitalSearchVM.TargetName);
 
