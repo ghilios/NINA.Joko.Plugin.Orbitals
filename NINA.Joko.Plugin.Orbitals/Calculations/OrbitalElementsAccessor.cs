@@ -55,14 +55,14 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             }
         }
 
-        private readonly AsyncManualResetEvent loadedEvent;
+        private readonly ManualResetEvent loadedEvent;
         private readonly IOrbitalsOptions options;
         private readonly object backendLock = new object();
         private readonly Dictionary<OrbitalObjectTypeEnum, OrbitalElementsBackend> backendsByType = new Dictionary<OrbitalObjectTypeEnum, OrbitalElementsBackend>();
         private PVTable jwstVectorTable;
 
         public OrbitalElementsAccessor(IOrbitalsOptions options) {
-            this.loadedEvent = new AsyncManualResetEvent(false);
+            this.loadedEvent = new ManualResetEvent(false);
             this.options = options;
             foreach (var objectType in Enum.GetValues(typeof(OrbitalObjectTypeEnum)).Cast<OrbitalObjectTypeEnum>()) {
                 backendsByType.Add(objectType, CreateDefaultBackend(objectType));
@@ -158,8 +158,8 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             }
         }
 
-        public async Task WaitUntilLoaded(CancellationToken ct) {
-            await this.loadedEvent.WaitAsync(ct);
+        public void WaitUntilLoaded() {
+            this.loadedEvent.WaitOne(-1);
         }
 
         private void UpdateBackend(OrbitalObjectTypeEnum objectType, OrbitalElementsBackend backend) {

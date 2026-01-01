@@ -97,7 +97,7 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
 
         DateTime GetJWSTValidUntil();
 
-        Task WaitUntilLoaded(CancellationToken ct);
+        void WaitUntilLoaded();
 
         event EventHandler<OrbitalElementsObjectTypeUpdatedEventArgs> Updated;
 
