@@ -149,6 +149,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
                 Target.InputCoordinates.Coordinates = targetCoordinates;
                 ShiftTrackingRate = Target.DeepSkyObject.ShiftTrackingRate;
                 Distance.AU = TargetObject.Position.Distance;
+                RaisePropertyChanged(nameof(CurrentCoordinates));
                 AfterParentChanged();
             } catch (Exception e) {
                 Logger.Error("Error while refreshing coordinates", e);
@@ -185,6 +186,8 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
                 RaisePropertyChanged();
             }
         }
+
+        public Coordinates CurrentCoordinates => Target?.InputCoordinates?.Coordinates;
 
         private Distance distance = new Distance(0.0d);
 

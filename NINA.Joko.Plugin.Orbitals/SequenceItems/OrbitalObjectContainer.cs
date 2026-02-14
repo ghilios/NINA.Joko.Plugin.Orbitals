@@ -164,9 +164,12 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             };
 
             clone.TargetObject.OrbitalElements = TargetObject.OrbitalElements;
+            clone.Target = new InputTarget(Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Latitude), Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Longitude), profileService.ActiveProfile.AstrometrySettings.Horizon);
             clone.Target.PositionAngle = this.Target.PositionAngle;
             clone.Target.TargetName = this.Target.TargetName;
-            clone.Target.InputCoordinates = this.Target.InputCoordinates;
+            clone.Target.InputCoordinates = this.Target.InputCoordinates.Clone();
+            clone.Target.DeepSkyObject = new OrbitalElementsObject(orbitalElementsAccessor, null, profileService.ActiveProfile.AstrometrySettings.Horizon, profileService);
+            clone.Target.DeepSkyObject.SetDateAndPosition(NighttimeCalculator.GetReferenceDate(DateTime.Now), latitude: profileService.ActiveProfile.AstrometrySettings.Latitude, longitude: profileService.ActiveProfile.AstrometrySettings.Longitude);
             clone.OrbitalSearchVM.ObjectType = this.OrbitalSearchVM.ObjectType;
             clone.OrbitalSearchVM.SetTargetNameWithoutSearch(this.OrbitalSearchVM.TargetName);
 

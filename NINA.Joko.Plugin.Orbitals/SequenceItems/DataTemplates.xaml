@@ -201,7 +201,7 @@
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="{Binding Target.InputCoordinates.Coordinates.RAString, Mode=OneWay}" />
+                                    Text="{Binding CurrentCoordinates.RAString, Mode=OneWay}" />
                                 <TextBlock
                                     Grid.Row="2"
                                     Grid.Column="0"
@@ -213,7 +213,7 @@
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="{Binding Target.InputCoordinates.Coordinates.DecString, Mode=OneWay}" />
+                                    Text="{Binding CurrentCoordinates.DecString, Mode=OneWay}" />
                                 <TextBlock
                                     Grid.Row="3"
                                     Grid.Column="0"
@@ -527,7 +527,7 @@
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="{Binding Target.InputCoordinates.Coordinates.RAString, Mode=OneWay}" />
+                                    Text="{Binding CurrentCoordinates.RAString, Mode=OneWay}" />
                                 <TextBlock
                                     Grid.Row="2"
                                     Grid.Column="0"
@@ -539,7 +539,7 @@
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="{Binding Target.InputCoordinates.Coordinates.DecString, Mode=OneWay}" />
+                                    Text="{Binding CurrentCoordinates.DecString, Mode=OneWay}" />
                                 <TextBlock
                                     Grid.Row="3"
                                     Grid.Column="0"
@@ -834,7 +834,7 @@
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="{Binding Target.InputCoordinates.Coordinates.RAString, Mode=OneWay}" />
+                                    Text="{Binding CurrentCoordinates.RAString, Mode=OneWay}" />
                                 <TextBlock
                                     Grid.Row="2"
                                     Grid.Column="0"
@@ -846,7 +846,7 @@
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="{Binding Target.InputCoordinates.Coordinates.DecString, Mode=OneWay}" />
+                                    Text="{Binding CurrentCoordinates.DecString, Mode=OneWay}" />
                                 <TextBlock
                                     Grid.Row="3"
                                     Grid.Column="0"
@@ -1195,7 +1195,7 @@
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="{Binding Target.InputCoordinates.Coordinates.RAString, Mode=OneWay}" />
+                                    Text="{Binding CurrentCoordinates.RAString, Mode=OneWay}" />
                                 <TextBlock
                                     Grid.Row="1"
                                     Grid.Column="2"
@@ -1219,7 +1219,7 @@
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="{Binding Target.InputCoordinates.Coordinates.DecString, Mode=OneWay}" />
+                                    Text="{Binding CurrentCoordinates.DecString, Mode=OneWay}" />
                                 <TextBlock
                                     Grid.Row="2"
                                     Grid.Column="2"
