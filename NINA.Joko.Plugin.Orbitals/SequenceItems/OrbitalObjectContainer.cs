@@ -80,7 +80,6 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         [OnDeserialized]
         internal void OnDeserializedMethod(StreamingContext context) {
             this.RefreshCoordinates();
-            RaiseAllPropertiesChanged();
         }
 
         private void OrbitalElementsAccessor_Updated(object sender, OrbitalElementsObjectTypeUpdatedEventArgs e) {
