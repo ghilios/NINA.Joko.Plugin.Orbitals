@@ -35,8 +35,8 @@ namespace NINA.Joko.Plugin.Orbitals.Utility {
             var connectionStringBuilder = new SQLiteConnectionStringBuilder { DataSource = ":memory:" };
             connection = new SQLiteConnection(connectionStringBuilder.ToString());
             connection.Open();
-            connection.EnableExtensions(true);
-            connection.LoadExtension("SQLite.Interop.dll", "sqlite3_fts5_init");
+            //connection.EnableExtensions(true);
+            //connection.LoadExtension("SQLite.Interop.dll", "sqlite3_fts5_init");
             using (var command = new SQLiteCommand($@"CREATE VIRTUAL TABLE [{tableName}] USING FTS5(key, tokenize=""trigram"");", connection)) {
                 command.ExecuteNonQuery();
             }
