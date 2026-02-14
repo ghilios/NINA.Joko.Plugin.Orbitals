@@ -122,7 +122,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
                         OrbitalSearchVM.SetTargetNameWithoutSearch("");
                     } else {
                         try {
-                            orbitalElementsAccessor.WaitUntilLoaded(CancellationToken.None).Wait();
+                            orbitalElementsAccessor.WaitUntilLoaded();
                             var orbitalElements = orbitalElementsAccessor.Get(ObjectType, value);
                             if (orbitalElements != null) {
                                 TargetObject.OrbitalElements = orbitalElements;
