@@ -105,7 +105,7 @@
                                         <TextBlock
                                             VerticalAlignment="Center"
                                             Foreground="{StaticResource ButtonForegroundBrush}"
-                                            Text="{Binding Target.DeepSkyObject.Coordinates.RAString}" />
+                                            Text="{Binding CurrentCoordinates_RAString}" />
                                         <TextBlock
                                             Margin="5,0,5,0"
                                             VerticalAlignment="Center"
@@ -114,7 +114,7 @@
                                         <TextBlock
                                             VerticalAlignment="Center"
                                             Foreground="{StaticResource ButtonForegroundBrush}"
-                                            Text="{Binding Target.DeepSkyObject.Coordinates.DecString}" />
+                                            Text="{Binding CurrentCoordinates_DecString}" />
                                         <TextBlock
                                             Margin="5,0,5,0"
                                             VerticalAlignment="Center"
@@ -201,7 +201,7 @@
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="{Binding CurrentCoordinates.RAString, Mode=OneWay}" />
+                                    Text="{Binding CurrentCoordinates_RAString, Mode=OneWay}" />
                                 <TextBlock
                                     Grid.Row="2"
                                     Grid.Column="0"
@@ -213,7 +213,7 @@
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="{Binding CurrentCoordinates.DecString, Mode=OneWay}" />
+                                    Text="{Binding CurrentCoordinates_DecString, Mode=OneWay}" />
                                 <TextBlock
                                     Grid.Row="3"
                                     Grid.Column="0"
@@ -444,7 +444,7 @@
                                         <TextBlock
                                             VerticalAlignment="Center"
                                             Foreground="{StaticResource ButtonForegroundBrush}"
-                                            Text="{Binding Target.DeepSkyObject.Coordinates.RAString}" />
+                                            Text="{Binding CurrentCoordinates_RAString}" />
                                         <TextBlock
                                             Margin="5,0,5,0"
                                             VerticalAlignment="Center"
@@ -453,7 +453,7 @@
                                         <TextBlock
                                             VerticalAlignment="Center"
                                             Foreground="{StaticResource ButtonForegroundBrush}"
-                                            Text="{Binding Target.DeepSkyObject.Coordinates.DecString}" />
+                                            Text="{Binding CurrentCoordinates_DecString}" />
                                         <TextBlock
                                             Margin="5,0,5,0"
                                             VerticalAlignment="Center"
@@ -527,7 +527,7 @@
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="{Binding CurrentCoordinates.RAString, Mode=OneWay}" />
+                                    Text="{Binding CurrentCoordinates_RAString, Mode=OneWay}" />
                                 <TextBlock
                                     Grid.Row="2"
                                     Grid.Column="0"
@@ -539,7 +539,7 @@
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="{Binding CurrentCoordinates.DecString, Mode=OneWay}" />
+                                    Text="{Binding CurrentCoordinates_DecString, Mode=OneWay}" />
                                 <TextBlock
                                     Grid.Row="3"
                                     Grid.Column="0"
@@ -770,7 +770,7 @@
                                         <TextBlock
                                             VerticalAlignment="Center"
                                             Foreground="{StaticResource ButtonForegroundBrush}"
-                                            Text="{Binding Target.DeepSkyObject.Coordinates.RAString}" />
+                                            Text="{Binding CurrentCoordinates_RAString}" />
                                         <TextBlock
                                             Margin="5,0,5,0"
                                             VerticalAlignment="Center"
@@ -779,7 +779,7 @@
                                         <TextBlock
                                             VerticalAlignment="Center"
                                             Foreground="{StaticResource ButtonForegroundBrush}"
-                                            Text="{Binding Target.DeepSkyObject.Coordinates.DecString}" />
+                                            Text="{Binding CurrentCoordinates_DecString}" />
                                         <TextBlock
                                             Margin="5,0,5,0"
                                             VerticalAlignment="Center"
@@ -834,7 +834,7 @@
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="{Binding CurrentCoordinates.RAString, Mode=OneWay}" />
+                                    Text="{Binding CurrentCoordinates_RAString, Mode=OneWay}" />
                                 <TextBlock
                                     Grid.Row="2"
                                     Grid.Column="0"
@@ -846,7 +846,7 @@
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="{Binding CurrentCoordinates.DecString, Mode=OneWay}" />
+                                    Text="{Binding CurrentCoordinates_DecString, Mode=OneWay}" />
                                 <TextBlock
                                     Grid.Row="3"
                                     Grid.Column="0"
@@ -1103,7 +1103,7 @@
                                         <TextBlock
                                             VerticalAlignment="Center"
                                             Foreground="{StaticResource ButtonForegroundBrush}"
-                                            Text="{Binding Target.DeepSkyObject.Coordinates.RAString}" />
+                                            Text="{Binding CurrentCoordinates_RAString}" />
                                         <TextBlock
                                             Margin="5,0,5,0"
                                             VerticalAlignment="Center"
@@ -1112,7 +1112,7 @@
                                         <TextBlock
                                             VerticalAlignment="Center"
                                             Foreground="{StaticResource ButtonForegroundBrush}"
-                                            Text="{Binding Target.DeepSkyObject.Coordinates.DecString}" />
+                                            Text="{Binding CurrentCoordinates_DecString}" />
                                         <TextBlock
                                             Margin="5,0,5,0"
                                             VerticalAlignment="Center"
@@ -1195,7 +1195,7 @@
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="{Binding CurrentCoordinates.RAString, Mode=OneWay}" />
+                                    Text="{Binding CurrentCoordinates_RAString, Mode=OneWay}" />
                                 <TextBlock
                                     Grid.Row="1"
                                     Grid.Column="2"
@@ -1219,7 +1219,7 @@
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center"
-                                    Text="{Binding CurrentCoordinates.DecString, Mode=OneWay}" />
+                                    Text="{Binding CurrentCoordinates_DecString, Mode=OneWay}" />
                                 <TextBlock
                                     Grid.Row="2"
                                     Grid.Column="2"

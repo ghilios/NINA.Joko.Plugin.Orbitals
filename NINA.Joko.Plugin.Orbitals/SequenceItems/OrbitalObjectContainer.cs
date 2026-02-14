@@ -13,28 +13,29 @@
 using Newtonsoft.Json;
 using NINA.Astrometry;
 using NINA.Astrometry.Interfaces;
+using NINA.Core.Utility;
+using NINA.Core.Utility.Notification;
+using NINA.Joko.Plugin.Orbitals.Calculations;
+using NINA.Joko.Plugin.Orbitals.Enums;
+using NINA.Joko.Plugin.Orbitals.Interfaces;
+using NINA.Joko.Plugin.Orbitals.Utility;
+using NINA.Joko.Plugin.Orbitals.ViewModels;
 using NINA.Profile.Interfaces;
+using NINA.Sequencer.Conditions;
 using NINA.Sequencer.Container;
 using NINA.Sequencer.Container.ExecutionStrategy;
 using NINA.Sequencer.SequenceItem;
+using NINA.Sequencer.Trigger;
 using NINA.WPF.Base.Interfaces.Mediator;
 using System;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.ComponentModel.Composition;
 using System.Linq;
+using System.Runtime.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Collections.ObjectModel;
-using NINA.Sequencer.Trigger;
-using NINA.Sequencer.Conditions;
-using NINA.Joko.Plugin.Orbitals.Calculations;
-using NINA.Joko.Plugin.Orbitals.Interfaces;
-using NINA.Joko.Plugin.Orbitals.Enums;
-using NINA.Joko.Plugin.Orbitals.ViewModels;
-using System.Threading;
-using NINA.Core.Utility.Notification;
-using NINA.Core.Utility;
-using System.ComponentModel;
-using NINA.Joko.Plugin.Orbitals.Utility;
 
 namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
 
@@ -74,6 +75,12 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             WeakEventManager<INotifyPropertyChanged, PropertyChangedEventArgs>.AddHandler(orbitalSearchVM, nameof(orbitalSearchVM.PropertyChanged), OrbitalSearchVM_PropertyChanged);
             WeakEventManager<IOrbitalElementsAccessor, OrbitalElementsObjectTypeUpdatedEventArgs>.AddHandler(orbitalElementsAccessor, nameof(orbitalElementsAccessor.Updated), OrbitalElementsAccessor_Updated);
             PostConstruction();
+        }
+
+        [OnDeserialized]
+        internal void OnDeserializedMethod(StreamingContext context) {
+            this.RefreshCoordinates();
+            RaiseAllPropertiesChanged();
         }
 
         private void OrbitalElementsAccessor_Updated(object sender, OrbitalElementsObjectTypeUpdatedEventArgs e) {
