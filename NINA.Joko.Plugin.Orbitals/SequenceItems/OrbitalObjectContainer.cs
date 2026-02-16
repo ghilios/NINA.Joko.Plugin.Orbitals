@@ -23,7 +23,6 @@ using NINA.Joko.Plugin.Orbitals.ViewModels;
 using NINA.Profile.Interfaces;
 using NINA.Sequencer.Conditions;
 using NINA.Sequencer.Container;
-using NINA.Sequencer.Container.ExecutionStrategy;
 using NINA.Sequencer.SequenceItem;
 using NINA.Sequencer.Trigger;
 using NINA.WPF.Base.Interfaces.Mediator;
@@ -33,8 +32,6 @@ using System.ComponentModel;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Runtime.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 
 namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
@@ -80,7 +77,6 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         [OnDeserialized]
         internal void OnDeserializedMethod(StreamingContext context) {
             this.RefreshCoordinates();
-            RaiseAllPropertiesChanged();
         }
 
         private void OrbitalElementsAccessor_Updated(object sender, OrbitalElementsObjectTypeUpdatedEventArgs e) {
@@ -175,8 +171,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             clone.Target.PositionAngle = this.Target.PositionAngle;
             clone.Target.TargetName = this.Target.TargetName;
             clone.Target.InputCoordinates = this.Target.InputCoordinates.Clone();
-            clone.Target.DeepSkyObject = new OrbitalElementsObject(orbitalElementsAccessor, null, profileService.ActiveProfile.AstrometrySettings.Horizon, profileService);
-            clone.Target.DeepSkyObject.SetDateAndPosition(NighttimeCalculator.GetReferenceDate(DateTime.Now), latitude: profileService.ActiveProfile.AstrometrySettings.Latitude, longitude: profileService.ActiveProfile.AstrometrySettings.Longitude);
+            clone.Target.DeepSkyObject = (this.Target.DeepSkyObject as OrbitalElementsObject).Clone();
             clone.OrbitalSearchVM.ObjectType = this.OrbitalSearchVM.ObjectType;
             clone.OrbitalSearchVM.SetTargetNameWithoutSearch(this.OrbitalSearchVM.TargetName);
 
@@ -192,6 +187,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
                 trigger.AttachNewParent(clone);
             }
 
+            clone.RefreshCoordinates();
             return clone;
         }
 

@@ -62,7 +62,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
         public OrbitalElementsObject Clone() {
             var cloned = new OrbitalElementsObject(orbitalElementsAccessor, OrbitalElements, customHorizon, profileService);
-            cloned.SetDateAndPosition(cloned._referenceDate, cloned._latitude, cloned._longitude);
+            cloned.SetDateAndPosition(this._referenceDate, this._latitude, this._longitude);
             return cloned;
         }
     }
