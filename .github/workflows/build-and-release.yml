@@ -11,7 +11,7 @@ permissions:
 env:
   PLUGIN_NAME: "Orbitals"
   PLUGIN_DLL_NAME: "NINA.Joko.Plugin.Orbitals"
-  PLUGIN_MANIFEST_PATH: "o/Orbitals/3.3.0"
+  PLUGIN_MANIFEST_PATH: "o/Orbitals/3.2.0"
   PLUGIN_IS_BETA: false
 
 jobs:
@@ -37,7 +37,7 @@ jobs:
 
       - name: Prepare package
         run: |
-          $buildOut = "NINA.Joko.Plugin.Orbitals/bin/Release/net10.0-windows7.0"
+          $buildOut = "NINA.Joko.Plugin.Orbitals/bin/Release/net8.0-windows7.0"
           Copy-Item "$buildOut/${{ env.PLUGIN_DLL_NAME }}.dll" "packages/${{ env.PLUGIN_NAME }}/" -Force
           Copy-Item "$buildOut/${{ env.PLUGIN_DLL_NAME }}.pdb" "packages/${{ env.PLUGIN_NAME }}/" -Force
           Copy-Item "$buildOut/protobuf-net*.dll" "packages/${{ env.PLUGIN_NAME }}/" -Force
