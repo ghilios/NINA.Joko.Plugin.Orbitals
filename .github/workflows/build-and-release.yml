@@ -11,7 +11,7 @@ permissions:
 env:
   PLUGIN_NAME: "Orbitals"
   PLUGIN_DLL_NAME: "NINA.Joko.Plugin.Orbitals"
-  PLUGIN_MANIFEST_PATH: "1/Orbitals/3.3.0.1003"
+  PLUGIN_MANIFEST_PATH: "o/Orbitals/3.3.0"
   PLUGIN_IS_BETA: false
 
 jobs:
