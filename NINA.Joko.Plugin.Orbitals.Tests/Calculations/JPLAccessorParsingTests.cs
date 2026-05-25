@@ -104,15 +104,49 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
             jd.Should().BeApproximately(2451545.0, 1e-2);
         }
 
-        [Test, Explicit, Category("BugCandidate")]
-        public void CalendarDateAndFractionToJulian_DayPartCloseToOne_DoesNotExceedTwentyFourHours() {
-            // SUSPECTED EDGE: JPLAccessor.cs:495 multiplies dayPart * 24, which can yield
-            // ~24.0 when dayPart approaches 1.0 due to float rounding. NOVAS.JulianDate
-            // may not roll over to the next day. Pin behavior so a fix or documented
-            // domain restriction is a deliberate choice.
+        // REF: USNO Julian Date reference points.
+        //   2000-01-01 12:00 = JD 2451545.0   (J2000.0 epoch)
+        //   2000-01-01 00:00 = JD 2451544.5
+        //   1970-01-01 00:00 = JD 2440587.5   (Unix epoch)
+        //   1986-02-09 10:50:13 = JD 2446470.95154 (1P/Halley 1986 perihelion)
+        [TestCase(20000101.5, 2451545.0)]
+        [TestCase(20000101.0, 2451544.5)]
+        [TestCase(19700101.0, 2440587.5)]
+        [TestCase(19860209.45154, 2446470.95154)]
+        public void CalendarDateAndFractionToJulian_KnownDates(double dateAndFraction, double expectedJd) {
+            JPLAccessor.CalendarDateAndFractionToJulian(dateAndFraction)
+                .Should().BeApproximately(expectedJd, 1e-5);
+        }
+
+        [Test]
+        public void CalendarDateAndFractionToJulian_DayPartCloseToOne_RollsCleanlyIntoNextDay() {
+            // Edge case: a dateAndFraction just below the next calendar day must yield a
+            // JD essentially equal to the next day's midnight. Potential failure mode is
+            // dayPart*24 yielding ~24 due to float rounding, which NOVAS.JulianDate would
+            // not normalize. In practice the double representation of 20000101.99999999
+            // truncates to a dayPart of ~0.99999999, giving 23.99999976 hours, well under 24.
             var jdAtAlmostNextDay = JPLAccessor.CalendarDateAndFractionToJulian(20000101.99999999);
             var jdAtNextDay = JPLAccessor.CalendarDateAndFractionToJulian(20000102.0);
             jdAtAlmostNextDay.Should().BeApproximately(jdAtNextDay, 1e-5);
+        }
+
+        [Test]
+        public void CalendarDateAndFractionToJulian_NegativeYear_PreservesPositiveMonthAndDay() {
+            // BCE date encoded as a negative yyyymmdd.fraction: -5000101.0 = year -500
+            // Jan 1 at midnight. The sign is applied only to the year (month/day come
+            // from the magnitude). REF: NOVAS supports proleptic-Julian BCE dates;
+            // negative year -500 Jan 1 has a known JD per the standard algorithm.
+            // Verify the function preserves positive month/day in the negative-year case
+            // by round-tripping: the +500 Jan 1 and -500 Jan 1 JDs must differ by
+            // exactly 1000 years of days (varies by leap rule, so verify approximately).
+            var jdPositive = JPLAccessor.CalendarDateAndFractionToJulian(5000101.0);
+            var jdNegative = JPLAccessor.CalendarDateAndFractionToJulian(-5000101.0);
+
+            // ~1000 tropical years ~= 365250 days. Tolerance loose because leap-day
+            // distribution between -500 and +500 depends on the calendar rule NOVAS
+            // applies. The test's intent is "negative year is in fact a different year,
+            // not silently treated as positive."
+            (jdPositive - jdNegative).Should().BeApproximately(365250.0, 100.0);
         }
     }
 }
