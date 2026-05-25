@@ -51,7 +51,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
         public SolarSystemBodyObject Clone() {
             var cloned = new SolarSystemBodyObject(orbitalElementsAccessor, SolarSystemBody, customHorizon);
-            cloned.SetDateAndPosition(cloned._referenceDate, cloned._latitude, cloned._longitude);
+            cloned.SetDateAndPosition(this._referenceDate, this._latitude, this._longitude);
             return cloned;
         }
     }
