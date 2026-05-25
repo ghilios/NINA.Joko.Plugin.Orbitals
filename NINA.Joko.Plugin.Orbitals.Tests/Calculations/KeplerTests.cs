@@ -135,6 +135,32 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
             position.Distance.AU.Should().BeApproximately(2.0 * (1.5 - 1.0), AssertTolerance);
         }
 
+        // Verifies Kepler.cs:401 r = a*(e*cosh(E) - 1) at non-periapsis points along
+        // a hyperbolic orbit. Inverted from chosen E: given E and e, derive M via the
+        // hyperbolic Kepler equation M = e*sinh(E) - E, feed (M, e, a) into the solver,
+        // and assert the returned distance matches a*(e*cosh(E) - 1) exactly.
+        // Rows cover both pre-periapsis (E < 0), periapsis itself (E = 0), and a
+        // range of post-periapsis E values with both moderate (e=1.5) and
+        // strongly-hyperbolic (e=3.0) eccentricities.
+        [TestCase(1.5, 1.0, 1.0)]   // e=1.5, a=1.0, E=1.0  ->  r = 1*(1.5*cosh(1)-1)  =~ 1.3155
+        [TestCase(1.5, 1.0, 2.0)]   // e=1.5, a=1.0, E=2.0  ->  r = 1*(1.5*cosh(2)-1)  =~ 4.6403
+        [TestCase(1.5, 1.0, -1.0)]  // E negative (pre-periapsis); cosh(-E) = cosh(E)
+        [TestCase(2.0, 0.5, 1.5)]   // e=2.0, a=0.5, E=1.5  ->  r = 0.5*(2*cosh(1.5)-1) =~ 1.8514
+        [TestCase(3.0, 2.0, 0.5)]   // very hyperbolic
+        [TestCase(3.0, 2.0, 2.5)]   // strongly past periapsis
+        public void HyperbolicDistance_AtNonPeriapsisE_MatchesGeometry(double eccentricity, double semiMajorAxis, double E) {
+            // Derive M from Kepler's hyperbolic equation: M = e*sinh(E) - E.
+            var meanAnomaly = eccentricity * Math.Sinh(E) - E;
+            var elements = MakeAtEpochAt(meanAnomaly, eccentricity, semiMajorAxis);
+
+            var position = Kepler.CalculateOrbitalElements(elements, elements.Epoch_jd, SolverTolerance);
+
+            // Expected r = a*(e*cosh(E) - 1). Independent of the algorithm's intermediate
+            // steps -- it's the analytical hyperbolic-orbit geometry identity.
+            var expectedR = semiMajorAxis * (eccentricity * Math.Cosh(E) - 1.0);
+            position.Distance.AU.Should().BeApproximately(expectedR, AssertTolerance);
+        }
+
         [Test]
         public void HyperbolicSolver_SemiMajorAxisDerivedFromQ_StoresPositiveValue() {
             // Setting q (and not a) for a hyperbolic orbit should populate a with

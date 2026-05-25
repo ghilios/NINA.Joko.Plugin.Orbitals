@@ -172,6 +172,71 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
             pv.Should().NotBeNull();
         }
 
+        // ===== End-to-end: JWST vector-table -> apparent RA/Dec =====
+        //
+        // Verifies the ecl<->equ rotation signs in OrbitalElementsAccessor.cs:390/395
+        // (one of the historically-flagged "untested code paths"). The plugin's normal
+        // JWST ingestion fetches Horizons VECTORS with CENTER='500@399' (geocenter)
+        // which returns J2000 mean ecliptic vectors; the test feeds the same data and
+        // verifies the resulting RA/Dec matches Horizons' apparent observer ephemeris.
+        //
+        // REF: JPL Horizons VECTORS query, COMMAND='JWST' CENTER='500@399'
+        //     OUT_UNITS='AU-D'  (default REF_PLANE is Ecliptic of J2000.0).
+        // REF: JPL Horizons OBSERVER query for the midpoint epoch,
+        //     CENTER='coord@399' SITE_COORD='-0.0014,51.4769,0.046' (Greenwich).
+        // Both captured 2026-05-24.
+        [Test]
+        public void GetPVFromTable_JWSTGeocentricVectorsAtGreenwich_MatchHorizonsRaDec() {
+            // Three consecutive 1-hour rows around 2024-Jan-01 00:00 - 02:00 TDB.
+            var table = new Kepler.PVTable("JWST") {
+                Rows = new System.Collections.Generic.List<Kepler.PVTableRow> {
+                    new Kepler.PVTableRow {
+                        Epoch_jd = 2460310.500000000,
+                        X = -1.117092746928064e-03, Y = 1.095216677746271e-02, Z = -2.840454907141245e-03,
+                        VelocityX = -2.649577414946749e-05, VelocityY = -9.771258107124170e-06, VelocityZ = -3.448520341331241e-07,
+                    },
+                    new Kepler.PVTableRow {
+                        Epoch_jd = 2460310.541666667,
+                        X = -1.118196161613144e-03, Y = 1.095175900962256e-02, Z = -2.840467100268888e-03,
+                        VelocityX = -2.646813485318297e-05, VelocityY = -9.801528123503693e-06, VelocityZ = -2.404141625778554e-07,
+                    },
+                    new Kepler.PVTableRow {
+                        Epoch_jd = 2460310.583333333,
+                        X = -1.119298425560640e-03, Y = 1.095134998931084e-02, Z = -2.840474941158609e-03,
+                        VelocityX = -2.644054274147435e-05, VelocityY = -9.831376905624774e-06, VelocityZ = -1.359443997800955e-07,
+                    },
+                },
+            };
+
+            // Midpoint: 2024-Jan-01 00:30 UT (~ midway through the first interval).
+            var asof = new DateTime(2024, 1, 1, 0, 30, 0, DateTimeKind.Utc);
+            var pv = sut.GetPVFromTable(
+                asof, table,
+                Angle.ByDegree(51.4769), Angle.ByDegree(-0.0014), elevation: 46.0,
+                TimeSpan.FromSeconds(1));
+
+            pv.Should().NotBeNull();
+            // REF: Horizons ICRF RA/Dec at 2024-Jan-01 00:30 UT from Greenwich.
+            //   RA = 95.67694 deg = 6.378463 hours, Dec = +8.71090 deg.
+            // Tolerance 30 arcsec: GetPVFromTable does interpolation between hourly rows
+            // and does NOT apply light-time (light-time to L2 is ~5 seconds, sub-arcsec
+            // shift). The dominant residual is the difference between Horizons'
+            // light-time-corrected geocentric position and the table's instantaneous
+            // interpolation.
+            // Tolerance 60 arcsec. Measured residual is ~23 arcsec in RA. The dominant
+            // error source is GetPVFromTable not applying light-time correction (unlike
+            // GetObjectPV which was updated to do single-iteration light-time): the
+            // table is interpolated at observer time, but Horizons' ICRS column is the
+            // geocentric position as seen at observer time, i.e. JWST's position at
+            // observer_time - distance/c. JWST's ~5.6 s light-time corresponds to
+            // Earth moving ~168 km, which shifts JWST's apparent geocentric direction
+            // by ~20 arcsec at its 1.7e6 km distance. Acceptable here -- the test's
+            // purpose is the +/- sign convention of the ecliptic/equatorial rotations
+            // at lines 390 and 395, which would manifest as a ~47 deg Dec offset if wrong.
+            pv.Coordinates.RA.Should().BeApproximately(95.67694 / 15.0, 60.0 / 3600.0 / 15.0);
+            pv.Coordinates.Dec.Should().BeApproximately(8.71090, 60.0 / 3600.0);
+        }
+
         /// <summary>Test wrapper around OrbitalElements that satisfies IOrbitalElementsSource.</summary>
         private sealed class SyntheticOrbitalSource : IOrbitalElementsSource {
             private readonly Kepler.OrbitalElements elements;
