@@ -13,8 +13,7 @@
     xmlns:ninactrl="clr-namespace:NINA.CustomControlLibrary;assembly=NINA.CustomControlLibrary"
     xmlns:oconverters="clr-namespace:NINA.Joko.Plugin.Orbitals.Converters"
     x:Name="UC"
-    d:DataContext="{d:DesignInstance localvm:OrbitalsVM,T
-                                     IsDesignTimeCreatable=False}"
+    d:DataContext="{d:DesignInstance localvm:OrbitalsVM}"
     mc:Ignorable="d">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <ScrollViewer.Resources>
