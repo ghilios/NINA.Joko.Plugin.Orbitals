@@ -1,0 +1,136 @@
+using FluentAssertions;
+using NINA.Joko.Plugin.Orbitals.Calculations;
+using NUnit.Framework;
+using System.IO;
+using System.Linq;
+using System.Text;
+
+namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
+
+    [TestFixture]
+    public class JPLAccessorParsingTests {
+
+        // JPL fixed-width format: header line (column names), spacing line
+        // (dashes whose lengths determine each column's width), then data.
+        // Splitting the spacing line on single space yields the per-column widths.
+
+        // 9 columns: name(40) epoch(5) q(11) e(10) i(10) w(11) node(10) tp(17) ref(6)
+        private const string CometFixture =
+            "Name                                     Epoch q           e          i          w           node       tp                ref   \n" +
+            "---------------------------------------- ----- ----------- ---------- ---------- ----------- ---------- ----------------- ------\n" +
+            "1P/Halley                                49400 0.585978112 0.96714291 162.262691 111.3324851 58.4200810 19860209.45154    JPL 73\n";
+
+        // 11 columns: name(20) epoch(5) a(11) e(10) i(10) w(11) node(10) M(10) H(5) G(5) ref(6)
+        // Both H and G have distinct values to make bug #2 (line 258 duplicate H mapping) observable.
+        private const string UnnumberedAsteroidFixture =
+            "Name                 Epoch a           e          i          w           node       M          H     G     ref   \n" +
+            "-------------------- ----- ----------- ---------- ---------- ----------- ---------- ---------- ----- ----- ------\n" +
+            "1990 SH1             60200 2.450123456 0.12345678 11.2345678 100.1234567 80.7654321 90.1234567 17.10 0.150 JPL 12\n";
+
+        // 12 columns: number(4) name(15) epoch(5) a(11) e(10) i(10) w(11) node(10) M(10) H(5) G(5) ref(6)
+        private const string NumberedAsteroidFixture =
+            "Num. Name            Epoch a           e          i          w           node       M          H     G     ref   \n" +
+            "---- --------------- ----- ----------- ---------- ---------- ----------- ---------- ---------- ----- ----- ------\n" +
+            "   1 Ceres           60200 2.769165200 0.07891260 10.5879572 73.43228860 80.2549325 60.0728817  3.34 0.120 JPL 50\n";
+
+        private static StreamReader FromString(string content) =>
+            new StreamReader(new MemoryStream(Encoding.ASCII.GetBytes(content)));
+
+        [Test]
+        public void CometResponse_ParsesHalleyRowIntoExpectedFields() {
+            using var response = new JPLCometResponse(FromString(CometFixture));
+
+            var rows = response.Response.ToList();
+
+            rows.Should().HaveCount(1);
+            var halley = rows[0];
+            halley.name.Trim().Should().Be("1P/Halley");
+            halley.epoch.Should().Be(49400);
+            halley.q.Should().BeApproximately(0.585978112, 1e-9);
+            halley.e.Should().BeApproximately(0.96714291, 1e-9);
+            halley.i.Should().BeApproximately(162.262691, 1e-6);
+            halley.w.Should().BeApproximately(111.3324851, 1e-7);
+            halley.node.Should().BeApproximately(58.4200810, 1e-7);
+            halley.tp.Should().BeApproximately(19860209.45154, 1e-5);
+            halley.ref_.Trim().Should().Be("JPL 73");
+        }
+
+        [Test]
+        public void NumberedAsteroidResponse_ParsesCeresRowIntoExpectedFields() {
+            using var response = new JPLNumberedAsteroidResponse(FromString(NumberedAsteroidFixture));
+
+            var rows = response.Response.ToList();
+
+            rows.Should().HaveCount(1);
+            var ceres = rows[0];
+            ceres.number.Should().Be(1);
+            ceres.name.Trim().Should().Be("Ceres");
+            ceres.epoch.Should().Be(60200);
+            ceres.a.Should().BeApproximately(2.769165200, 1e-9);
+            ceres.e.Should().BeApproximately(0.07891260, 1e-8);
+            ceres.i.Should().BeApproximately(10.5879572, 1e-7);
+            ceres.w.Should().BeApproximately(73.43228860, 1e-7);
+            ceres.node.Should().BeApproximately(80.2549325, 1e-7);
+            ceres.M.Should().BeApproximately(60.0728817, 1e-7);
+            ceres.H.Should().BeApproximately(3.34, 1e-2);
+            ceres.GetName().Should().Be("1/Ceres");
+        }
+
+        [Test]
+        public void UnnumberedAsteroidResponse_ParsesRowIntoH_AndDropsG_DueToDuplicateMapping() {
+            // Documents current behavior: the parser at JPLAccessor.cs:258 maps column 10
+            // to .H (a duplicate of line 257) instead of .G. FlatFiles uses the FIRST
+            // mapping for the property (column 9 wins), so .H gets column 9's value and
+            // column 10 is read-and-discarded -- .G stays at its default 0.
+            // The BugCandidate test below asserts the CORRECT behavior (H from col 9,
+            // G from col 10) and is Explicit.
+            using var response = new JPLUnnumberedAsteroidResponse(FromString(UnnumberedAsteroidFixture));
+
+            var rows = response.Response.ToList();
+
+            rows.Should().HaveCount(1);
+            var row = rows[0];
+            row.name.Trim().Should().Be("1990 SH1");
+            row.epoch.Should().Be(60200);
+            row.a.Should().BeApproximately(2.450123456, 1e-9);
+            row.H.Should().BeApproximately(17.10, 1e-2, "column 9 wins via the first .H mapping");
+            row.G.Should().Be(0.0, "column 10 was mapped to .H instead of .G, so G stays default");
+        }
+
+        [Test, Explicit, Category("BugCandidate")]
+        public void UnnumberedAsteroidResponse_ShouldPopulateBoth_H_And_G() {
+            // SUSPECTED BUG: JPLAccessor.cs:258 mapper.Property(x => x.H, headerLengths[9] + 1)
+            // is a duplicate of line 257. The JPL un-numbered asteroid format has
+            // H (absolute magnitude) followed by G (magnitude slope parameter).
+            // Should map column 10 to x.G, not x.H.
+            using var response = new JPLUnnumberedAsteroidResponse(FromString(UnnumberedAsteroidFixture));
+
+            var rows = response.Response.ToList();
+            var row = rows[0];
+
+            row.H.Should().BeApproximately(17.10, 1e-2, "H should come from column 9");
+            row.G.Should().BeApproximately(0.150, 1e-3, "G should come from column 10");
+        }
+
+        [Test, Explicit, Category("RequiresNatives")]
+        public void CalendarDateAndFractionToJulian_KnownDates_MatchUSNOReference() {
+            // REF: USNO. NOVAS.JulianDate is a P/Invoke into NOVAS31lib.dll; this test
+            // is Explicit/RequiresNatives until Phase 7 copies the native libraries into
+            // the test bin directory.
+            // J2000.0 = 2000-Jan-01.5 -> yyyymmdd.fraction = 20000101.5 -> JD 2451545.0.
+            var jd = JPLAccessor.CalendarDateAndFractionToJulian(20000101.5);
+            jd.Should().BeApproximately(2451545.0, 1e-2);
+        }
+
+        [Test, Explicit, Category("BugCandidate")]
+        public void CalendarDateAndFractionToJulian_DayPartCloseToOne_DoesNotExceedTwentyFourHours() {
+            // SUSPECTED EDGE: JPLAccessor.cs:495 multiplies dayPart * 24, which can yield
+            // ~24.0 when dayPart approaches 1.0 due to float rounding. NOVAS.JulianDate
+            // may not roll over to the next day. Pin behavior so a fix or documented
+            // domain restriction is a deliberate choice.
+            var jdAtAlmostNextDay = JPLAccessor.CalendarDateAndFractionToJulian(20000101.99999999);
+            var jdAtNextDay = JPLAccessor.CalendarDateAndFractionToJulian(20000102.0);
+            jdAtAlmostNextDay.Should().BeApproximately(jdAtNextDay, 1e-5);
+        }
+    }
+}
