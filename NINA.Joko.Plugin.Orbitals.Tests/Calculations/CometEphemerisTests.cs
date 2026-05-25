@@ -11,8 +11,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
 
     /// <summary>
     /// End-to-end tests covering the full elements -> Kepler propagation -> topocentric
-    /// RA/Dec pipeline (Kepler.CalculateOrbitalElements + Kepler.GetApparentPosition +
-    /// NOVAS ecliptic/equatorial transforms), exercised across the full range of
+    /// RA/Dec pipeline (Kepler.CalculateOrbitalElements + Kepler.GetTopocentricJ2000Position
+    /// + NOVAS ecliptic-to-equatorial rotation), exercised across the full range of
     /// orbital eccentricities using real comet ephemerides from JPL Horizons.
     ///
     /// Each case cites the exact Horizons elements query and the exact Horizons
@@ -22,12 +22,13 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
     /// propagation time is essentially zero.
     ///
     /// Reference values used here are Horizons' "R.A.___(ICRF)___DEC" column, i.e.
-    /// the astrometric ICRS position. The plugin's GetApparentPosition resolves the
-    /// vector via NOVAS at J2000 frame and does NOT add the precession-to-date,
-    /// nutation, annual aberration, or light-deflection corrections that Horizons'
-    /// "a-appar" column carries -- so comparing against ICRS is the apples-to-apples
-    /// check. The systematic offset between ICRS and apparent for these dates is
-    /// ~17-22 arcmin, which would otherwise swamp the test signal.
+    /// the astrometric ICRS position. The plugin's GetTopocentricJ2000Position resolves
+    /// the vector in the J2000 mean equatorial frame and does NOT add the
+    /// precession-to-date, nutation, annual aberration, or light-deflection
+    /// corrections that Horizons' "a-appar" column carries -- so comparing against
+    /// ICRS is the apples-to-apples check. The systematic offset between ICRS and
+    /// apparent for these dates is ~17-22 arcmin, which would otherwise swamp the
+    /// test signal.
     ///
     /// Tolerance is set at ~5 arcmin to absorb the remaining residuals from
     /// Kepler-only propagation (vs. Horizons' n-body model), the UTC/TT

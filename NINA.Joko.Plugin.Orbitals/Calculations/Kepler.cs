@@ -240,22 +240,43 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             PosVector pos,
             ref PosVector outputPos);
 
-        public static RectangularCoordinates GetApparentPosition(
+        /// <summary>
+        /// Returns the object's topocentric position vector in the J2000 mean equatorial
+        /// (ICRS-equivalent) frame, i.e. the geometric direction from the observer to the
+        /// object at <see cref="OrbitalPosition.AsOf_jd"/>.
+        ///
+        /// This is NOT a true apparent place: no precession-to-date, no nutation, no
+        /// annual aberration, no light-time correction. The plugin's downstream code
+        /// treats the resulting coordinates as <c>Epoch.J2000</c>, which matches what
+        /// NINA expects for target coordinates (the mount/driver handles JNow at slew
+        /// time). For 2024 dates the difference between this and Horizons "apparent" is
+        /// dominated by precession (~18 arcmin).
+        ///
+        /// Math: the object's heliocentric ecliptic position is rotated to J2000
+        /// equatorial; Earth's heliocentric equatorial position (from NOVAS) and the
+        /// observer's geocentric equatorial position (from <see cref="GetPVOnEarthSurface"/>)
+        /// are subtracted. Everything stays in one frame, so there's no frame mix-up.
+        /// </summary>
+        public static RectangularCoordinates GetTopocentricJ2000Position(
             OrbitalPosition orbitalPosition,
             NOVAS.Body orbitalCenterBody,
             Angle latitude,
             Angle longitude,
             double elevation) {
+            // Earth's heliocentric position (NOVAS returns ICRS / J2000 mean equatorial).
             var centerPosition = NOVAS.BodyPositionAndVelocity(orbitalPosition.AsOf_jd, orbitalCenterBody, NOVAS.SolarSystemOrigin.SolarCenterOfMass);
+
+            // Observer's geocentric position (NOVAS geo_posvel returns J2000 mean equatorial).
             var asof = NOVAS.JulianToDateTime(orbitalPosition.AsOf_jd);
             var pvOnSurface = GetPVOnEarthSurface(asof, latitude, longitude, elevation);
 
-            var outputV = default(PosVector);
-            NOVAS_Equ2Ecl_vec(SOFA.J2000_jd, NOVAS.CoordinateSystem.CIOOfDate, NOVAS.Accuracy.Full, PosVector.From(centerPosition.Position), ref outputV);
-            var earthEclipticPosition = outputV.ToRectangularCoordinates();
-            var objectPosition = orbitalPosition.EclipticCoordinates - (earthEclipticPosition + pvOnSurface.Position);
-            NOVAS_Ecl2Equ_vec(SOFA.J2000_jd, NOVAS.CoordinateSystem.CIOOfDate, NOVAS.Accuracy.Full, PosVector.From(objectPosition), ref outputV);
-            return outputV.ToRectangularCoordinates();
+            // Object's heliocentric position is in the orbital plane reduced to J2000
+            // mean ecliptic; rotate it once into J2000 mean equatorial via NOVAS.
+            var objectEquatorial = default(PosVector);
+            NOVAS_Ecl2Equ_vec(SOFA.J2000_jd, NOVAS.CoordinateSystem.CIOOfDate, NOVAS.Accuracy.Full, PosVector.From(orbitalPosition.EclipticCoordinates), ref objectEquatorial);
+
+            // All three vectors are now in the same frame. Subtract.
+            return objectEquatorial.ToRectangularCoordinates() - centerPosition.Position - pvOnSurface.Position;
         }
 
         public static OrbitalPosition CalculateOrbitalElements(

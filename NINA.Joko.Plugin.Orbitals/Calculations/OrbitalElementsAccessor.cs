@@ -284,12 +284,12 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             var jdtt = AstroUtil.GetJulianDate(asof);
             var startPosition = Kepler.CalculateOrbitalElements(orbitalElements, jdtt);
             var nextPosition = Kepler.CalculateOrbitalElements(orbitalElements, jdtt + AstrometricConstants.JD_SEC * rateDriftDelta.TotalSeconds);
-            var startApparentPosition = Kepler.GetApparentPosition(startPosition, NOVAS.Body.Earth, latitude, longitude, elevation);
-            var startCoordinates = startApparentPosition.ToPolar();
-            var nextApparentPosition = Kepler.GetApparentPosition(nextPosition, NOVAS.Body.Earth, latitude, longitude, elevation);
-            var nextCoordinates = nextApparentPosition.ToPolar();
+            var startTopocentricPosition = Kepler.GetTopocentricJ2000Position(startPosition, NOVAS.Body.Earth, latitude, longitude, elevation);
+            var startCoordinates = startTopocentricPosition.ToPolar();
+            var nextTopocentricPosition = Kepler.GetTopocentricJ2000Position(nextPosition, NOVAS.Body.Earth, latitude, longitude, elevation);
+            var nextCoordinates = nextTopocentricPosition.ToPolar();
             var trackingRate = SiderealShiftTrackingRate.Create(startCoordinates, nextCoordinates, rateDriftDelta);
-            return new OrbitalPositionVelocity(asof, startApparentPosition, null, startCoordinates, trackingRate);
+            return new OrbitalPositionVelocity(asof, startTopocentricPosition, null, startCoordinates, trackingRate);
         }
 
         private string GetObjectTypeSavePath(OrbitalObjectTypeEnum objectType) {
