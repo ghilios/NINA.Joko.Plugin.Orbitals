@@ -227,6 +227,10 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                     progress?.Report(new ApplicationStatus() {
                         Status = $"Updating {objectType.ToDescriptionString()} Elements"
                     });
+                    // OrbitalsPlugin's ImportingConstructor creates OrbitalElementsDirectory
+                    // at plugin load, but defend against the directory being deleted at
+                    // runtime (e.g. user troubleshooting) so Update doesn't silently fail.
+                    Directory.CreateDirectory(Path.GetDirectoryName(tmpPath));
                     var backend = OrbitalElementsBackend.Create(objectType, DateTime.Now, elements.Select(e => e.ToOrbitalElements()), ct);
                     using (var fs = new FileStream(tmpPath, FileMode.Create, FileAccess.Write, FileShare.None))
                     using (var gs = new GZipStream(fs, CompressionLevel.Optimal)) {
@@ -347,6 +351,8 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                     progress?.Report(new ApplicationStatus() {
                         Status = $"Updating JWST Vector Table"
                     });
+                    // Same defensive check as Update -- see comment there.
+                    Directory.CreateDirectory(Path.GetDirectoryName(tmpPath));
                     using (var fs = new FileStream(tmpPath, FileMode.Create, FileAccess.Write, FileShare.None))
                     using (var gs = new GZipStream(fs, CompressionLevel.Optimal)) {
                         ProtoBuf.Serializer.SerializeWithLengthPrefix<PVTable>(gs, pvTable, ProtoBuf.PrefixStyle.Base128, 1);

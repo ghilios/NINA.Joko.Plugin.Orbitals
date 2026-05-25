@@ -8,7 +8,9 @@ using NINA.Joko.Plugin.Orbitals.Interfaces;
 using NINA.Joko.Plugin.Orbitals.Tests.TestHelpers;
 using NUnit.Framework;
 using System;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 
 namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
@@ -16,11 +18,28 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
     [TestFixture, Category("RequiresSqlite")]
     public class OrbitalElementsAccessorTests {
 
+        // OrbitalElementsAccessor.Update serializes to a file under
+        // OrbitalsPlugin.OrbitalElementsDirectory. Without isolation, tests would
+        // (a) fail on a fresh CI runner because that directory doesn't exist, and
+        // (b) clobber a dev machine's real NINA comet/asteroid bundle. Redirect the
+        // path to a per-fixture temp directory via the private setter (reflection)
+        // and restore on teardown.
+        private static readonly PropertyInfo ElementsDirectoryProperty = typeof(OrbitalsPlugin)
+            .GetProperty(nameof(OrbitalsPlugin.OrbitalElementsDirectory), BindingFlags.Public | BindingFlags.Static);
+
+        private string originalElementsDirectory;
+        private string testElementsDirectory;
+
         private Mock<IOrbitalsOptions> optionsMock;
         private OrbitalElementsAccessor sut;
 
         [SetUp]
         public void Setup() {
+            originalElementsDirectory = (string)ElementsDirectoryProperty.GetValue(null);
+            testElementsDirectory = Path.Combine(Path.GetTempPath(), "OrbitalsTests_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(testElementsDirectory);
+            ElementsDirectoryProperty.SetValue(null, testElementsDirectory);
+
             optionsMock = new Mock<IOrbitalsOptions>();
             optionsMock.SetupGet(o => o.CometAccessor).Returns(OrbitalElementsAccessorEnum.JPL);
             sut = new OrbitalElementsAccessor(optionsMock.Object);
@@ -29,6 +48,10 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
         [TearDown]
         public void Teardown() {
             (sut as IDisposable)?.Dispose();
+            ElementsDirectoryProperty.SetValue(null, originalElementsDirectory);
+            if (Directory.Exists(testElementsDirectory)) {
+                try { Directory.Delete(testElementsDirectory, recursive: true); } catch { /* best-effort */ }
+            }
         }
 
         [Test]
