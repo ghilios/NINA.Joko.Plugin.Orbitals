@@ -112,11 +112,10 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
             row.G.Should().BeApproximately(0.150, 1e-3, "G should come from column 10");
         }
 
-        [Test, Explicit, Category("RequiresNatives")]
+        [Test]
         public void CalendarDateAndFractionToJulian_KnownDates_MatchUSNOReference() {
-            // REF: USNO. NOVAS.JulianDate is a P/Invoke into NOVAS31lib.dll; this test
-            // is Explicit/RequiresNatives until Phase 7 copies the native libraries into
-            // the test bin directory.
+            // REF: USNO. NOVAS.JulianDate is a P/Invoke into NOVAS31lib.dll which the
+            // CopyNinaNativeAssets target wires into the test bin under External/x64/NOVAS.
             // J2000.0 = 2000-Jan-01.5 -> yyyymmdd.fraction = 20000101.5 -> JD 2451545.0.
             var jd = JPLAccessor.CalendarDateAndFractionToJulian(20000101.5);
             jd.Should().BeApproximately(2451545.0, 1e-2);

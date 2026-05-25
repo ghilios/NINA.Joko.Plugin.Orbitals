@@ -40,7 +40,7 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
             actual.Should().BeApproximately(Math.PI - 1e-6, 1e-12);
         }
 
-        [Test, Explicit, Category("RequiresNatives")]
+        [Test]
         public void J2000MeanObliquity_MatchesIAUReference() {
             // REF: IAU 2006 (Capitaine et al.) ecliptic obliquity at J2000.0
             // = 84381.406 arcsec = 23.4392794444... degrees.
