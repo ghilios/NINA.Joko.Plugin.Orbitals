@@ -2,6 +2,14 @@
 
 This branch targets **NINA 3.2.0.9001** and **.NET 8** (`net8.0-windows7.0`). It exists alongside `develop`, which targets **NINA 3.3.0.1003-nightly** and **.NET 10**. Most ongoing feature work lands on `develop`; this branch holds the same fixes, tests, and CI but pinned to the 3.2-compatible toolchain.
 
+## PR target branch
+
+All PRs opened from this branch — or from any `backport/develop-to-3.2*` branch — **must target `release/3.2`**, not `develop`. `develop` is the NINA 3.3 line and a separate release. When using `gh pr create`, always pass `--base release/3.2`. If a PR is opened against the wrong base, re-target it before merging.
+
+## Porting from develop
+
+When `develop` has new commits that need to flow back here, use the `port-from-develop` skill at `.claude/skills/port-from-develop/SKILL.md`. It tracks the last-ported develop commit in `.claude/skills/port-from-develop/last-ported-commit` so each run only re-merges what's new. The skill also enumerates the canonical 3.2 pin-back checklist (NINA.Plugin version, TFM, SQLite FTS5 loader, workflow paths) and explicitly forbids changing `AssemblyVersion` / `AssemblyFileVersion` during the merge — those belong to the 3.2 release line and only move under deliberate release commits here.
+
 A few concrete differences from `develop` you must preserve when editing here:
 
 - `NINA.Joko.Plugin.Orbitals/NINA.Joko.Plugin.Orbitals.csproj` and `TestApp/TestApp.csproj` — `<PackageReference Include="NINA.Plugin" Version="3.2.0.9001" />`. Do **not** bump to 3.3.x on this branch.
