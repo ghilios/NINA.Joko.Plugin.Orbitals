@@ -21,4 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\NINA.Joko.Plugin.Orbitals\NINA.Joko.Plugin.Orbitals.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="TestHelpers\ReferenceData\**\*" Exclude="TestHelpers\ReferenceData\.gitkeep" />
+  </ItemGroup>
 </Project>
