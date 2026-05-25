@@ -29,7 +29,10 @@ namespace NINA.Joko.Plugin.Orbitals {
 
     [Export(typeof(IPluginManifest))]
     public class OrbitalsPlugin : PluginBase {
-        public static readonly string OrbitalElementsDirectory = Path.Combine(CoreUtil.APPLICATIONTEMPPATH, "OrbitalElements");
+        // Property (not readonly field) so tests can redirect to a per-fixture temp
+        // directory via reflection. Production code only assigns this once, in the
+        // ImportingConstructor below; the private setter prevents incidental writes.
+        public static string OrbitalElementsDirectory { get; private set; } = Path.Combine(CoreUtil.APPLICATIONTEMPPATH, "OrbitalElements");
 
         [ImportingConstructor]
         public OrbitalsPlugin(IProfileService profileService) {

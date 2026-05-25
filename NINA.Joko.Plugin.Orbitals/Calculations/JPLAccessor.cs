@@ -255,7 +255,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                 mapper.Property(x => x.node, headerLengths[6] + 1);
                 mapper.Property(x => x.M, headerLengths[7] + 1);
                 mapper.Property(x => x.H, headerLengths[8] + 1);
-                mapper.Property(x => x.H, headerLengths[9] + 1);
+                mapper.Property(x => x.G, headerLengths[9] + 1);
                 mapper.Property(x => x.ref_, Window.Trailing);
                 var options = new FixedLengthOptions() {
                     IsFirstRecordHeader = false,
@@ -323,7 +323,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                 mapper.Property(x => x.node, headerLengths[7] + 1);
                 mapper.Property(x => x.M, headerLengths[8] + 1);
                 mapper.Property(x => x.H, headerLengths[9] + 1);
-                mapper.Property(x => x.H, headerLengths[10] + 1);
+                mapper.Property(x => x.G, headerLengths[10] + 1);
                 mapper.Property(x => x.ref_, Window.Trailing);
                 var options = new FixedLengthOptions() {
                     IsFirstRecordHeader = false,
