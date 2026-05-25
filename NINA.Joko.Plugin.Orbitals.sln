@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NINA.Joko.Plugin.Orbitals",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestApp", "TestApp\TestApp.csproj", "{D248D27E-74EC-4535-B10A-54F6629CC708}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NINA.Joko.Plugin.Orbitals.Tests", "NINA.Joko.Plugin.Orbitals.Tests\NINA.Joko.Plugin.Orbitals.Tests.csproj", "{ECC07833-71DC-42A6-8630-7DB61084A949}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -31,6 +33,14 @@ Global
 		{D248D27E-74EC-4535-B10A-54F6629CC708}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D248D27E-74EC-4535-B10A-54F6629CC708}.Release|x64.ActiveCfg = Release|x64
 		{D248D27E-74EC-4535-B10A-54F6629CC708}.Release|x64.Build.0 = Release|x64
+		{ECC07833-71DC-42A6-8630-7DB61084A949}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ECC07833-71DC-42A6-8630-7DB61084A949}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ECC07833-71DC-42A6-8630-7DB61084A949}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{ECC07833-71DC-42A6-8630-7DB61084A949}.Debug|x64.Build.0 = Debug|Any CPU
+		{ECC07833-71DC-42A6-8630-7DB61084A949}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ECC07833-71DC-42A6-8630-7DB61084A949}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ECC07833-71DC-42A6-8630-7DB61084A949}.Release|x64.ActiveCfg = Release|Any CPU
+		{ECC07833-71DC-42A6-8630-7DB61084A949}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
