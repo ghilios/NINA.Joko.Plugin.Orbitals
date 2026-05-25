@@ -37,6 +37,24 @@ description: Use when bringing new develop commits into release/3.2 (the NINA 3.
 11. **Commit pins + state.** Stage the pin-back changes and the state file. Commit: `Port develop $(LAST_SHORT)..$(NEW_SHORT) — pin to NINA 3.2.0.9001 / .NET 8`.
 12. **Push + PR.** Push the branch. Open a PR with **base = `release/3.2`** (never `develop`). See CLAUDE.md "PR target branch" section.
 
+## Release workflow trigger model (read before editing build-and-release.yml)
+
+`build-and-release.yml` triggers on tag push only:
+
+```yaml
+on:
+  push:
+    tags:
+      - 'release/v[0-9]+.[0-9]+.[0-9]+.[0-9]+'
+```
+
+Tag triggers in GitHub Actions ignore branch — any tag matching the pattern fires the workflow at **the tag's commit**, and the workflow file at that commit is what executes. So:
+
+- A `release/v3.1.0.x` tag created on a commit in the `release/3.2` lineage uses that commit's `build-and-release.yml`, which has `PLUGIN_MANIFEST_PATH: "o/Orbitals/3.2.0"` and the `net8.0-windows7.0` build dir → publishes to the 3.2 manifest path.
+- A `release/v3.3.x.x` tag on `develop`'s lineage uses develop's workflow, which has `o/Orbitals/3.3.0` and `net10.0-windows7.0` → publishes to the 3.3 manifest path.
+
+**Consequence for ports:** the trigger itself never needs editing on this branch. What MUST hold after every port is that `release/3.2`'s copy of `build-and-release.yml` keeps the 3.2-line values (`PLUGIN_MANIFEST_PATH`, build dir). If develop has drifted those, the pin-back step has to put them back — otherwise the next `release/v3.1.0.x` tag publishes the manifest to the wrong directory. These are in the pin checklist below; treat the row about `build-and-release.yml` as load-bearing.
+
 ## 3.2 pin checklist
 
 These values must hold after the merge. Audit each one; only edit if develop has drifted it.
@@ -53,6 +71,7 @@ These values must hold after the merge. Audit each one; only edit if develop has
 | `TestApp/TestApp.csproj` | `<TargetFramework>` | `net8.0-windows7.0` |
 | `TestApp/TestApp.csproj` | `<PackageReference Include="NINA.Plugin">` | `3.2.0.9001` |
 | `TestApp/TestApp.csproj` | `System.ComponentModel.Composition` | `8.0.0` (present) |
+| `.github/workflows/build-and-release.yml` | `on.push.tags` pattern | `'release/v[0-9]+.[0-9]+.[0-9]+.[0-9]+'` (unchanged — same pattern on both lines; the branch context comes from the tag's commit, not the trigger) |
 | `.github/workflows/build-and-release.yml` | `PLUGIN_MANIFEST_PATH` | `"o/Orbitals/3.2.0"` |
 | `.github/workflows/build-and-release.yml` | `Prepare package` build dir | `net8.0-windows7.0` |
 | `.github/workflows/tests.yml` | trigger branches | `release/3.2`, `backport/develop-to-3.2*` |
