@@ -52,22 +52,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
         }
 
         [Test]
-        public void KmPerAu_MatchesIAU2012NominalValue() {
-            // REF: IAU 2012 Resolution B2: 1 au = 149,597,870,700 m exactly.
-            // = 149597870.700 km.
-            // Implementation uses 1.49597870691e8 km, which is 9 m short of the IAU value.
-            // SUSPECTED MINOR PRECISION DRIFT: see AstrometricConstants.cs:24
-            // Tolerance 0.01 km (10 m). Test expected to PASS at current implementation
-            // (drift is 0.009 km), but the explicit BugCandidate variant below
-            // asserts the exact IAU value and is meant to surface the drift if reviewed.
-            AstrometricConstants.KM_PER_AU.Should().BeApproximately(149597870.700, 0.01);
-        }
-
-        [Test, Explicit, Category("BugCandidate")]
         public void KmPerAu_ExactlyMatchesIAU2012Nominal() {
-            // SUSPECTED PRECISION DRIFT: AstrometricConstants.cs:24 uses 1.49597870691e8
-            // (older value). IAU 2012 nominal AU is 149,597,870,700 m exactly.
-            // Drift is ~9 m, harmless for visual astrometry but pedantically wrong.
+            // REF: IAU 2012 Resolution B2: 1 au = 149,597,870,700 m exactly.
             AstrometricConstants.KM_PER_AU.Should().Be(149597870.700);
         }
 

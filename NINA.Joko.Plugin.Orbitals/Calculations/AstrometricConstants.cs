@@ -21,8 +21,9 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         public const double EARTH_MU = 3.986004418e14; // Earth gravitational parameter, m^3/s^2
         public const long SEC_PER_DAY = 60L * 60L * 24L;
         public const double JD_SEC = 1.0d / SEC_PER_DAY;
-        public const double KM_PER_AU = 1.49597870691e8;
-        public const double M_PER_AU = 1.49597870691e11;
+        // IAU 2012 Resolution B2: 1 au = 149,597,870,700 m exactly.
+        public const double KM_PER_AU = 1.49597870700e8;
+        public const double M_PER_AU = 1.49597870700e11;
 
         // Conversion factor for m^3/s^2 to km^3/d^2
         public const double M3_S2_TO_KM3_D2_FACTOR = SEC_PER_DAY * SEC_PER_DAY / 1000000000.0d;
