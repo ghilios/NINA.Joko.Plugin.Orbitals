@@ -50,7 +50,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
         public PVTableObject Clone() {
             var cloned = new PVTableObject(orbitalElementsAccessor, this.Name, customHorizon, profileService);
-            cloned.SetDateAndPosition(cloned._referenceDate, cloned._latitude, cloned._longitude);
+            cloned.SetDateAndPosition(this._referenceDate, this._latitude, this._longitude);
             return cloned;
         }
     }

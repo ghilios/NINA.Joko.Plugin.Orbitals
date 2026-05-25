@@ -33,7 +33,10 @@ jobs:
       - name: Build .NET Assemblies
         run: |
           dotnet restore "NINA.Joko.Plugin.Orbitals/NINA.Joko.Plugin.Orbitals.csproj"
-          dotnet build "NINA.Joko.Plugin.Orbitals/NINA.Joko.Plugin.Orbitals.csproj" -c Release -p:Platform=AnyCPU -p:PostBuildEvent= -p:Version=${{ env.VERSION }}
+          # AssemblyInfo.cs is the source of truth for AssemblyVersion (GenerateAssemblyInfo=false
+          # in the csproj), so don't pass -p:Version — it would be silently ignored and could
+          # mislead future maintainers into thinking the tag controls the embedded version.
+          dotnet build "NINA.Joko.Plugin.Orbitals/NINA.Joko.Plugin.Orbitals.csproj" -c Release -p:Platform=AnyCPU -p:PostBuildEvent=
 
       - name: Prepare package
         run: |

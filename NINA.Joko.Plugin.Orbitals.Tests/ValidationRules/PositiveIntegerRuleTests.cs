@@ -12,7 +12,7 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ValidationRules {
 
         [TestCase("1", true)]
         [TestCase("100", true)]
-        [TestCase("0", false)]
+        [TestCase("0", true)]
         [TestCase("-1", false)]
         [TestCase("-100", false)]
         [TestCase("abc", false)]
