@@ -427,7 +427,16 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                 }
 
                 if (!orbitalElements.q_Perihelion_au.HasValue) {
-                    orbitalElements.q_Perihelion_au = (1 + ecc) * orbitalElements.a_SemiMajorAxis_au.Value;
+                    // Periapsis distance:
+                    //   Elliptic   (e < 1): q = a (1 - e)
+                    //   Hyperbolic (e > 1): q = a (e - 1) = -a (1 - e)  (with a stored
+                    //                       as the positive value per the convention
+                    //                       at line 280 above).
+                    var q = orbitalElements.a_SemiMajorAxis_au.Value * (1d - ecc);
+                    if (ecc > 1d) {
+                        q = -q;
+                    }
+                    orbitalElements.q_Perihelion_au = q;
                 }
             } else {
                 // Parabolic orbit. Use Barker's equation

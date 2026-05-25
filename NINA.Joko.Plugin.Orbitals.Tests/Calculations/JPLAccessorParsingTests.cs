@@ -73,17 +73,15 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
             ceres.node.Should().BeApproximately(80.2549325, 1e-7);
             ceres.M.Should().BeApproximately(60.0728817, 1e-7);
             ceres.H.Should().BeApproximately(3.34, 1e-2);
+            ceres.G.Should().BeApproximately(0.120, 1e-3);
             ceres.GetName().Should().Be("1/Ceres");
         }
 
         [Test]
-        public void UnnumberedAsteroidResponse_ParsesRowIntoH_AndDropsG_DueToDuplicateMapping() {
-            // Documents current behavior: the parser at JPLAccessor.cs:258 maps column 10
-            // to .H (a duplicate of line 257) instead of .G. FlatFiles uses the FIRST
-            // mapping for the property (column 9 wins), so .H gets column 9's value and
-            // column 10 is read-and-discarded -- .G stays at its default 0.
-            // The BugCandidate test below asserts the CORRECT behavior (H from col 9,
-            // G from col 10) and is Explicit.
+        public void UnnumberedAsteroidResponse_ParsesRowIntoExpectedFields_IncludingBothHAndG() {
+            // Both H (absolute magnitude, column 9) and G (magnitude slope parameter,
+            // column 10) are populated. Prior to the fix at JPLAccessor.cs:258 the
+            // mapper had a duplicate H mapping, leaving G silently at the default 0.
             using var response = new JPLUnnumberedAsteroidResponse(FromString(UnnumberedAsteroidFixture));
 
             var rows = response.Response.ToList();
@@ -93,23 +91,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
             row.name.Trim().Should().Be("1990 SH1");
             row.epoch.Should().Be(60200);
             row.a.Should().BeApproximately(2.450123456, 1e-9);
-            row.H.Should().BeApproximately(17.10, 1e-2, "column 9 wins via the first .H mapping");
-            row.G.Should().Be(0.0, "column 10 was mapped to .H instead of .G, so G stays default");
-        }
-
-        [Test, Explicit, Category("BugCandidate")]
-        public void UnnumberedAsteroidResponse_ShouldPopulateBoth_H_And_G() {
-            // SUSPECTED BUG: JPLAccessor.cs:258 mapper.Property(x => x.H, headerLengths[9] + 1)
-            // is a duplicate of line 257. The JPL un-numbered asteroid format has
-            // H (absolute magnitude) followed by G (magnitude slope parameter).
-            // Should map column 10 to x.G, not x.H.
-            using var response = new JPLUnnumberedAsteroidResponse(FromString(UnnumberedAsteroidFixture));
-
-            var rows = response.Response.ToList();
-            var row = rows[0];
-
-            row.H.Should().BeApproximately(17.10, 1e-2, "H should come from column 9");
-            row.G.Should().BeApproximately(0.150, 1e-3, "G should come from column 10");
+            row.H.Should().BeApproximately(17.10, 1e-2);
+            row.G.Should().BeApproximately(0.150, 1e-3);
         }
 
         [Test]

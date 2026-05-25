@@ -160,16 +160,11 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
             elements.a_SemiMajorAxis_au.Value.Should().BeApproximately(2.0, AssertTolerance);
         }
 
-        [Test, Explicit, Category("BugCandidate")]
-        public void OrbitalElements_QFallbackFromA_ComputesPerihelionDistance() {
-            // SUSPECTED BUG: Kepler.cs:409 sets q = (1 + e) * a, which is aphelion.
-            // Correct: perihelion q = a * (1 - e) for elliptic orbits.
-            //
-            // This fallback only fires when callers supply 'a' but not 'q'.
-            // Most JPL/MPC ingestion paths supply 'q' directly, so live paths
-            // usually side-step it -- but anything that does fall through gets
-            // the maximum orbital distance written into the perihelion slot.
-            var elements = new Kepler.OrbitalElements("test") {
+        [Test]
+        public void OrbitalElements_QFallbackFromA_Elliptic_ComputesPerihelionDistance() {
+            // q fallback fires when callers supply 'a' but not 'q'.
+            // Elliptic: q = a(1 - e). a=2, e=0.5 -> q=1.0.
+            var elements = new Kepler.OrbitalElements("test-elliptic") {
                 PrimaryGravitationalParameter = Kepler.GravitationalParameter.Sun,
                 Epoch_jd = 2451545.0,
                 a_SemiMajorAxis_au = 2.0,
@@ -178,15 +173,34 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
                 w_ArgOfPerihelion_rad = 0.0,
                 node_LongitudeOfAscending_rad = 0.0,
                 M_MeanAnomalyAtEpoch = 0.0,
-                // q deliberately omitted so the fallback at Kepler.cs:408-410 runs.
+                // q deliberately omitted -- exercises the q-fallback in Kepler.cs.
             };
 
             Kepler.CalculateOrbitalElements(elements, elements.Epoch_jd, SolverTolerance);
 
-            // CORRECT: q = a(1 - e) = 2.0 * 0.5 = 1.0
             elements.q_Perihelion_au.Should().NotBeNull();
-            elements.q_Perihelion_au!.Value.Should().BeApproximately(1.0, 1e-12,
-                "perihelion distance is a*(1-e), not a*(1+e)");
+            elements.q_Perihelion_au!.Value.Should().BeApproximately(1.0, 1e-12);
+        }
+
+        [Test]
+        public void OrbitalElements_QFallbackFromA_Hyperbolic_ComputesPerihelionDistance() {
+            // Hyperbolic: q = a(e - 1) with a stored as positive (per Kepler.cs:280
+            // sign-flip convention). a=2, e=1.5 -> q = 2*(1.5-1) = 1.0.
+            var elements = new Kepler.OrbitalElements("test-hyperbolic") {
+                PrimaryGravitationalParameter = Kepler.GravitationalParameter.Sun,
+                Epoch_jd = 2451545.0,
+                a_SemiMajorAxis_au = 2.0,
+                e_Eccentricity = 1.5,
+                i_Inclination_rad = 0.0,
+                w_ArgOfPerihelion_rad = 0.0,
+                node_LongitudeOfAscending_rad = 0.0,
+                M_MeanAnomalyAtEpoch = 0.0,
+            };
+
+            Kepler.CalculateOrbitalElements(elements, elements.Epoch_jd, SolverTolerance);
+
+            elements.q_Perihelion_au.Should().NotBeNull();
+            elements.q_Perihelion_au!.Value.Should().BeApproximately(1.0, 1e-12);
         }
 
         [Test]
