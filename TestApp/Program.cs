@@ -54,8 +54,8 @@ namespace TestApp {
                     Console.WriteLine($"Solving for {cometNameLower}");
                     var orbitalElements = cometElements.ToOrbitalElements();
                     var orbitalPosition = Kepler.CalculateOrbitalElements(orbitalElements, nowJd);
-                    var orbitalApparentPosition = Kepler.GetApparentPosition(orbitalPosition, NOVAS.Body.Earth, latitude, longitude, elevation);
-                    var orbitalCoordinates = orbitalApparentPosition.ToPolar();
+                    var orbitalTopocentricPosition = Kepler.GetTopocentricJ2000Position(orbitalPosition, NOVAS.Body.Earth, latitude, longitude, elevation);
+                    var orbitalCoordinates = orbitalTopocentricPosition.ToPolar();
                 }
             }
 

@@ -107,7 +107,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
         public TLEObject Clone() {
             var cloned = new TLEObject(satellite.Tle, customHorizon, profileService, epoch, rateDriftDelta);
-            cloned.SetDateAndPosition(cloned._referenceDate, cloned._latitude, cloned._longitude);
+            cloned.SetDateAndPosition(this._referenceDate, this._latitude, this._longitude);
             return cloned;
         }
     }

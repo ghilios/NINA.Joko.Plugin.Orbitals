@@ -137,8 +137,9 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
                 Conditions = new ObservableCollection<ISequenceCondition>(Conditions.Select(t => t.Clone() as ISequenceCondition))
             };
 
-            clone.TargetObject.Tle = TargetObject.Tle;
             clone.Target.PositionAngle = this.Target.PositionAngle;
+            clone.Target.InputCoordinates = this.Target.InputCoordinates.Clone();
+            clone.Target.DeepSkyObject = (this.Target.DeepSkyObject as TLEObject).Clone();
 
             foreach (var item in clone.Items) {
                 item.AttachNewParent(clone);
