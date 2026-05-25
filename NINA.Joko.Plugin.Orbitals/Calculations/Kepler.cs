@@ -242,20 +242,21 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
         /// <summary>
         /// Returns the object's topocentric position vector in the J2000 mean equatorial
-        /// (ICRS-equivalent) frame, i.e. the geometric direction from the observer to the
-        /// object at <see cref="OrbitalPosition.AsOf_jd"/>.
+        /// (ICRS-equivalent) frame: geometric direction from the observer to the object,
+        /// with the object's position taken at <see cref="OrbitalPosition.AsOf_jd"/>
+        /// and Earth/observer positions taken at that same instant.
         ///
-        /// This is NOT a true apparent place: no precession-to-date, no nutation, no
-        /// annual aberration, no light-time correction. The plugin's downstream code
-        /// treats the resulting coordinates as <c>Epoch.J2000</c>, which matches what
-        /// NINA expects for target coordinates (the mount/driver handles JNow at slew
-        /// time). For 2024 dates the difference between this and Horizons "apparent" is
-        /// dominated by precession (~18 arcmin).
+        /// This is NOT a true apparent place -- no precession-to-date, no nutation, no
+        /// annual aberration. Light-time correction is the caller's responsibility: pass
+        /// an OrbitalPosition whose AsOf_jd is t_observe - distance/c if you want light-
+        /// time-corrected coordinates, OR call the overload that accepts a separate
+        /// observerJdtt parameter (which uses different times for the object and the
+        /// observer/Earth, as required by a strict light-time treatment).
         ///
-        /// Math: the object's heliocentric ecliptic position is rotated to J2000
-        /// equatorial; Earth's heliocentric equatorial position (from NOVAS) and the
-        /// observer's geocentric equatorial position (from <see cref="GetPVOnEarthSurface"/>)
-        /// are subtracted. Everything stays in one frame, so there's no frame mix-up.
+        /// The plugin's downstream code treats the resulting coordinates as
+        /// <c>Epoch.J2000</c>, which matches what NINA expects for target coordinates
+        /// (the mount/driver handles JNow at slew time). For 2024 dates the difference
+        /// between this and Horizons "a-appar" is dominated by precession (~18 arcmin).
         /// </summary>
         public static RectangularCoordinates GetTopocentricJ2000Position(
             OrbitalPosition orbitalPosition,
@@ -263,11 +264,32 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             Angle latitude,
             Angle longitude,
             double elevation) {
-            // Earth's heliocentric position (NOVAS returns ICRS / J2000 mean equatorial).
-            var centerPosition = NOVAS.BodyPositionAndVelocity(orbitalPosition.AsOf_jd, orbitalCenterBody, NOVAS.SolarSystemOrigin.SolarCenterOfMass);
+            return GetTopocentricJ2000Position(
+                orbitalPosition,
+                observerJdtt: orbitalPosition.AsOf_jd,
+                orbitalCenterBody,
+                latitude, longitude, elevation);
+        }
 
-            // Observer's geocentric position (NOVAS geo_posvel returns J2000 mean equatorial).
-            var asof = NOVAS.JulianToDateTime(orbitalPosition.AsOf_jd);
+        /// <summary>
+        /// Light-time-aware variant: <paramref name="orbitalPosition"/>'s AsOf_jd is
+        /// the time at which the object's position was computed (= t_observe - lt for
+        /// a light-time-corrected pass), while <paramref name="observerJdtt"/> is when
+        /// the observer is actually observing. Earth's heliocentric position and the
+        /// observer's geocentric position are both evaluated at observerJdtt.
+        /// </summary>
+        public static RectangularCoordinates GetTopocentricJ2000Position(
+            OrbitalPosition orbitalPosition,
+            double observerJdtt,
+            NOVAS.Body orbitalCenterBody,
+            Angle latitude,
+            Angle longitude,
+            double elevation) {
+            // Earth's heliocentric position at the OBSERVER's time (NOVAS returns ICRS).
+            var centerPosition = NOVAS.BodyPositionAndVelocity(observerJdtt, orbitalCenterBody, NOVAS.SolarSystemOrigin.SolarCenterOfMass);
+
+            // Observer's geocentric position at the OBSERVER's time (NOVAS geo_posvel).
+            var asof = NOVAS.JulianToDateTime(observerJdtt);
             var pvOnSurface = GetPVOnEarthSurface(asof, latitude, longitude, elevation);
 
             // Object's heliocentric position is in the orbital plane reduced to J2000
@@ -275,7 +297,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             var objectEquatorial = default(PosVector);
             NOVAS_Ecl2Equ_vec(SOFA.J2000_jd, NOVAS.CoordinateSystem.CIOOfDate, NOVAS.Accuracy.Full, PosVector.From(orbitalPosition.EclipticCoordinates), ref objectEquatorial);
 
-            // All three vectors are now in the same frame. Subtract.
+            // All three vectors are now in the same J2000 mean equatorial frame.
             return objectEquatorial.ToRectangularCoordinates() - centerPosition.Position - pvOnSurface.Position;
         }
 

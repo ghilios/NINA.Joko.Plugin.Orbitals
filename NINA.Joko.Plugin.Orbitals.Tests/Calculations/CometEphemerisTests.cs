@@ -49,10 +49,12 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
         private static readonly Angle GreenwichLon = Angle.ByDegree(-0.0014);
         private const double GreenwichElev_m = 46.0;
 
-        // 5 arcmin in RA-hours and Dec-degrees. RA is stored as hours by NINA's
-        // Coordinates type; 5 arcmin = 5/60 deg = (5/60)/15 hours = 0.00555... h.
-        private const double Tolerance_Hours = 5.0 / 60.0 / 15.0;
-        private const double Tolerance_Degrees = 5.0 / 60.0;
+        // 30 arcsec, made possible by the light-time correction in GetObjectPV.
+        // Prior to that fix the tolerance was 5 arcmin (10x looser) to absorb the
+        // light-time error. Residuals against Horizons ICRS are now ~1-3 arcsec
+        // dominated by two-body vs n-body propagation drift.
+        private const double Tolerance_Hours = 30.0 / 3600.0 / 15.0;
+        private const double Tolerance_Degrees = 30.0 / 3600.0;
 
         private OrbitalElementsAccessor sut;
 

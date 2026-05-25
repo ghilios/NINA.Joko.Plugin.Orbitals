@@ -281,15 +281,43 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         }
 
         public OrbitalPositionVelocity GetObjectPV(DateTime asof, OrbitalElements orbitalElements, Angle latitude, Angle longitude, double elevation, TimeSpan rateDriftDelta) {
-            var jdtt = AstroUtil.GetJulianDate(asof);
-            var startPosition = Kepler.CalculateOrbitalElements(orbitalElements, jdtt);
-            var nextPosition = Kepler.CalculateOrbitalElements(orbitalElements, jdtt + AstrometricConstants.JD_SEC * rateDriftDelta.TotalSeconds);
-            var startTopocentricPosition = Kepler.GetTopocentricJ2000Position(startPosition, NOVAS.Body.Earth, latitude, longitude, elevation);
-            var startCoordinates = startTopocentricPosition.ToPolar();
-            var nextTopocentricPosition = Kepler.GetTopocentricJ2000Position(nextPosition, NOVAS.Body.Earth, latitude, longitude, elevation);
-            var nextCoordinates = nextTopocentricPosition.ToPolar();
-            var trackingRate = SiderealShiftTrackingRate.Create(startCoordinates, nextCoordinates, rateDriftDelta);
-            return new OrbitalPositionVelocity(asof, startTopocentricPosition, null, startCoordinates, trackingRate);
+            var observerJdtt = AstroUtil.GetJulianDate(asof);
+            var startResult = ApparentTopocentricWithLightTime(observerJdtt, orbitalElements, latitude, longitude, elevation);
+
+            var nextObserverJdtt = observerJdtt + AstrometricConstants.JD_SEC * rateDriftDelta.TotalSeconds;
+            var nextResult = ApparentTopocentricWithLightTime(nextObserverJdtt, orbitalElements, latitude, longitude, elevation);
+
+            var trackingRate = SiderealShiftTrackingRate.Create(startResult.Coords, nextResult.Coords, rateDriftDelta);
+            return new OrbitalPositionVelocity(asof, startResult.Vector, null, startResult.Coords, trackingRate);
+        }
+
+        /// <summary>
+        /// Apparent topocentric position with single-iteration light-time correction:
+        /// the position you see at <paramref name="observerJdtt"/> is the object's
+        /// geometric position at observerJdtt - distance/c. Earth and observer
+        /// positions are taken at observerJdtt (when the light arrives), the object
+        /// position is taken at the earlier emit time (when the light departed).
+        /// One iteration is sufficient for solar-system distances; the residual is
+        /// O((v_object * lt / c)^2), sub-arcsec at any practical distance.
+        /// </summary>
+        private (RectangularCoordinates Vector, Coordinates Coords) ApparentTopocentricWithLightTime(
+            double observerJdtt, OrbitalElements orbitalElements,
+            Angle latitude, Angle longitude, double elevation) {
+            // Initial geometric position at observerJdtt -- used only to estimate distance.
+            var instantaneousPosition = Kepler.CalculateOrbitalElements(orbitalElements, observerJdtt);
+            var instantaneousTopocentric = Kepler.GetTopocentricJ2000Position(
+                instantaneousPosition, observerJdtt, NOVAS.Body.Earth, latitude, longitude, elevation);
+            var distance_au = Math.Sqrt(instantaneousTopocentric.X * instantaneousTopocentric.X
+                                      + instantaneousTopocentric.Y * instantaneousTopocentric.Y
+                                      + instantaneousTopocentric.Z * instantaneousTopocentric.Z);
+            var lightTime_days = distance_au / AstrometricConstants.SPEED_OF_LIGHT_AU_PER_DAY;
+
+            // Re-propagate the object back by the light-travel time; Earth and observer
+            // stay at observerJdtt. The overload accepting observerJdtt does exactly that.
+            var emitPosition = Kepler.CalculateOrbitalElements(orbitalElements, observerJdtt - lightTime_days);
+            var topocentric = Kepler.GetTopocentricJ2000Position(
+                emitPosition, observerJdtt, NOVAS.Body.Earth, latitude, longitude, elevation);
+            return (topocentric, topocentric.ToPolar());
         }
 
         private string GetObjectTypeSavePath(OrbitalObjectTypeEnum objectType) {

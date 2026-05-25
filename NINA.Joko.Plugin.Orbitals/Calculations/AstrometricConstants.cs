@@ -37,6 +37,12 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         public const double SIDEREAL_SEC_PER_SI_SEC = 1.00273791552838d;
         public const double SIDEREAL_RATE_ARCSEC_PER_SI_SEC = 15.0410686d;
 
+        // Speed of light in AU per day. REF: IAU 2009 c = 299792458 m/s exactly;
+        // converted using IAU 2012 nominal au (149,597,870,700 m).
+        //   c [AU/day] = 299792.458 [km/s] * 86400 [s/day] / 149597870.700 [km/AU]
+        //              = 173.144632674240
+        public const double SPEED_OF_LIGHT_AU_PER_DAY = 299792.458d * SEC_PER_DAY / KM_PER_AU;
+
         /// <summary>
         /// Mean ecliptic obliquity at J2000
         /// </summary>
