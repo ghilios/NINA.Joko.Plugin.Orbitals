@@ -3,7 +3,10 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'release/v[0-9]+.[0-9]+.[0-9]+.[0-9]+'
+      # release/3.2 line: scoped so a stray release/v3.3.* tag on this
+      # lineage doesn't publish a 3.3-versioned manifest to o/Orbitals/3.2.0
+      - 'release/v3.1.[0-9]+.[0-9]+'
+      - 'release/v3.2.[0-9]+.[0-9]+'
 
 permissions:
   contents: write
