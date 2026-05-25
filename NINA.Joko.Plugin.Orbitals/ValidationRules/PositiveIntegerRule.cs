@@ -22,10 +22,10 @@ namespace NINA.Joko.Plugin.Orbitals.ValidationRules {
                 return new ValidationResult(false, "Null value");
             }
             var s = value.ToString();
-            if (int.TryParse(s, NumberStyles.Number, cultureInfo, out var intval) && intval > 0) {
+            if (int.TryParse(s, NumberStyles.Number, cultureInfo, out var intval) && intval >= 0) {
                 return new ValidationResult(true, null);
             } else {
-                return new ValidationResult(false, "Value must be a positive integer");
+                return new ValidationResult(false, "Value must be a non-negative integer");
             }
         }
     }
