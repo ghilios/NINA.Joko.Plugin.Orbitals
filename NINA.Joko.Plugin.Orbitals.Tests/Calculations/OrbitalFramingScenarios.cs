@@ -67,6 +67,10 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
                 Epoch.J2000);
 
         // ── Tracking-rate snapshots (JPL Horizons dRA*cosD/dt, dDec/dt columns) ──
+        //
+        // These fixtures are consumed by Phase B (OrbitalFramingWizardVMTests) when the
+        // VM's summary panel is tested.  Each method returns a SiderealShiftTrackingRate
+        // paired with the position fixture of the same name/epoch.
 
         // REF: JPL Horizons C/2023 A3 at 2024-Oct-26 22:00 UTC.
         //      dRA*cosD/dt ≈ −94.0 arcsec/hr  →  RADegreesPerHour = −94.0 / 3600

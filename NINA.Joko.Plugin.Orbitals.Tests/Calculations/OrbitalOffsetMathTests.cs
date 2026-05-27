@@ -54,9 +54,9 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
         // Plan §9.1 – (0h, 60°) to (1h, 60°).
         // Great-circle distance: cos(d) = sin²(60°) + cos²(60°)·cos(15°)
         // = 0.75 + 0.25·cos(15°) ≈ 0.75 + 0.25·0.96593 = 0.99148
-        // d = acos(0.99148) ≈ 7.4756° ≈ 26912 arcsec
+        // d = acos(0.99148) ≈ 7.4839° ≈ 26942 arcsec
         [Test]
-        public void AngularSeparation_OneHourAt60DegDec_IsApprox26913Arcsec() {
+        public void AngularSeparation_OneHourAt60DegDec_IsApprox26942Arcsec() {
             var c1 = C(0.0, 60.0);
             var c2 = C(1.0, 60.0);
 

@@ -15,6 +15,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
     ///   2. The raw RA offset varies measurably between anchors at different Dec,
     ///      proving that (sep, PA) encodes geometry-independent intent while raw
     ///      ΔRA is position-dependent.
+    ///   3. The first-order flat-sky east/north components approximate sep·sin(PA)
+    ///      and sep·cos(PA) at every anchor (tangent-plane consistency).
     /// </summary>
     [TestFixture]
     public class OrbitalOffsetEquivalenceTests {
@@ -54,6 +56,47 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
                         "AngularSeparation(anchor, ApplyOffset) must recover the requested separation");
                 }
             }
+        }
+
+        // ── Test 2: raw RA offset differs between anchors A and C ────────────────
+
+        /// <summary>
+        /// Proves that applying the same (sep, PA) intent produces different raw ΔRA
+        /// at anchor A (Dec=0°) vs. anchor C (Dec=+60°).  The cos(Dec) foreshortening
+        /// is roughly 2× between these two declinations, so for a 30-arcmin intent the
+        /// ΔRA difference should comfortably exceed 0.01 h.
+        /// </summary>
+        [Test]
+        public void ApplyOffset_RawRAOffset_DiffersBetweenAnchors_ProvingPositionDependence() {
+            // Anchor A at RA=6h (not 0h) to avoid RA wrap-around when a westward offset
+            // would place the result near 24h / 0h and make deltaRA_A spuriously large.
+            var anchorA = new Coordinates(Angle.ByHours(6.0),  Angle.ByDegree(0.0),  Epoch.J2000);
+            var anchorC = new Coordinates(Angle.ByHours(18.0), Angle.ByDegree(60.0), Epoch.J2000);
+
+            // Use the 30-arcmin West intent (PA=270°): pure RA offset, maximises cos(Dec) difference.
+            double sep  = 1800.0;  // 30 arcmin in arcsec
+            double pa   = 270.0;   // West
+
+            var resultA = OrbitalOffsetMath.ApplyOffset(anchorA, sep, pa);
+            var resultC = OrbitalOffsetMath.ApplyOffset(anchorC, sep, pa);
+
+            double deltaRA_A = resultA.RA - anchorA.RA;
+            double deltaRA_C = resultC.RA - anchorC.RA;
+
+            // Both should represent the same angular intent …
+            double sepA = OrbitalOffsetMath.AngularSeparation(anchorA, resultA);
+            double sepC = OrbitalOffsetMath.AngularSeparation(anchorC, resultC);
+            sepA.Should().BeApproximately(sep, 1e-4, "anchor A: separation must be correct");
+            sepC.Should().BeApproximately(sep, 1e-4, "anchor C: separation must be correct");
+
+            // … but the raw ΔRA in hours must differ measurably due to cos(Dec) foreshortening.
+            // At Dec=0°:  ΔRA ≈ −(1800/3600)/15 h ≈ −0.0333 h  (no foreshortening)
+            // At Dec=60°: ΔRA ≈ −0.0333 / cos(60°) = −0.0667 h  (foreshortened by ×2)
+            // Difference ≈ 0.033 h >> 0.01 h threshold.
+            double raDiff = Math.Abs(deltaRA_A - deltaRA_C);
+            raDiff.Should().BeGreaterThan(0.01,
+                "the same angular intent expressed at Dec=0° vs Dec=+60° must yield " +
+                "different raw ΔRA, demonstrating position-dependence of naïve RA offsets");
         }
 
         // ── Test 3: tangent-plane components are consistent across anchors ──────
@@ -106,45 +149,6 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
                     $"anchor {label} ({raH}h, {decDeg}°): flat-sky north component " +
                     $"must approximate sep·cos(PA) = {expectedNorth:F3} arcsec within {tol} arcsec");
             }
-        }
-
-        // ── Test 2: raw RA offset differs between anchors A and C ────────────────
-
-        /// <summary>
-        /// Proves that applying the same (sep, PA) intent produces different raw ΔRA
-        /// at anchor A (Dec=0°) vs. anchor C (Dec=+60°).  The cos(Dec) foreshortening
-        /// is roughly 2× between these two declinations, so for a 30-arcmin intent the
-        /// ΔRA difference should comfortably exceed 0.01 h.
-        /// </summary>
-        [Test]
-        public void ApplyOffset_RawRAOffset_DiffersBetweenAnchors_ProvingPositionDependence() {
-            var anchorA = new Coordinates(Angle.ByHours(0.0),  Angle.ByDegree(0.0),  Epoch.J2000);
-            var anchorC = new Coordinates(Angle.ByHours(18.0), Angle.ByDegree(60.0), Epoch.J2000);
-
-            // Use the 30-arcmin West intent (PA=270°): pure RA offset, maximises cos(Dec) difference.
-            double sep  = 1800.0;  // 30 arcmin in arcsec
-            double pa   = 270.0;   // West
-
-            var resultA = OrbitalOffsetMath.ApplyOffset(anchorA, sep, pa);
-            var resultC = OrbitalOffsetMath.ApplyOffset(anchorC, sep, pa);
-
-            double deltaRA_A = resultA.RA - anchorA.RA;
-            double deltaRA_C = resultC.RA - anchorC.RA;
-
-            // Both should represent the same angular intent …
-            double sepA = OrbitalOffsetMath.AngularSeparation(anchorA, resultA);
-            double sepC = OrbitalOffsetMath.AngularSeparation(anchorC, resultC);
-            sepA.Should().BeApproximately(sep, 1e-4, "anchor A: separation must be correct");
-            sepC.Should().BeApproximately(sep, 1e-4, "anchor C: separation must be correct");
-
-            // … but the raw ΔRA in hours must differ measurably.
-            // At Dec=0°: ΔRA ≈ −(1800/3600)/15 h ≈ −0.0333 h
-            // At Dec=60°: ΔRA ≈ −0.0333 / cos(60°) = −0.0667 h
-            // Difference ≈ 0.033 h >> 0.01 h threshold.
-            double raDiff = Math.Abs(deltaRA_A - deltaRA_C);
-            raDiff.Should().BeGreaterThan(0.01,
-                "the same angular intent expressed at Dec=0° vs Dec=+60° must yield " +
-                "different raw ΔRA, demonstrating position-dependence of naïve RA offsets");
         }
     }
 }

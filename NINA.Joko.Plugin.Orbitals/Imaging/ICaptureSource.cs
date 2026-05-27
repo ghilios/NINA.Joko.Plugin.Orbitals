@@ -23,7 +23,7 @@ namespace NINA.Joko.Plugin.Orbitals.Imaging {
     /// </summary>
     internal sealed class CapturedFrame {
         /// <summary>Raw pixel data for display or astrometric analysis.</summary>
-        public BitmapSource Image { get; init; }
+        public required BitmapSource Image { get; init; }
 
         /// <summary>Frame width in pixels.</summary>
         public int WidthPx { get; init; }
@@ -32,7 +32,7 @@ namespace NINA.Joko.Plugin.Orbitals.Imaging {
         public int HeightPx { get; init; }
 
         /// <summary>J2000 equatorial coordinates of the image centre.</summary>
-        public Coordinates Coordinates { get; init; }
+        public required Coordinates Coordinates { get; init; }
 
         /// <summary>Camera position angle, degrees, North-through-East convention, range [0, 360).</summary>
         public double PositionAngleDeg { get; init; }

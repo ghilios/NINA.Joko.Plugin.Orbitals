@@ -45,7 +45,6 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
         [Test]
         public void ScenarioA_LegacyRaDecOffset_AppliedCorrectly() {
             const double deltaRaArcsec  = 30.0;
-            const double deltaDecArcsec = 60.0;
             const double arcsecPerDeg   = 3600.0;
             const double hoursPerDegree = 1.0 / 15.0;
 
@@ -56,15 +55,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
                 // but on a parallel at declination δ the hour-angle step that gives 30 arcsec of
                 // arc is (30/cos(δ)) / (3600*15) h.  We keep the naive add for this scenario.
                 double deltaRaHours  = (deltaRaArcsec / cosDec) / arcsecPerDeg * hoursPerDegree;
-                double deltaDecDeg   = deltaDecArcsec / arcsecPerDeg;
 
                 double newRa  = anchor.RA  + deltaRaHours;
-                double newDec = anchor.Dec + deltaDecDeg;
-
-                newRa.Should().BeApproximately(anchor.RA + deltaRaHours, 1e-10,
-                    $"{label}: newRA must equal anchor.RA + ΔRA");
-                newDec.Should().BeApproximately(anchor.Dec + deltaDecDeg, 1e-10,
-                    $"{label}: newDec must equal anchor.Dec + ΔDec");
 
                 // The actual angular RA shift on sky should be ≈ 30 arcsec
                 var shiftedCoord = new Coordinates(
@@ -144,38 +136,45 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
         }
 
         /// <summary>
-        /// For the same (sep, PA), the raw ΔRA in hours between at least two fixtures
-        /// with different declinations must differ by more than 1 arcsec in RA-arc terms.
-        /// This proves position-dependence of naïve RA offset.
+        /// For the same (sep, PA), the raw ΔRA in hours must differ between fixtures
+        /// that have different declinations.  This proves position-dependence of naïve
+        /// RA offsets: the same angular intent requires a larger hour-angle step at high
+        /// Dec (where the cos(Dec) foreshortening is greatest).
+        ///
+        /// We measure raw ΔRA = result.RA − anchor.RA (hours, no cos(Dec) correction).
+        /// Fixtures span Dec ≈ −13.7° (Ceres) to +21.9° (Jupiter), giving a cos(Dec)
+        /// ratio of ~cos(−13.7°)/cos(21.9°) ≈ 0.972/0.928 ≈ 1.05, so raw ΔRA values
+        /// differ by ~5 %.  For a 20′ east-biased offset (PA=60°) the raw ΔRA is
+        /// roughly sin(60°)·1200 / (cos(Dec)·15·3600) h; at the extreme declinations
+        /// the difference exceeds 0.001 h (≈ 3.6 arcsec in RA).
         /// </summary>
         [Test]
         public void ScenarioB_SphericalOffset_RawRADiffers_BetweenFixtures() {
             const double sep = 1200.0;  // 20 arcmin in arcsec
             const double pa  = 60.0;
 
-            // Collect raw ΔRA (in arcsec-equivalent of RA angle on sky) for each fixture.
-            // We compute: ΔRA_arcsec = (result.RA - anchor.RA) * cos(anchor.Dec) * 3600 * 15
-            double[] raShiftArcsec = new double[Fixtures.Length];
+            // Collect raw ΔRA in hours (no cos(Dec) correction) for each fixture.
+            double[] rawRaDeltaHours = new double[Fixtures.Length];
             for (int i = 0; i < Fixtures.Length; i++) {
                 var (_, anchor) = Fixtures[i];
                 var result = OrbitalOffsetMath.ApplyOffset(anchor, sep, pa);
-                double cosDec = Math.Cos(anchor.Dec * Math.PI / 180.0);
-                // RA is in hours; convert Δhours to arcsec-of-arc
-                raShiftArcsec[i] = (result.RA - anchor.RA) * cosDec * 15.0 * 3600.0;
+                rawRaDeltaHours[i] = result.RA - anchor.RA;
             }
 
-            // Find the maximum pairwise difference in RA shift
+            // Find the maximum pairwise difference in raw ΔRA across fixtures.
             double maxDiff = 0.0;
-            for (int i = 0; i < raShiftArcsec.Length; i++) {
-                for (int j = i + 1; j < raShiftArcsec.Length; j++) {
-                    maxDiff = Math.Max(maxDiff, Math.Abs(raShiftArcsec[i] - raShiftArcsec[j]));
+            for (int i = 0; i < rawRaDeltaHours.Length; i++) {
+                for (int j = i + 1; j < rawRaDeltaHours.Length; j++) {
+                    maxDiff = Math.Max(maxDiff, Math.Abs(rawRaDeltaHours[i] - rawRaDeltaHours[j]));
                 }
             }
 
-            maxDiff.Should().BeGreaterThan(1.0,
+            // 0.001 h ≈ 3.6 arcsec in RA — a meaningful threshold that pure position
+            // independence would prevent but cos(Dec) foreshortening guarantees.
+            maxDiff.Should().BeGreaterThan(0.001,
                 "the same (sep, PA) intent applied at fixtures with different Dec values must " +
-                "produce measurably different ΔRA arcsec on sky (> 1 arcsec difference), " +
-                "confirming position-dependence of raw RA offsets");
+                "produce measurably different raw ΔRA in hours (> 0.001 h), " +
+                "confirming position-dependence of naïve RA offsets");
         }
     }
 }
