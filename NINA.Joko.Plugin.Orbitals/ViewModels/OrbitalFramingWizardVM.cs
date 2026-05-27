@@ -185,6 +185,13 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 BackgroundImage = null;
 
                 // Initialise offsets — rectangle centred on the body.
+                _rectangleOffsetXPx = 0;
+                _rectangleOffsetYPx = 0;
+                _rectangleRotationDeg = 0;
+                RaisePropertyChanged(nameof(RectangleOffsetXPx));
+                RaisePropertyChanged(nameof(RectangleOffsetYPx));
+                RaisePropertyChanged(nameof(RectangleRotationDeg));
+
                 RAOffsetHours = 0;
                 DecOffsetDegrees = 0;
                 FinalPositionAngle = 0;
@@ -211,11 +218,64 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         }
 
         private void ResetFraming() {
+            // Reset canvas state (pixel offsets and rotation).
+            _rectangleOffsetXPx = 0;
+            _rectangleOffsetYPx = 0;
+            _rectangleRotationDeg = 0;
+            RaisePropertyChanged(nameof(RectangleOffsetXPx));
+            RaisePropertyChanged(nameof(RectangleOffsetYPx));
+            RaisePropertyChanged(nameof(RectangleRotationDeg));
+
+            // Reset the derived offset properties.
             RAOffsetHours = 0;
             DecOffsetDegrees = 0;
             FinalPositionAngle = 0;
             OffsetSeparationArcsec = 0;
             OffsetPositionAngleDeg = 0;
+        }
+
+        /// <summary>
+        /// Converts the current canvas pixel offset (from centre) into RA/Dec offsets
+        /// and the sky-frame (separation, position-angle) representation.
+        /// Only runs when a captured image with a valid pixscale is available.
+        /// </summary>
+        private void RecalculateOffsets() {
+            if (!HasCapture) return;
+            if (CapturedImagePixscale <= 0) return;
+
+            // Convert pixel offset → angular offset.
+            // The captured image layer fills 1/BackgroundFovMultiplier of the canvas,
+            // and 1 displayed pixel corresponds to CapturedImagePixscale arcsec.
+            double dRaArcsec = _rectangleOffsetXPx * CapturedImagePixscale;
+            double dDecArcsec = -_rectangleOffsetYPx * CapturedImagePixscale; // Y flipped (pixels down, Dec up)
+
+            // Arcsec → RA hours and Dec degrees.
+            double decRad = (CapturedImageCoordinates?.Dec ?? 0.0) * Math.PI / 180.0;
+            double cosDecFactor = Math.Max(Math.Cos(decRad), 1e-6);
+
+            RAOffsetHours = (dRaArcsec / 3600.0) / 15.0 / cosDecFactor;
+            DecOffsetDegrees = dDecArcsec / 3600.0;
+
+            // Sky-frame (separation, PA) — display-only; used by a future container variant.
+            if (CapturedImageCoordinates != null) {
+                var bodyCoords = selectedObject?.PositionAt(DateTime.UtcNow).Coordinates;
+                if (bodyCoords != null) {
+                    double offsetRA = bodyCoords.RA + RAOffsetHours;
+                    double offsetDec = bodyCoords.Dec + DecOffsetDegrees;
+                    var offsetCoords = new Coordinates(
+                        Angle.ByHours(offsetRA),
+                        Angle.ByDegree(offsetDec),
+                        Epoch.J2000);
+
+                    OffsetSeparationArcsec = OrbitalOffsetMath.AngularSeparation(bodyCoords, offsetCoords);
+                    OffsetPositionAngleDeg = OrbitalOffsetMath.PositionAngleNToE(bodyCoords, offsetCoords);
+                }
+            }
+
+            RaisePropertyChanged(nameof(RAOffsetHours));
+            RaisePropertyChanged(nameof(DecOffsetDegrees));
+            RaisePropertyChanged(nameof(OffsetSeparationArcsec));
+            RaisePropertyChanged(nameof(OffsetPositionAngleDeg));
         }
 
         private Task ExportToSequencerAsync() {
@@ -405,6 +465,49 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         public double OffsetPositionAngleDeg {
             get => offsetPositionAngleDeg;
             set { if (offsetPositionAngleDeg != value) { offsetPositionAngleDeg = value; RaisePropertyChanged(); } }
+        }
+
+        // ─── Canvas state (updated by OrbitalFramingCanvas via TwoWay bindings) ─
+
+        private double _rectangleOffsetXPx = 0;
+        /// <summary>Horizontal canvas-pixel offset of the framing rectangle from centre.</summary>
+        public double RectangleOffsetXPx {
+            get => _rectangleOffsetXPx;
+            set {
+                if (_rectangleOffsetXPx != value) {
+                    _rectangleOffsetXPx = value;
+                    RaisePropertyChanged();
+                    RecalculateOffsets();
+                }
+            }
+        }
+
+        private double _rectangleOffsetYPx = 0;
+        /// <summary>Vertical canvas-pixel offset of the framing rectangle from centre.</summary>
+        public double RectangleOffsetYPx {
+            get => _rectangleOffsetYPx;
+            set {
+                if (_rectangleOffsetYPx != value) {
+                    _rectangleOffsetYPx = value;
+                    RaisePropertyChanged();
+                    RecalculateOffsets();
+                }
+            }
+        }
+
+        private double _rectangleRotationDeg = 0;
+        /// <summary>Framing-rectangle rotation in degrees (relative to captured image).</summary>
+        public double RectangleRotationDeg {
+            get => _rectangleRotationDeg;
+            set {
+                if (_rectangleRotationDeg != value) {
+                    _rectangleRotationDeg = value;
+                    RaisePropertyChanged();
+                    // Final PA = camera-image PA + rectangle rotation, normalised.
+                    FinalPositionAngle = (((360.0 - (CapturedImageRotation + _rectangleRotationDeg)) % 360.0) + 360.0) % 360.0;
+                    RaisePropertyChanged(nameof(FinalPositionAngle));
+                }
+            }
         }
 
         // -------------------------------------------------------------------------

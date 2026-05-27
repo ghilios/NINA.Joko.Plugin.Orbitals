@@ -1,0 +1,76 @@
+<UserControl
+    x:Class="NINA.Joko.Plugin.Orbitals.View.OrbitalFramingCanvas"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    d:DesignHeight="600" d:DesignWidth="800"
+    x:Name="CanvasRoot">
+
+    <!-- Three-layer framing canvas.
+         Layer 1: Background sky-survey image (fills the control).
+         Layer 2: Captured image, centred, scaled to 1/BackgroundFovMultiplier of the control.
+         Layer 3: Draggable/rotatable framing rectangle the user can pan and spin.
+    -->
+    <Grid Background="Black" ClipToBounds="True"
+          x:Name="RootGrid"
+          SizeChanged="RootGrid_SizeChanged">
+
+        <!-- Layer 1: Background survey image -->
+        <Image x:Name="BackgroundLayer"
+               Stretch="Uniform"
+               HorizontalAlignment="Stretch"
+               VerticalAlignment="Stretch" />
+
+        <!-- Layer 2: Captured image (centred; smaller than background) -->
+        <Image x:Name="CapturedLayer"
+               Stretch="Uniform"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"
+               RenderTransformOrigin="0.5,0.5">
+            <Image.RenderTransform>
+                <RotateTransform x:Name="CapturedRotation" Angle="0" />
+            </Image.RenderTransform>
+        </Image>
+
+        <!-- Layer 3: Framing rectangle (draggable / wheel-rotatable) -->
+        <Rectangle x:Name="FramingRectangle"
+                   StrokeThickness="2"
+                   Fill="Transparent"
+                   Cursor="SizeAll"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   RenderTransformOrigin="0.5,0.5"
+                   MouseLeftButtonDown="FramingRectangle_MouseLeftButtonDown"
+                   MouseMove="FramingRectangle_MouseMove"
+                   MouseLeftButtonUp="FramingRectangle_MouseLeftButtonUp"
+                   MouseWheel="FramingRectangle_MouseWheel"
+                   MouseRightButtonDown="FramingRectangle_MouseRightButtonDown">
+            <Rectangle.Stroke>
+                <SolidColorBrush Color="Yellow" Opacity="0.85" />
+            </Rectangle.Stroke>
+            <Rectangle.RenderTransform>
+                <TransformGroup>
+                    <TranslateTransform x:Name="RectTranslate" X="0" Y="0" />
+                    <RotateTransform x:Name="RectRotation" Angle="0" />
+                </TransformGroup>
+            </Rectangle.RenderTransform>
+        </Rectangle>
+
+        <!-- Centre crosshair -->
+        <Canvas x:Name="CrosshairCanvas"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                IsHitTestVisible="False">
+            <Line x:Name="CrosshairH"
+                  Stroke="#40FFFFFF"
+                  StrokeThickness="1"
+                  StrokeDashArray="4,4" />
+            <Line x:Name="CrosshairV"
+                  Stroke="#40FFFFFF"
+                  StrokeThickness="1"
+                  StrokeDashArray="4,4" />
+        </Canvas>
+    </Grid>
+</UserControl>
