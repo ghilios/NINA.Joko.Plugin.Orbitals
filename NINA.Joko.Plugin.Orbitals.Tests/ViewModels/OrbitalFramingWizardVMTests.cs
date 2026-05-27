@@ -37,7 +37,9 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
 
         private static BitmapSource MakeTestBitmap(int w = 10, int h = 10) {
             var pixels = new byte[w * h * 4];
-            return BitmapSource.Create(w, h, 96, 96, PixelFormats.Bgr32, null, pixels, w * 4);
+            var bmp = BitmapSource.Create(w, h, 96, 96, PixelFormats.Bgr32, null, pixels, w * 4);
+            bmp.Freeze();
+            return bmp;
         }
 
         private static CapturedFrame MakeFrame(Coordinates coords, double pa = 45.0, double pixscale = 1.5) =>
@@ -235,7 +237,7 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
         }
 
         [Test]
-        public async System.Threading.Tasks.Task ResetFramingCommand_ResetsAllOffsets() {
+        public void ResetFramingCommand_ResetsAllOffsets() {
             var coords = OrbitalFramingScenarios.Jupiter_20260115();
             var rate = OrbitalFramingScenarios.Jupiter_20260115_TrackingRate();
             var (vm, _, target) = Make(coords, rate, "Jupiter");

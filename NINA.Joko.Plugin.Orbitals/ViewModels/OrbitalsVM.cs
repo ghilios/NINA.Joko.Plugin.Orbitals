@@ -196,9 +196,9 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                         nighttimeCalculator,
                         applicationStatusMediator,
                         orbitalsOptions);
-                    wizardVm.Initialize(SelectedOrbitalsObject);
 
                     await Application.Current.Dispatcher.InvokeAsync(() => {
+                        wizardVm.Initialize(SelectedOrbitalsObject);
                         var window = new OrbitalFramingWizardView {
                             DataContext = wizardVm,
                             Owner = Application.Current.MainWindow

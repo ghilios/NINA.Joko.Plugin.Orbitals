@@ -25,6 +25,11 @@ namespace NINA.Joko.Plugin.Orbitals.View {
         public OrbitalFramingWizardView() {
             InitializeComponent();
             DataContextChanged += OrbitalFramingWizardView_DataContextChanged;
+            Closed += OrbitalFramingWizardView_Closed;
+        }
+
+        private void OrbitalFramingWizardView_Closed(object sender, EventArgs e) {
+            (DataContext as OrbitalFramingWizardVM)?.Dispose();
         }
 
         private void OrbitalFramingWizardView_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e) {

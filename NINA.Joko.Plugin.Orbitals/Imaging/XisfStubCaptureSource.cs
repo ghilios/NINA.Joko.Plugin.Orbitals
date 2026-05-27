@@ -13,7 +13,6 @@
 using NINA.Astrometry;
 using NINA.Core.Model;
 using NINA.Core.Utility;
-using NINA.Core.Utility.Notification;
 using NINA.Joko.Plugin.Orbitals.Calculations;
 using NINA.Profile.Interfaces;
 using System;
@@ -59,9 +58,10 @@ namespace NINA.Joko.Plugin.Orbitals.Imaging {
                 progress?.Report(new ApplicationStatus { Source = "OrbitalFramingWizard", Status = "Checking for stub frame..." });
 
                 // Step 1: require the stub file to exist.
+                // Do NOT call Notification.ShowError here — we're on a background thread.
+                // The VM's catch block is responsible for user notification.
                 if (!File.Exists(StubXisfPath)) {
-                    Notification.ShowError($"XISF stub frame not found at {StubXisfPath}");
-                    throw new FileNotFoundException("XISF stub frame not found", StubXisfPath);
+                    throw new FileNotFoundException("XISF stub frame not found at path: " + StubXisfPath, StubXisfPath);
                 }
 
                 ct.ThrowIfCancellationRequested();

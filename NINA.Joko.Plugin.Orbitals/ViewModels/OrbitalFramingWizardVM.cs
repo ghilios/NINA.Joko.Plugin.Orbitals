@@ -24,6 +24,7 @@ using NINA.WPF.Base.Interfaces.Mediator;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,7 +40,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
     /// </summary>
     [Export(typeof(OrbitalFramingWizardVM))]
     [PartCreationPolicy(CreationPolicy.NonShared)]
-    public class OrbitalFramingWizardVM : BaseINPC {
+    public class OrbitalFramingWizardVM : BaseINPC, IDisposable {
         private readonly IProfileService profileService;
         private readonly ICaptureSource captureSource;
         private readonly INighttimeCalculator nighttimeCalculator;
@@ -49,6 +50,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private OrbitalsObjectBase selectedObject;
         private CancellationTokenSource captureCts;
         private DispatcherTimer liveTimer;
+        private bool _disposed;
 
         public OrbitalFramingWizardVM(
             IProfileService profileService,
@@ -62,8 +64,13 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             this.orbitalsOptions = orbitalsOptions;
 
             // Exactly one capture source must be registered for Phase B–D.
-            this.captureSource = captureSources?.Single()
-                ?? throw new ArgumentException("No ICaptureSource implementations are available.", nameof(captureSources));
+            var sourceList = captureSources?.ToList()
+                ?? throw new ArgumentNullException(nameof(captureSources));
+            if (sourceList.Count == 0)
+                throw new ArgumentException("No ICaptureSource implementations are registered.", nameof(captureSources));
+            if (sourceList.Count > 1)
+                throw new ArgumentException($"Expected exactly one ICaptureSource; found {sourceList.Count}. Use CaptureMode selection (Phase E).", nameof(captureSources));
+            this.captureSource = sourceList[0];
 
             SlewCenterAndImageCommand = new AsyncRelayCommand(SlewCenterAndImageAsync, () => !IsCapturing);
             CancelCaptureCommand = new RelayCommand(CancelCapture, () => IsCapturing);
@@ -100,6 +107,8 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
         /// <summary>Stop the live timer (e.g. when the window closes).</summary>
         public void Dispose() {
+            if (_disposed) return;
+            _disposed = true;
             liveTimer?.Stop();
             liveTimer = null;
             captureCts?.Cancel();
@@ -144,7 +153,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         // -------------------------------------------------------------------------
 
         private async Task SlewCenterAndImageAsync() {
-            var cts = new CancellationTokenSource();
+            using var cts = new CancellationTokenSource();
             captureCts = cts;
 
             IsCapturing = true;
@@ -185,8 +194,12 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 HasCapture = true;
             } catch (OperationCanceledException) {
                 Logger.Info("Orbital Framing Wizard capture cancelled");
+            } catch (FileNotFoundException ex) {
+                Logger.Error("Orbital Framing Wizard capture failed: stub frame not found", ex);
+                NINA.Core.Utility.Notification.Notification.ShowError($"XISF stub frame not found: {ex.FileName}");
             } catch (Exception e) {
                 Logger.Error("Orbital Framing Wizard capture failed", e);
+                NINA.Core.Utility.Notification.Notification.ShowError($"Capture failed: {e.Message}");
             } finally {
                 IsCapturing = false;
                 captureCts = null;
@@ -206,8 +219,9 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         }
 
         private Task ExportToSequencerAsync() {
-            // Phase D implementation.
-            throw new NotImplementedException("Export to sequencer is not yet implemented (Phase D).");
+            // Phase D will implement this.
+            NINA.Core.Utility.Notification.Notification.ShowWarning("Export to Sequencer is not yet implemented. This will be available in Phase D.");
+            return Task.CompletedTask;
         }
 
         private void Cancel() {
