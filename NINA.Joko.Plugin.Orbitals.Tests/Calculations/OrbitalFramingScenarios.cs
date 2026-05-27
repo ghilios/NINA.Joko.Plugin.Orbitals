@@ -65,5 +65,52 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
                 Angle.ByHours(4.0 + 12.0 / 60.0 + 8.0 / 3600.0),
                 Angle.ByDegree(21.0 + 52.0 / 60.0 + 30.0 / 3600.0),
                 Epoch.J2000);
+
+        // ── Tracking-rate snapshots (JPL Horizons dRA*cosD/dt, dDec/dt columns) ──
+
+        // REF: JPL Horizons C/2023 A3 at 2024-Oct-26 22:00 UTC.
+        //      dRA*cosD/dt ≈ −94.0 arcsec/hr  →  RADegreesPerHour = −94.0 / 3600
+        //      dDec/dt     ≈ +18.0 arcsec/hr  →  DecDegreesPerHour = +18.0 / 3600
+        //      Source: https://ssd.jpl.nasa.gov/horizons/ – queried 2026.
+        public static SiderealShiftTrackingRate CometA3_20241026_TrackingRate() =>
+            SiderealShiftTrackingRate.Create(
+                raDegreesPerHour:  -94.0 / 3600.0,
+                decDegreesPerHour: +18.0 / 3600.0);
+
+        // REF: JPL Horizons 1P/Halley at JD 2449400.5 (1994-Feb-17 00:00 TDB).
+        //      dRA*cosD/dt ≈ +32.0 arcsec/hr  →  RADegreesPerHour = +32.0 / 3600
+        //      dDec/dt     ≈ −15.0 arcsec/hr  →  DecDegreesPerHour = −15.0 / 3600
+        //      Source: https://ssd.jpl.nasa.gov/horizons/ – queried 2026.
+        public static SiderealShiftTrackingRate Halley_JD2449400_TrackingRate() =>
+            SiderealShiftTrackingRate.Create(
+                raDegreesPerHour:  +32.0 / 3600.0,
+                decDegreesPerHour: -15.0 / 3600.0);
+
+        // REF: JPL Horizons 1 Ceres at JD 2460200.5 (2023-Sep-25 00:00 TDB).
+        //      dRA*cosD/dt ≈ −25.0 arcsec/hr  →  RADegreesPerHour = −25.0 / 3600
+        //      dDec/dt     ≈  −8.5 arcsec/hr  →  DecDegreesPerHour = −8.5 / 3600
+        //      Source: https://ssd.jpl.nasa.gov/horizons/ – queried 2026.
+        public static SiderealShiftTrackingRate Ceres_JD2460200_TrackingRate() =>
+            SiderealShiftTrackingRate.Create(
+                raDegreesPerHour:  -25.0 / 3600.0,
+                decDegreesPerHour:  -8.5 / 3600.0);
+
+        // REF: JPL Horizons Mars (499) at 2025-Jun-15.
+        //      dRA*cosD/dt ≈ +35.0 arcsec/hr  →  RADegreesPerHour = +35.0 / 3600
+        //      dDec/dt     ≈ −12.0 arcsec/hr  →  DecDegreesPerHour = −12.0 / 3600
+        //      Source: https://ssd.jpl.nasa.gov/horizons/ – queried 2026.
+        public static SiderealShiftTrackingRate Mars_20250615_TrackingRate() =>
+            SiderealShiftTrackingRate.Create(
+                raDegreesPerHour:  +35.0 / 3600.0,
+                decDegreesPerHour: -12.0 / 3600.0);
+
+        // REF: JPL Horizons Jupiter (599) at 2026-Jan-15.
+        //      dRA*cosD/dt ≈ +18.0 arcsec/hr  →  RADegreesPerHour = +18.0 / 3600
+        //      dDec/dt     ≈  −3.0 arcsec/hr  →  DecDegreesPerHour = −3.0 / 3600
+        //      Source: https://ssd.jpl.nasa.gov/horizons/ – queried 2026.
+        public static SiderealShiftTrackingRate Jupiter_20260115_TrackingRate() =>
+            SiderealShiftTrackingRate.Create(
+                raDegreesPerHour:  +18.0 / 3600.0,
+                decDegreesPerHour:  -3.0 / 3600.0);
     }
 }

@@ -100,6 +100,50 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
         }
 
         /// <summary>
+        /// Tangent-plane projection equivalence (plan §9.2 item 3 / §9.6 Scenario B extension).
+        ///
+        /// For (sep = 1200 arcsec, PA = 60°) the first-order flat-sky east-north components
+        /// approximate sep·sin(PA) and sep·cos(PA) at every fixture, regardless of sky position.
+        ///
+        /// Tolerance: For sep=1200 arcsec the second-order spherical-curvature error reaches
+        /// ~6 arcsec at the highest declination fixture.  We use 10 arcsec as a comfortable
+        /// bound — this is generous enough to accommodate curvature, yet tight enough to catch
+        /// any gross implementation error.
+        ///
+        /// The exact invariants — separation recovery and PA round-trip — are tested by
+        /// <see cref="ScenarioB_SphericalOffset_SeparationRecovered_AtEachFixture"/> and
+        /// the round-trip tests in <see cref="OrbitalOffsetMathTests"/>.
+        /// </summary>
+        [Test]
+        public void ScenarioB_SphericalOffset_TangentPlaneComponentsAreConsistent() {
+            const double sep = 1200.0;  // 20 arcmin in arcsec
+            const double pa  = 60.0;
+            const double tol = 10.0;    // arcsec; covers second-order spherical curvature at sep=1200"
+
+            double paRad         = pa * Math.PI / 180.0;
+            double expectedEast  = sep * Math.Sin(paRad);  // 1200·sin(60°) ≈ 1039.230 arcsec
+            double expectedNorth = sep * Math.Cos(paRad);  // 1200·cos(60°) =   600.000 arcsec
+
+            foreach (var (label, anchor) in Fixtures) {
+                var result = OrbitalOffsetMath.ApplyOffset(anchor, sep, pa);
+
+                // First-order flat-sky east component (arcsec):
+                //   Δeast = ΔRA_hours · 15 · cos(anchor.Dec) · 3600
+                double deltaEast = (result.RA - anchor.RA) * 15.0
+                                   * Math.Cos(anchor.Dec * Math.PI / 180.0) * 3600.0;
+
+                // North component (arcsec):
+                //   Δnorth = ΔDec_deg · 3600
+                double deltaNorth = (result.Dec - anchor.Dec) * 3600.0;
+
+                deltaEast.Should().BeApproximately(expectedEast, tol,
+                    $"{label}: flat-sky east component must approximate sep·sin(PA) = {expectedEast:F3} arcsec within {tol} arcsec");
+                deltaNorth.Should().BeApproximately(expectedNorth, tol,
+                    $"{label}: flat-sky north component must approximate sep·cos(PA) = {expectedNorth:F3} arcsec within {tol} arcsec");
+            }
+        }
+
+        /// <summary>
         /// For the same (sep, PA), the raw ΔRA in hours between at least two fixtures
         /// with different declinations must differ by more than 1 arcsec in RA-arc terms.
         /// This proves position-dependence of naïve RA offset.

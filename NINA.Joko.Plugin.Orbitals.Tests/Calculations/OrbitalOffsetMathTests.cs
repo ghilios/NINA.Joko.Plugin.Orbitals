@@ -132,6 +132,73 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
             }
         }
 
+        // ── PositionAngle – 45° diagonal ────────────────────────────────────────
+
+        // Plan §9.1 – NE diagonal: (0h,0°) → (+30″/cos(0°) east, +30″ north) ≈ 45°.
+        // The east offset in RA-hours for 30 arcsec at Dec=0° is 30/(3600*15) h.
+        // The north offset in Dec-degrees is 30/3600 °.
+        // The resulting PA from the north-through-east formula should be ≈ 45°.
+        [Test]
+        public void PositionAngle_NEDiagonal_Is45Degrees() {
+            var from = C(0.0, 0.0);
+
+            // Move 30 arcsec east and 30 arcsec north from equator.
+            // At Dec=0° east offset in RA-hours = 30″ / (3600 * 15) h.
+            double eastOffsetHours = 30.0 / (3600.0 * 15.0);
+            double northOffsetDeg  = 30.0 / 3600.0;
+            var to = C(eastOffsetHours, northOffsetDeg);
+
+            double pa = OrbitalOffsetMath.PositionAngleNToE(from, to);
+
+            pa.Should().BeApproximately(45.0, 0.1,
+                "NE diagonal (equal east and north offsets at equator) → PA ≈ 45°");
+        }
+
+        // ── PositionAngle – Agreement with AstroUtil.CalculatePositionAngle ────
+
+        // Plan §9.1 – Cross-check our PositionAngleNToE against NINA's built-in
+        // AstroUtil.CalculatePositionAngle (Atan-based formula).
+        //
+        // AstroUtil.CalculatePositionAngle(a1deg, a2deg, d1deg, d2deg) computes:
+        //   θ = atan( sin(a1-a2) / (cos(d2)·tan(d1) − sin(d2)·cos(a1-a2)) )
+        // where a1=from_RA, a2=to_RA.  Because sin(a1-a2) is negative when the target
+        // is east of the reference, NINA's formula gives East→270° while our N-through-E
+        // convention gives East→90°.  The two values satisfy:
+        //   ninaPA = (360 − ourPA) mod 360   for purely RA offsets.
+        //
+        // The formulas AGREE numerically (ninaPA ≈ ourPA) only when the target is in the
+        // NE or NW quadrant, i.e. when the northward component dominates.  We test that
+        // domain exclusively and use a tolerance of 0.01° because the Atan approximation
+        // differs from our atan2 formula by O(ΔRA²) even in the valid quadrant.
+        //
+        // NINA's atan (not atan2) also has quadrant ambiguity near PA=180° (pure south),
+        // so we skip any southward cases.
+        [TestCase(0.0, 0.0, 0.0, 1.0)]           // Pure North → PA = 0° (both agree exactly)
+        [TestCase(0.0, 0.0, -1.0/60.0, 1.0)]     // NW (west-north) → PA ≈ 346°
+        [TestCase(0.0, 0.0,  1.0/60.0, 1.0)]     // NE (east-north) → PA ≈ 14°
+        public void PositionAngle_AgreesWithAstroUtil_NorthernHalf(
+                double fromRaH, double fromDecDeg, double toRaH, double toDecDeg) {
+            var from = C(fromRaH, fromDecDeg);
+            var to   = C(toRaH,   toDecDeg);
+
+            // Our N-through-E formula.
+            double ourPA = OrbitalOffsetMath.PositionAngleNToE(from, to);
+
+            // NINA's Atan-based formula.  Arguments: RA in degrees (= hours * 15).
+            double ninaRaw = AstroUtil.CalculatePositionAngle(
+                fromRaH * 15.0, toRaH * 15.0, fromDecDeg, toDecDeg);
+            // Wrap NINA result into [0, 360).
+            double ninaPA = ((ninaRaw % 360.0) + 360.0) % 360.0;
+
+            // In the NE/NW quadrant with north dominating, both formulas give the same
+            // numerical result (the sin/atan ratio is the same for small RA displacements
+            // with a large northward component).  Tolerance 0.01° accommodates the
+            // atan vs atan2 second-order difference.
+            ourPA.Should().BeApproximately(ninaPA, 0.01,
+                $"PositionAngleNToE must agree with AstroUtil.CalculatePositionAngle " +
+                $"in the northern half for ({fromRaH}h, {fromDecDeg}°) → ({toRaH}h, {toDecDeg}°)");
+        }
+
         // ── Pole test ────────────────────────────────────────────────────────────
 
         // Plan §9.1 – ApplyOffset near Dec=+89.99° must return finite coordinates

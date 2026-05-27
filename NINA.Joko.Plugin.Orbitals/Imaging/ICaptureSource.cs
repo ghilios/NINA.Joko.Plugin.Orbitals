@@ -11,7 +11,7 @@ namespace NINA.Joko.Plugin.Orbitals.Imaging {
     /// <summary>
     /// Exposure settings passed to <see cref="ICaptureSource.CaptureAsync"/>.
     /// </summary>
-    public sealed class OrbitalFramingExposureSettings {
+    internal sealed class OrbitalFramingExposureSettings {
         public double ExposureTime { get; init; }
         public int Gain { get; init; }
         public int Offset { get; init; }
@@ -21,7 +21,7 @@ namespace NINA.Joko.Plugin.Orbitals.Imaging {
     /// <summary>
     /// Image frame returned by <see cref="ICaptureSource.CaptureAsync"/>.
     /// </summary>
-    public sealed class CapturedFrame {
+    internal sealed class CapturedFrame {
         /// <summary>Raw pixel data for display or astrometric analysis.</summary>
         public BitmapSource Image { get; init; }
 

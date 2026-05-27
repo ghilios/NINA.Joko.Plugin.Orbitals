@@ -56,6 +56,58 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
             }
         }
 
+        // ── Test 3: tangent-plane components are consistent across anchors ──────
+
+        /// <summary>
+        /// Plan §9.2 item 3 – gnomonic / tangent-plane projection equivalence.
+        ///
+        /// For a canonical (sep=600 arcsec, PA=45°) intent the first-order east-north
+        /// tangent-plane components should approximate sep·sin(PA) and sep·cos(PA).
+        ///
+        /// Because <see cref="OrbitalOffsetMath.ApplyOffset"/> encodes a geometry-
+        /// independent intent, the flat-sky approximation
+        ///   Δeast  = (result.RA  − anchor.RA) · 15 · cos(anchor.Dec) · 3600   arcsec
+        ///   Δnorth = (result.Dec − anchor.Dec) · 3600                          arcsec
+        /// should agree with sep·sin(PA) / sep·cos(PA) up to the second-order
+        /// spherical-curvature correction O(sep²/R²), which for sep=600 arcsec and
+        /// the highest-declination anchor (C, Dec=+60°) is at most ~2 arcsec.
+        ///
+        /// Tolerance note: the flat-formula error scales as ~(sep/206265)² · sep, so
+        /// for sep=600 arcsec the maximum error across all anchors is ≈1.5 arcsec.
+        /// We use 2.0 arcsec as a comfortable bound.
+        /// </summary>
+        [Test]
+        public void ApplyOffset_TangentPlaneComponents_AreConsistentAcrossAnchors() {
+            const double sep   = 600.0;   // 10 arcmin
+            const double pa    = 45.0;    // NE
+            const double tol   = 2.0;     // arcsec; covers second-order spherical curvature
+
+            double paRad = pa * Math.PI / 180.0;
+            double expectedEast  = sep * Math.Sin(paRad);  // ≈ 424.264 arcsec
+            double expectedNorth = sep * Math.Cos(paRad);  // ≈ 424.264 arcsec
+
+            foreach (var (label, raH, decDeg) in Anchors) {
+                var anchor = new Coordinates(Angle.ByHours(raH), Angle.ByDegree(decDeg), Epoch.J2000);
+                var result = OrbitalOffsetMath.ApplyOffset(anchor, sep, pa);
+
+                // First-order flat-sky east component (arcsec):
+                //   Δeast = ΔRA_hours · 15 · cos(anchor.Dec) · 3600
+                double deltaEast = (result.RA - anchor.RA) * 15.0
+                                   * Math.Cos(anchor.Dec * Math.PI / 180.0) * 3600.0;
+
+                // North component (arcsec):
+                //   Δnorth = ΔDec_deg · 3600
+                double deltaNorth = (result.Dec - anchor.Dec) * 3600.0;
+
+                deltaEast.Should().BeApproximately(expectedEast, tol,
+                    $"anchor {label} ({raH}h, {decDeg}°): flat-sky east component " +
+                    $"must approximate sep·sin(PA) = {expectedEast:F3} arcsec within {tol} arcsec");
+                deltaNorth.Should().BeApproximately(expectedNorth, tol,
+                    $"anchor {label} ({raH}h, {decDeg}°): flat-sky north component " +
+                    $"must approximate sep·cos(PA) = {expectedNorth:F3} arcsec within {tol} arcsec");
+            }
+        }
+
         // ── Test 2: raw RA offset differs between anchors A and C ────────────────
 
         /// <summary>
