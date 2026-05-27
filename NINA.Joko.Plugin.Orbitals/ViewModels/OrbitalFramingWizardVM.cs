@@ -350,14 +350,20 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 }
 
                 // Step 5: Add to sequencer and navigate.
-                if (rawClone is IDeepSkyObjectContainer dsoContainer) {
-                    sequenceMediator.AddAdvancedTarget(dsoContainer);
+                if (rawClone is not IDeepSkyObjectContainer dsoContainer) {
+                    Notification.ShowError($"Internal error: Clone() returned a non-sequencer-compatible type: {rawClone?.GetType().Name}. Export aborted.");
+                    return;
                 }
-                applicationMediator.ChangeTab(ApplicationTab.SEQUENCE);
 
-                // Close the wizard.
-                Dispose();
-                CloseRequested?.Invoke(this, EventArgs.Empty);
+                try {
+                    sequenceMediator.AddAdvancedTarget(dsoContainer);
+                    applicationMediator.ChangeTab(ApplicationTab.SEQUENCE);
+                    Dispose();
+                    CloseRequested?.Invoke(this, EventArgs.Empty);
+                } catch (Exception innerEx) {
+                    Logger.Error("ExportToSequencerAsync: failed to add target to sequencer", innerEx);
+                    Notification.ShowError($"Export failed: {innerEx.Message}");
+                }
 
             } finally {
                 IsExporting = false;
@@ -398,6 +404,9 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 case PVTableObject pv when container is JWSTContainer jwstc:
                     // JWSTContainer pre-loads from the IOrbitalElementsAccessor; just set the name.
                     jwstc.Target.TargetName = selectedObject.Name;
+                    break;
+                default:
+                    Logger.Warning($"PopulateContainerSpecificFields: unhandled combination {selectedObject.GetType().Name} → {container.GetType().Name}. Container-specific fields may be empty.");
                     break;
             }
         }

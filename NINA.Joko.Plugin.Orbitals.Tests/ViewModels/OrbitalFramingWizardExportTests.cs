@@ -284,7 +284,6 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             seqMediator.Setup(s => s.GetDeepSkyObjectContainerTemplates())
                        .Returns(new List<IDeepSkyObjectContainer>());
 
-            var target = new FakeOrbitalsObject("Mars", coords, rate);
             var ssb = new SolarSystemBodyObject(
                 MakeOrbitalElementsAccessor().Object,
                 SolarSystemBody.Mars,
