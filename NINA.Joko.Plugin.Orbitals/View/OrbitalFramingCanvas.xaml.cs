@@ -85,6 +85,22 @@ namespace NINA.Joko.Plugin.Orbitals.View {
                     FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
                     OnRectangleRotationChanged));
 
+        public static readonly DependencyProperty BackgroundFovMultiplierProperty =
+            DependencyProperty.Register(
+                nameof(BackgroundFovMultiplier),
+                typeof(double),
+                typeof(OrbitalFramingCanvas),
+                new FrameworkPropertyMetadata(3.0, OnBackgroundFovMultiplierChanged));
+
+        public double BackgroundFovMultiplier {
+            get => (double)GetValue(BackgroundFovMultiplierProperty);
+            set => SetValue(BackgroundFovMultiplierProperty, value);
+        }
+
+        private static void OnBackgroundFovMultiplierChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) {
+            ((OrbitalFramingCanvas)d).UpdateCapturedLayerSize();
+        }
+
         // ─── CLR wrappers ────────────────────────────────────────────────────────
 
         public BitmapSource CapturedImageSource {
@@ -175,14 +191,12 @@ namespace NINA.Joko.Plugin.Orbitals.View {
 
         /// <summary>
         /// Size the captured-image layer to 1/BackgroundFovMultiplier of the control.
-        /// The multiplier lives on the VM; we expose it via the UserControl's
-        /// DataContext if available, but default to 3.0 so the layer is one-third
-        /// of the canvas dimensions if no VM is wired.
+        /// The multiplier comes from the <see cref="BackgroundFovMultiplierProperty"/> DP,
+        /// defaulting to 3.0 so the layer is one-third of the canvas dimensions if no
+        /// binding is set.
         /// </summary>
         private void UpdateCapturedLayerSize() {
-            double fovMultiplier = 3.0;
-            if (DataContext is ViewModels.OrbitalFramingWizardVM vm)
-                fovMultiplier = Math.Max(1.0, vm.BackgroundFovMultiplier);
+            double fovMultiplier = Math.Max(1.0, BackgroundFovMultiplier);
 
             double w = RootGrid.ActualWidth;
             double h = RootGrid.ActualHeight;

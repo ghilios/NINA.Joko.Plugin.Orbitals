@@ -54,6 +54,7 @@
                     CapturedImageSource="{Binding CapturedImage}"
                     CapturedImageRotation="{Binding CapturedImageRotation}"
                     BackgroundImageSource="{Binding BackgroundImage}"
+                    BackgroundFovMultiplier="{Binding BackgroundFovMultiplier}"
                     RectangleOffsetX="{Binding RectangleOffsetXPx, Mode=TwoWay}"
                     RectangleOffsetY="{Binding RectangleOffsetYPx, Mode=TwoWay}"
                     RectangleRotation="{Binding RectangleRotationDeg, Mode=TwoWay}"

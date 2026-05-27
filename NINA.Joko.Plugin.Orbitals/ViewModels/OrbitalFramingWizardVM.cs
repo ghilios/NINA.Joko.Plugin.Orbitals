@@ -253,10 +253,11 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             //   - deltaX / deltaY are in pixels (positive X → right on screen, positive Y → down).
             //   - scaleX / scaleY are arcsec/pixel.
             //   - rotation is the image position angle (clockwise degrees, N-up convention).
-            // Y is negated here because screen-Y increases downward while Dec increases upward.
+            // NINA's Shift() already handles the screen-Y-to-sky-Dec inversion internally;
+            // do NOT negate _rectangleOffsetYPx here (double negation would invert the Dec axis).
             var framingTarget = CapturedImageCoordinates.Shift(
                 _rectangleOffsetXPx,
-                -_rectangleOffsetYPx,
+                _rectangleOffsetYPx,
                 CapturedImageRotation,
                 CapturedImagePixscale,
                 CapturedImagePixscale);
@@ -273,13 +274,9 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             DecOffsetDegrees = framingTarget.Dec - bodyCoords.Dec;
 
             // Step 4: Sky-frame (separation, PA) from the body to the framing target.
+            // Property setters already raise PropertyChanged — no manual calls needed.
             OffsetSeparationArcsec = OrbitalOffsetMath.AngularSeparation(bodyCoords, framingTarget);
             OffsetPositionAngleDeg = OrbitalOffsetMath.PositionAngleNToE(bodyCoords, framingTarget);
-
-            RaisePropertyChanged(nameof(RAOffsetHours));
-            RaisePropertyChanged(nameof(DecOffsetDegrees));
-            RaisePropertyChanged(nameof(OffsetSeparationArcsec));
-            RaisePropertyChanged(nameof(OffsetPositionAngleDeg));
         }
 
         private Task ExportToSequencerAsync() {
@@ -444,31 +441,31 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private double raOffsetHours;
         public double RAOffsetHours {
             get => raOffsetHours;
-            set { if (raOffsetHours != value) { raOffsetHours = value; RaisePropertyChanged(); } }
+            private set { if (raOffsetHours != value) { raOffsetHours = value; RaisePropertyChanged(); } }
         }
 
         private double decOffsetDegrees;
         public double DecOffsetDegrees {
             get => decOffsetDegrees;
-            set { if (decOffsetDegrees != value) { decOffsetDegrees = value; RaisePropertyChanged(); } }
+            private set { if (decOffsetDegrees != value) { decOffsetDegrees = value; RaisePropertyChanged(); } }
         }
 
         private double finalPositionAngle;
         public double FinalPositionAngle {
             get => finalPositionAngle;
-            set { if (finalPositionAngle != value) { finalPositionAngle = value; RaisePropertyChanged(); } }
+            private set { if (finalPositionAngle != value) { finalPositionAngle = value; RaisePropertyChanged(); } }
         }
 
         private double offsetSeparationArcsec;
         public double OffsetSeparationArcsec {
             get => offsetSeparationArcsec;
-            set { if (offsetSeparationArcsec != value) { offsetSeparationArcsec = value; RaisePropertyChanged(); } }
+            private set { if (offsetSeparationArcsec != value) { offsetSeparationArcsec = value; RaisePropertyChanged(); } }
         }
 
         private double offsetPositionAngleDeg;
         public double OffsetPositionAngleDeg {
             get => offsetPositionAngleDeg;
-            set { if (offsetPositionAngleDeg != value) { offsetPositionAngleDeg = value; RaisePropertyChanged(); } }
+            private set { if (offsetPositionAngleDeg != value) { offsetPositionAngleDeg = value; RaisePropertyChanged(); } }
         }
 
         // ─── Canvas state (updated by OrbitalFramingCanvas via TwoWay bindings) ─
@@ -508,8 +505,8 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                     _rectangleRotationDeg = value;
                     RaisePropertyChanged();
                     // Final PA = camera-image PA + rectangle rotation, normalised.
+                    // FinalPositionAngle setter already raises PropertyChanged — no manual call needed.
                     FinalPositionAngle = (((360.0 - (CapturedImageRotation + _rectangleRotationDeg)) % 360.0) + 360.0) % 360.0;
-                    RaisePropertyChanged(nameof(FinalPositionAngle));
                 }
             }
         }

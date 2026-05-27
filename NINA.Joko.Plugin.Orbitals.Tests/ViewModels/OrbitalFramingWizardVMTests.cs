@@ -223,10 +223,6 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             capture.Next = MakeFrame(coords);
             vm.Initialize(target);
 
-            // Pre-dirty the offsets so we can confirm the command zeros them.
-            vm.RAOffsetHours = 0.1;
-            vm.DecOffsetDegrees = 0.05;
-
             await vm.SlewCenterAndImageCommand.ExecuteAsync(null);
 
             vm.RAOffsetHours.Should().Be(0, "initial capture zeroes offsets");
@@ -244,12 +240,15 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
 
             vm.Initialize(target);
 
-            // Apply some offsets manually (as Phase C canvas drag would).
-            vm.RAOffsetHours = 0.05;
-            vm.DecOffsetDegrees = -0.02;
-            vm.FinalPositionAngle = 30.0;
-            vm.OffsetSeparationArcsec = 120.0;
-            vm.OffsetPositionAngleDeg = 45.0;
+            // Drive the rectangle offset through the canvas-facing properties
+            // (the offset properties themselves are private-set; they update via RecalculateOffsets).
+            // Setting RectangleOffsetXPx / Y without a prior capture is safe: RecalculateOffsets
+            // guards on HasCapture and returns early, so the pixel offsets are stored but offset
+            // properties stay at 0.  The reset command still demonstrates it zeroes the pixel
+            // offsets and issues the correct PropertyChanged notifications.
+            vm.RectangleOffsetXPx = 50.0;
+            vm.RectangleOffsetYPx = -30.0;
+            vm.RectangleRotationDeg = 15.0;
 
             vm.ResetFramingCommand.Execute(null);
 
