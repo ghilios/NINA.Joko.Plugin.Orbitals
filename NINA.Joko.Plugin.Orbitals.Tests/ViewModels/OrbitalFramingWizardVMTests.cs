@@ -80,12 +80,17 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             // Capture source
             var capture = new FakeCaptureSource();
 
+            var seqMediator = new Mock<NINA.Sequencer.Interfaces.Mediator.ISequenceMediator>();
+            var appMediator = new Mock<NINA.WPF.Base.Interfaces.Mediator.IApplicationMediator>();
+
             var vm = new OrbitalFramingWizardVM(
                 profileService.Object,
                 new[] { (ICaptureSource)capture },
                 nightCalc.Object,
                 statusMediator.Object,
-                options.Object);
+                options.Object,
+                seqMediator.Object,
+                appMediator.Object);
 
             var target = new FakeOrbitalsObject(name, coords, rate);
 
@@ -156,13 +161,17 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             var statusMediator = new Mock<IApplicationStatusMediator>();
             var options = new Mock<IOrbitalsOptions>();
             var capture = new FakeCaptureSource();
+            var seqMediator2 = new Mock<NINA.Sequencer.Interfaces.Mediator.ISequenceMediator>();
+            var appMediator2 = new Mock<NINA.WPF.Base.Interfaces.Mediator.IApplicationMediator>();
 
             var vm = new OrbitalFramingWizardVM(
                 profileService.Object,
                 new[] { (ICaptureSource)capture },
                 nightCalc.Object,
                 statusMediator.Object,
-                options.Object);
+                options.Object,
+                seqMediator2.Object,
+                appMediator2.Object);
 
             var target = new FakeOrbitalsObject("Mars", coords, rate);
             vm.Initialize(target);
@@ -225,9 +234,14 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
 
             await vm.SlewCenterAndImageCommand.ExecuteAsync(null);
 
-            vm.RAOffsetHours.Should().Be(0, "initial capture zeroes offsets");
-            vm.DecOffsetDegrees.Should().Be(0, "initial capture zeroes offsets");
-            vm.FinalPositionAngle.Should().Be(0);
+            vm.RAOffsetHours.Should().Be(0, "initial capture zeroes RA offset");
+            vm.DecOffsetDegrees.Should().Be(0, "initial capture zeroes Dec offset");
+            // FinalPositionAngle is computed from CapturedImageRotation: (360 - PA) % 360.
+            // MakeFrame uses pa=45.0 by default → expected = (360 - 45) % 360 = 315.
+            const double capturedPa = 45.0;
+            double expectedFinalPa = ((360.0 - capturedPa) % 360.0 + 360.0) % 360.0;
+            vm.FinalPositionAngle.Should().BeApproximately(expectedFinalPa, 1e-9,
+                "FinalPositionAngle is derived from the captured image PA at time of capture");
             vm.OffsetSeparationArcsec.Should().Be(0);
             vm.OffsetPositionAngleDeg.Should().Be(0);
         }
@@ -281,13 +295,17 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             nightCalc.Setup(n => n.Calculate()).Returns((NighttimeData)null);
             var statusMediator = new Mock<IApplicationStatusMediator>();
             var options = new Mock<IOrbitalsOptions>();
+            var seqMediator3 = new Mock<NINA.Sequencer.Interfaces.Mediator.ISequenceMediator>();
+            var appMediator3 = new Mock<NINA.WPF.Base.Interfaces.Mediator.IApplicationMediator>();
 
             var vm = new OrbitalFramingWizardVM(
                 profileService.Object,
                 new[] { (ICaptureSource)blockingCapture },
                 nightCalc.Object,
                 statusMediator.Object,
-                options.Object);
+                options.Object,
+                seqMediator3.Object,
+                appMediator3.Object);
 
             var target = new FakeOrbitalsObject("1P/Halley", coords, rate);
             vm.Initialize(target);

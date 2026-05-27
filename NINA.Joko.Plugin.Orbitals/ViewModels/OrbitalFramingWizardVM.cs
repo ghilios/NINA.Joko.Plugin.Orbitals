@@ -14,12 +14,17 @@ using CommunityToolkit.Mvvm.Input;
 using NINA.Astrometry;
 using RelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 using NINA.Astrometry.Interfaces;
+using NINA.Core.Enum;
 using NINA.Core.Model;
 using NINA.Core.Utility;
+using NINA.Core.Utility.Notification;
 using NINA.Joko.Plugin.Orbitals.Calculations;
 using NINA.Joko.Plugin.Orbitals.Imaging;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
+using NINA.Joko.Plugin.Orbitals.SequenceItems;
 using NINA.Profile.Interfaces;
+using NINA.Sequencer.Container;
+using NINA.Sequencer.Interfaces.Mediator;
 using NINA.WPF.Base.Interfaces.Mediator;
 using System;
 using System.Collections.Generic;
@@ -46,6 +51,8 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private readonly INighttimeCalculator nighttimeCalculator;
         private readonly IApplicationStatusMediator applicationStatusMediator;
         private readonly IOrbitalsOptions orbitalsOptions;
+        private readonly ISequenceMediator sequenceMediator;
+        private readonly IApplicationMediator applicationMediator;
 
         private OrbitalsObjectBase selectedObject;
         private CancellationTokenSource captureCts;
@@ -57,11 +64,15 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             IEnumerable<ICaptureSource> captureSources,
             INighttimeCalculator nighttimeCalculator,
             IApplicationStatusMediator applicationStatusMediator,
-            IOrbitalsOptions orbitalsOptions) {
+            IOrbitalsOptions orbitalsOptions,
+            ISequenceMediator sequenceMediator,
+            IApplicationMediator applicationMediator) {
             this.profileService = profileService;
             this.nighttimeCalculator = nighttimeCalculator;
             this.applicationStatusMediator = applicationStatusMediator;
             this.orbitalsOptions = orbitalsOptions;
+            this.sequenceMediator = sequenceMediator;
+            this.applicationMediator = applicationMediator;
 
             // Exactly one capture source must be registered for Phase B–D.
             var sourceList = captureSources?.ToList()
@@ -194,7 +205,10 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
                 RAOffsetHours = 0;
                 DecOffsetDegrees = 0;
-                FinalPositionAngle = 0;
+                // Compute the "natural" sequencer PA from the captured image rotation.
+                // CapturedImageRotation is the camera's position angle on sky; the
+                // sequencer uses the complementary convention: PA = (360 - imgPA) % 360.
+                FinalPositionAngle = (((360.0 - frame.PositionAngleDeg) % 360.0) + 360.0) % 360.0;
                 OffsetSeparationArcsec = 0;
                 OffsetPositionAngleDeg = 0;
 
@@ -229,7 +243,10 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             // Reset the derived offset properties.
             RAOffsetHours = 0;
             DecOffsetDegrees = 0;
-            FinalPositionAngle = 0;
+            // When a capture exists, restore the natural PA derived from the captured image.
+            FinalPositionAngle = HasCapture
+                ? (((360.0 - CapturedImageRotation) % 360.0) + 360.0) % 360.0
+                : 0.0;
             OffsetSeparationArcsec = 0;
             OffsetPositionAngleDeg = 0;
         }
@@ -279,10 +296,110 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             OffsetPositionAngleDeg = OrbitalOffsetMath.PositionAngleNToE(bodyCoords, framingTarget);
         }
 
-        private Task ExportToSequencerAsync() {
-            // Phase D will implement this.
-            NINA.Core.Utility.Notification.Notification.ShowWarning("Export to Sequencer is not yet implemented. This will be available in Phase D.");
-            return Task.CompletedTask;
+        private async Task ExportToSequencerAsync() {
+            if (selectedObject == null || !HasCapture) {
+                Notification.ShowWarning("No target selected or no capture available for export.");
+                return;
+            }
+
+            IsExporting = true;
+            try {
+                // Step 1: Resolve the matching container type.
+                var templates = sequenceMediator.GetDeepSkyObjectContainerTemplates();
+                Type containerType = GetContainerTypeForObject(selectedObject);
+                var template = templates?.FirstOrDefault(t => t.GetType() == containerType);
+
+                if (template == null) {
+                    Notification.ShowError(
+                        $"No sequence container template found for {selectedObject.GetType().Name}. " +
+                        $"Please add a {containerType.Name} container to the sequencer first.");
+                    return;
+                }
+
+                // Step 2: Clone the template and cast to the concrete container base.
+                var rawClone = template.Clone();
+
+                // Step 3: Populate common fields.
+                PopulateContainerSpecificFields(rawClone, selectedObject);
+
+                // Step 4: Set the offset coordinates and position angle on the base class.
+                if (rawClone is OrbitalsContainerBase<OrbitalElementsObject> oecBase) {
+                    oecBase.Target.PositionAngle = FinalPositionAngle;
+                    oecBase.OffsetCoordinates.Coordinates = new Coordinates(
+                        Angle.ByHours(RAOffsetHours),
+                        Angle.ByDegree(DecOffsetDegrees),
+                        Epoch.J2000);
+                } else if (rawClone is OrbitalsContainerBase<SolarSystemBodyObject> ssbBase) {
+                    ssbBase.Target.PositionAngle = FinalPositionAngle;
+                    ssbBase.OffsetCoordinates.Coordinates = new Coordinates(
+                        Angle.ByHours(RAOffsetHours),
+                        Angle.ByDegree(DecOffsetDegrees),
+                        Epoch.J2000);
+                } else if (rawClone is OrbitalsContainerBase<TLEObject> tlBase) {
+                    tlBase.Target.PositionAngle = FinalPositionAngle;
+                    tlBase.OffsetCoordinates.Coordinates = new Coordinates(
+                        Angle.ByHours(RAOffsetHours),
+                        Angle.ByDegree(DecOffsetDegrees),
+                        Epoch.J2000);
+                } else if (rawClone is OrbitalsContainerBase<PVTableObject> pvBase) {
+                    pvBase.Target.PositionAngle = FinalPositionAngle;
+                    pvBase.OffsetCoordinates.Coordinates = new Coordinates(
+                        Angle.ByHours(RAOffsetHours),
+                        Angle.ByDegree(DecOffsetDegrees),
+                        Epoch.J2000);
+                }
+
+                // Step 5: Add to sequencer and navigate.
+                if (rawClone is IDeepSkyObjectContainer dsoContainer) {
+                    sequenceMediator.AddAdvancedTarget(dsoContainer);
+                }
+                applicationMediator.ChangeTab(ApplicationTab.SEQUENCE);
+
+                // Close the wizard.
+                Dispose();
+                CloseRequested?.Invoke(this, EventArgs.Empty);
+
+            } finally {
+                IsExporting = false;
+            }
+        }
+
+        private static Type GetContainerTypeForObject(OrbitalsObjectBase obj) {
+            return obj switch {
+                OrbitalElementsObject => typeof(OrbitalObjectContainer),
+                SolarSystemBodyObject => typeof(SolarSystemBodyContainer),
+                TLEObject => typeof(ManualTLEContainer),
+                PVTableObject => typeof(JWSTContainer),
+                _ => throw new InvalidOperationException($"Unknown orbital object type: {obj.GetType().Name}")
+            };
+        }
+
+        private static void PopulateContainerSpecificFields(object container, OrbitalsObjectBase selectedObject) {
+            switch (selectedObject) {
+                case OrbitalElementsObject oe when container is OrbitalObjectContainer ooc:
+                    // SelectedOrbitalName setter triggers the lookup in IOrbitalElementsAccessor.
+                    // ObjectType is inherited from the user's template; the name lookup uses it.
+                    ooc.SelectedOrbitalName = oe.OrbitalElements?.Name;
+                    ooc.Target.TargetName = selectedObject.Name;
+                    break;
+                case SolarSystemBodyObject ssb when container is SolarSystemBodyContainer ssbc:
+                    ssbc.SelectedSolarSystemBody = ssb.SolarSystemBody;
+                    // SelectedSolarSystemBody setter already updates Target.TargetName.
+                    break;
+                case TLEObject tle when container is ManualTLEContainer tlec:
+                    if (tle.Tle != null) {
+                        // Reconstruct the 3-line TLE text from the parsed Tle object.
+                        string tleText = tle.Tle.Name + Environment.NewLine
+                                       + tle.Tle.Line1 + Environment.NewLine
+                                       + tle.Tle.Line2;
+                        tlec.TLEData = tleText;
+                    }
+                    break;
+                case PVTableObject pv when container is JWSTContainer jwstc:
+                    // JWSTContainer pre-loads from the IOrbitalElementsAccessor; just set the name.
+                    jwstc.Target.TargetName = selectedObject.Name;
+                    break;
+            }
         }
 
         private void Cancel() {

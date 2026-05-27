@@ -93,7 +93,9 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
                     Target.TargetName = parsedTle.Name;
                     Name = parsedTle.Name;
                     RefreshCoordinates();
-                    RaiseAllPropertiesChanged();
+                    RaisePropertyChanged(nameof(TLEData));
+                    RaisePropertyChanged(nameof(TargetAltitude));
+                    RaisePropertyChanged(nameof(TargetAzimuth));
                 }
             }
         }
