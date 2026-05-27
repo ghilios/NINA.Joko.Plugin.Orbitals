@@ -24,14 +24,17 @@ using NINA.Equipment.Interfaces.Mediator;
 using NINA.Equipment.Interfaces.ViewModel;
 using NINA.Joko.Plugin.Orbitals.Calculations;
 using NINA.Joko.Plugin.Orbitals.Enums;
+using NINA.Joko.Plugin.Orbitals.Imaging;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
 using NINA.Joko.Plugin.Orbitals.Utility;
+using NINA.Joko.Plugin.Orbitals.View;
 using NINA.Profile.Interfaces;
 using NINA.WPF.Base.Interfaces.Mediator;
 using NINA.WPF.Base.Interfaces.ViewModel;
 using NINA.WPF.Base.ViewModel;
 using SGPdotNET.TLE;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Threading;
 using System.Threading.Tasks;
@@ -53,7 +56,9 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private readonly IMPCAccessor mpcAccessor;
         private readonly IOrbitalElementsAccessor orbitalElementsAccessor;
         private readonly IProfileService profileService;
+        private readonly IApplicationStatusMediator applicationStatusMediator;
         private readonly IProgress<ApplicationStatus> progress;
+        private readonly IEnumerable<ICaptureSource> captureSources;
         private bool initialLoadComplete;
         private Task<bool> refreshTask;
 
@@ -65,8 +70,9 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             ITelescopeMediator telescopeMediator,
             IFramingAssistantVM framingAssistantVM,
             IApplicationMediator applicationMediator,
-            IApplicationStatusMediator applicationStatusMediator)
-            : this(profileService, nighttimeCalculator, guiderMediator, telescopeMediator, framingAssistantVM, applicationMediator, applicationStatusMediator, OrbitalsPlugin.OrbitalsOptions, OrbitalsPlugin.JPLAccessor, OrbitalsPlugin.MPCAccessor, OrbitalsPlugin.OrbitalElementsAccessor, new OrbitalSearchVM(OrbitalsPlugin.OrbitalElementsAccessor)) {
+            IApplicationStatusMediator applicationStatusMediator,
+            [ImportMany] IEnumerable<ICaptureSource> captureSources)
+            : this(profileService, nighttimeCalculator, guiderMediator, telescopeMediator, framingAssistantVM, applicationMediator, applicationStatusMediator, captureSources, OrbitalsPlugin.OrbitalsOptions, OrbitalsPlugin.JPLAccessor, OrbitalsPlugin.MPCAccessor, OrbitalsPlugin.OrbitalElementsAccessor, new OrbitalSearchVM(OrbitalsPlugin.OrbitalElementsAccessor)) {
         }
 
         public OrbitalsVM(
@@ -77,6 +83,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             IFramingAssistantVM framingAssistantVM,
             IApplicationMediator applicationMediator,
             IApplicationStatusMediator applicationStatusMediator,
+            IEnumerable<ICaptureSource> captureSources,
             IOrbitalsOptions orbitalsOptions,
             IJPLAccessor jplAccessor,
             IMPCAccessor mpcAccessor,
@@ -100,6 +107,8 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             this.orbitalElementsAccessor = orbitalElementsAccessor;
             this.OrbitalSearchVM = orbitalSearchVM;
             this.profileService = profileService;
+            this.applicationStatusMediator = applicationStatusMediator;
+            this.captureSources = captureSources;
             this.progress = ProgressFactory.Create(applicationStatusMediator, "Orbitals");
             this.orbitalElementsAccessor.Updated += OrbitalElementsAccessor_Updated;
             this.orbitalElementsAccessor.VectorTableUpdated += OrbitalElementsAccessor_VectorTableUpdated;
@@ -181,16 +190,26 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 }
 
                 try {
-                    var adjustedCoordinates = TargetCoordinates.Clone();
-                    adjustedCoordinates.RA += RAOffset;
-                    adjustedCoordinates.Dec += DecOffset;
+                    var wizardVm = new OrbitalFramingWizardVM(
+                        profileService,
+                        captureSources,
+                        nighttimeCalculator,
+                        applicationStatusMediator,
+                        orbitalsOptions);
+                    wizardVm.Initialize(SelectedOrbitalsObject);
 
-                    var dso = new DeepSkyObject(SelectedOrbitalsObject.Name, adjustedCoordinates.Transform(Epoch.J2000), profileService.ActiveProfile.ApplicationSettings.SkyAtlasImageRepository, profileService.ActiveProfile.AstrometrySettings.Horizon);
-                    applicationMediator.ChangeTab(ApplicationTab.FRAMINGASSISTANT);
-                    return await framingAssistantVM.SetCoordinates(dso);
+                    await Application.Current.Dispatcher.InvokeAsync(() => {
+                        var window = new OrbitalFramingWizardView {
+                            DataContext = wizardVm,
+                            Owner = Application.Current.MainWindow
+                        };
+                        window.ShowDialog();
+                    });
+
+                    return true;
                 } catch (Exception e) {
-                    Notification.ShowError($"Failed to send orbital target to framing wizard. {e.Message}");
-                    Logger.Error("Failed to send orbital target to framing wizard", e);
+                    Notification.ShowError($"Failed to open orbital framing wizard. {e.Message}");
+                    Logger.Error("Failed to open orbital framing wizard", e);
                     return false;
                 }
             });

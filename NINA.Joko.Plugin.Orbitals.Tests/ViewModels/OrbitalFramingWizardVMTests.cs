@@ -1,0 +1,326 @@
+using FluentAssertions;
+using Moq;
+using NINA.Astrometry;
+using NINA.Astrometry.Interfaces;
+using NINA.Core.Model;
+using NINA.Equipment.Interfaces;
+using NINA.Joko.Plugin.Orbitals.Calculations;
+using NINA.Joko.Plugin.Orbitals.Imaging;
+using NINA.Joko.Plugin.Orbitals.Interfaces;
+using NINA.Joko.Plugin.Orbitals.Tests.Calculations;
+using NINA.Joko.Plugin.Orbitals.Tests.TestHelpers;
+using NINA.Joko.Plugin.Orbitals.ViewModels;
+using NINA.Profile.Interfaces;
+using NINA.WPF.Base.Interfaces.Mediator;
+using NUnit.Framework;
+using System;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+
+namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
+
+    /// <summary>
+    /// Phase B unit tests for <see cref="OrbitalFramingWizardVM"/>.
+    ///
+    /// Covers:
+    ///  • Initial state after construction
+    ///  • Name bound after Initialize()
+    ///  • Successful capture: HasCapture=true, CapturedImage≠null, offsets=0, IsCapturing=false
+    ///  • ResetFramingCommand resets offsets
+    /// </summary>
+    [TestFixture]
+    public class OrbitalFramingWizardVMTests {
+
+        // -------------------------------------------------------------------------
+        // Factory helpers
+        // -------------------------------------------------------------------------
+
+        private static BitmapSource MakeTestBitmap(int w = 10, int h = 10) {
+            var pixels = new byte[w * h * 4];
+            return BitmapSource.Create(w, h, 96, 96, PixelFormats.Bgr32, null, pixels, w * 4);
+        }
+
+        private static CapturedFrame MakeFrame(Coordinates coords, double pa = 45.0, double pixscale = 1.5) =>
+            new CapturedFrame {
+                Image = MakeTestBitmap(),
+                WidthPx = 10,
+                HeightPx = 10,
+                Coordinates = coords,
+                PositionAngleDeg = pa,
+                PixscaleArcsecPerPx = pixscale,
+            };
+
+        private static (OrbitalFramingWizardVM vm, FakeCaptureSource capture, FakeOrbitalsObject target)
+            Make(Coordinates coords, SiderealShiftTrackingRate rate, string name = "Test Object") {
+            // Mock profile service
+            var cameraSettings = new Mock<ICameraSettings>();
+            cameraSettings.SetupGet(c => c.PixelSize).Returns(4.63); // µm
+            var telescopeSettings = new Mock<ITelescopeSettings>();
+            telescopeSettings.SetupGet(t => t.FocalLength).Returns(480); // mm
+
+            var activeProfile = new Mock<IProfile>();
+            activeProfile.SetupGet(p => p.CameraSettings).Returns(cameraSettings.Object);
+            activeProfile.SetupGet(p => p.TelescopeSettings).Returns(telescopeSettings.Object);
+
+            var profileService = new Mock<IProfileService>();
+            profileService.SetupGet(ps => ps.ActiveProfile).Returns(activeProfile.Object);
+
+            // Mock nighttime calculator
+            var nightCalc = new Mock<INighttimeCalculator>();
+            nightCalc.Setup(n => n.Calculate()).Returns((NighttimeData)null);
+
+            // Mock application status mediator
+            var statusMediator = new Mock<IApplicationStatusMediator>();
+
+            // Mock options
+            var options = new Mock<IOrbitalsOptions>();
+
+            // Capture source
+            var capture = new FakeCaptureSource();
+
+            var vm = new OrbitalFramingWizardVM(
+                profileService.Object,
+                new[] { (ICaptureSource)capture },
+                nightCalc.Object,
+                statusMediator.Object,
+                options.Object);
+
+            var target = new FakeOrbitalsObject(name, coords, rate);
+
+            return (vm, capture, target);
+        }
+
+        // -------------------------------------------------------------------------
+        // Tests
+        // -------------------------------------------------------------------------
+
+        [Test]
+        public void Constructor_InitialState_IsCapturingFalse_HasCaptureFalse() {
+            var coords = OrbitalFramingScenarios.CometA3_20241026();
+            var rate = OrbitalFramingScenarios.CometA3_20241026_TrackingRate();
+            var (vm, _, _) = Make(coords, rate);
+
+            vm.IsCapturing.Should().BeFalse();
+            vm.HasCapture.Should().BeFalse();
+            vm.CapturedImage.Should().BeNull();
+            vm.ExposureTime.Should().Be(30.0);
+            vm.Gain.Should().Be(0);
+            vm.Offset.Should().Be(0);
+        }
+
+        [Test]
+        public void Initialize_SetsName() {
+            var coords = OrbitalFramingScenarios.Ceres_JD2460200();
+            var rate = OrbitalFramingScenarios.Ceres_JD2460200_TrackingRate();
+            const string objName = "1 Ceres";
+            var (vm, _, target) = Make(coords, rate, objName);
+
+            vm.Initialize(target);
+
+            vm.Name.Should().Be(objName);
+        }
+
+        [Test]
+        public void Initialize_SetsNighttimeData() {
+            var coords = OrbitalFramingScenarios.Mars_20250615();
+            var rate = OrbitalFramingScenarios.Mars_20250615_TrackingRate();
+
+            // Use a nighttime calculator that returns a recognisable object.
+            var cameraSettings = new Mock<ICameraSettings>();
+            cameraSettings.SetupGet(c => c.PixelSize).Returns(4.63);
+            var telescopeSettings = new Mock<ITelescopeSettings>();
+            telescopeSettings.SetupGet(t => t.FocalLength).Returns(480);
+            var activeProfile = new Mock<IProfile>();
+            activeProfile.SetupGet(p => p.CameraSettings).Returns(cameraSettings.Object);
+            activeProfile.SetupGet(p => p.TelescopeSettings).Returns(telescopeSettings.Object);
+            var profileService = new Mock<IProfileService>();
+            profileService.SetupGet(ps => ps.ActiveProfile).Returns(activeProfile.Object);
+
+            // NighttimeData constructor takes DateTime values that mustn't overflow;
+            // use a recognisable sentinel via a simple wrapper returned by the mock.
+            var expectedNighttimeData = new NighttimeData(
+                DateTime.UtcNow,
+                DateTime.UtcNow.AddHours(8),
+                default,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null);
+            var nightCalc = new Mock<INighttimeCalculator>();
+            nightCalc.Setup(n => n.Calculate()).Returns(expectedNighttimeData);
+
+            var statusMediator = new Mock<IApplicationStatusMediator>();
+            var options = new Mock<IOrbitalsOptions>();
+            var capture = new FakeCaptureSource();
+
+            var vm = new OrbitalFramingWizardVM(
+                profileService.Object,
+                new[] { (ICaptureSource)capture },
+                nightCalc.Object,
+                statusMediator.Object,
+                options.Object);
+
+            var target = new FakeOrbitalsObject("Mars", coords, rate);
+            vm.Initialize(target);
+
+            vm.NighttimeData.Should().BeSameAs(expectedNighttimeData);
+        }
+
+        [Test]
+        public void CaptureButtonLabel_IsLoadTestImage() {
+            var coords = OrbitalFramingScenarios.Jupiter_20260115();
+            var rate = OrbitalFramingScenarios.Jupiter_20260115_TrackingRate();
+            var (vm, _, _) = Make(coords, rate);
+
+            vm.CaptureButtonLabel.Should().Be("Load Test Image");
+        }
+
+        [Test]
+        public async System.Threading.Tasks.Task SlewCenterAndImageCommand_OnSuccess_SetsHasCapture() {
+            var coords = OrbitalFramingScenarios.CometA3_20241026();
+            var rate = OrbitalFramingScenarios.CometA3_20241026_TrackingRate();
+            var (vm, capture, target) = Make(coords, rate, "C/2023 A3");
+
+            capture.Next = MakeFrame(coords, pa: 135.0, pixscale: 1.2);
+            vm.Initialize(target);
+
+            await vm.SlewCenterAndImageCommand.ExecuteAsync(null);
+
+            vm.HasCapture.Should().BeTrue("capture succeeded");
+            vm.IsCapturing.Should().BeFalse("capture has finished");
+            vm.CapturedImage.Should().NotBeNull();
+        }
+
+        [Test]
+        public async System.Threading.Tasks.Task SlewCenterAndImageCommand_OnSuccess_StoresFrameMetadata() {
+            var coords = OrbitalFramingScenarios.Ceres_JD2460200();
+            var rate = OrbitalFramingScenarios.Ceres_JD2460200_TrackingRate();
+            var (vm, capture, target) = Make(coords, rate, "1 Ceres");
+
+            const double expectedPa = 72.3;
+            const double expectedPixscale = 2.1;
+            capture.Next = MakeFrame(coords, pa: expectedPa, pixscale: expectedPixscale);
+            vm.Initialize(target);
+
+            await vm.SlewCenterAndImageCommand.ExecuteAsync(null);
+
+            vm.CapturedImageRotation.Should().BeApproximately(expectedPa, 1e-6);
+            vm.CapturedImagePixscale.Should().BeApproximately(expectedPixscale, 1e-6);
+            vm.CapturedImageWidthPx.Should().Be(10);
+            vm.CapturedImageHeightPx.Should().Be(10);
+        }
+
+        [Test]
+        public async System.Threading.Tasks.Task SlewCenterAndImageCommand_OnSuccess_OffsetsAreZero() {
+            var coords = OrbitalFramingScenarios.Mars_20250615();
+            var rate = OrbitalFramingScenarios.Mars_20250615_TrackingRate();
+            var (vm, capture, target) = Make(coords, rate, "Mars");
+
+            capture.Next = MakeFrame(coords);
+            vm.Initialize(target);
+
+            // Pre-dirty the offsets so we can confirm the command zeros them.
+            vm.RAOffsetHours = 0.1;
+            vm.DecOffsetDegrees = 0.05;
+
+            await vm.SlewCenterAndImageCommand.ExecuteAsync(null);
+
+            vm.RAOffsetHours.Should().Be(0, "initial capture zeroes offsets");
+            vm.DecOffsetDegrees.Should().Be(0, "initial capture zeroes offsets");
+            vm.FinalPositionAngle.Should().Be(0);
+            vm.OffsetSeparationArcsec.Should().Be(0);
+            vm.OffsetPositionAngleDeg.Should().Be(0);
+        }
+
+        [Test]
+        public async System.Threading.Tasks.Task ResetFramingCommand_ResetsAllOffsets() {
+            var coords = OrbitalFramingScenarios.Jupiter_20260115();
+            var rate = OrbitalFramingScenarios.Jupiter_20260115_TrackingRate();
+            var (vm, _, target) = Make(coords, rate, "Jupiter");
+
+            vm.Initialize(target);
+
+            // Apply some offsets manually (as Phase C canvas drag would).
+            vm.RAOffsetHours = 0.05;
+            vm.DecOffsetDegrees = -0.02;
+            vm.FinalPositionAngle = 30.0;
+            vm.OffsetSeparationArcsec = 120.0;
+            vm.OffsetPositionAngleDeg = 45.0;
+
+            vm.ResetFramingCommand.Execute(null);
+
+            vm.RAOffsetHours.Should().Be(0);
+            vm.DecOffsetDegrees.Should().Be(0);
+            vm.FinalPositionAngle.Should().Be(0);
+            vm.OffsetSeparationArcsec.Should().Be(0);
+            vm.OffsetPositionAngleDeg.Should().Be(0);
+        }
+
+        [Test]
+        public async System.Threading.Tasks.Task SlewCenterAndImageCommand_CanExecute_FalseWhileCapturing() {
+            var coords = OrbitalFramingScenarios.Halley_JD2449400();
+            var rate = OrbitalFramingScenarios.Halley_JD2449400_TrackingRate();
+
+            // Use a capture source that blocks until told to proceed.
+            var tcs = new System.Threading.Tasks.TaskCompletionSource<CapturedFrame>();
+            var blockingCapture = new BlockingCaptureSource(tcs.Task);
+
+            var cameraSettings = new Mock<ICameraSettings>();
+            cameraSettings.SetupGet(c => c.PixelSize).Returns(4.63);
+            var telescopeSettings = new Mock<ITelescopeSettings>();
+            telescopeSettings.SetupGet(t => t.FocalLength).Returns(480);
+            var activeProfile = new Mock<IProfile>();
+            activeProfile.SetupGet(p => p.CameraSettings).Returns(cameraSettings.Object);
+            activeProfile.SetupGet(p => p.TelescopeSettings).Returns(telescopeSettings.Object);
+            var profileService = new Mock<IProfileService>();
+            profileService.SetupGet(ps => ps.ActiveProfile).Returns(activeProfile.Object);
+            var nightCalc = new Mock<INighttimeCalculator>();
+            nightCalc.Setup(n => n.Calculate()).Returns((NighttimeData)null);
+            var statusMediator = new Mock<IApplicationStatusMediator>();
+            var options = new Mock<IOrbitalsOptions>();
+
+            var vm = new OrbitalFramingWizardVM(
+                profileService.Object,
+                new[] { (ICaptureSource)blockingCapture },
+                nightCalc.Object,
+                statusMediator.Object,
+                options.Object);
+
+            var target = new FakeOrbitalsObject("1P/Halley", coords, rate);
+            vm.Initialize(target);
+
+            // Start the capture (don't await; it's blocked).
+            var captureTask = vm.SlewCenterAndImageCommand.ExecuteAsync(null);
+
+            // Give the async machinery a moment to flip IsCapturing.
+            await System.Threading.Tasks.Task.Delay(50);
+
+            vm.IsCapturing.Should().BeTrue("command is in flight");
+
+            // Unblock the capture.
+            tcs.SetResult(MakeFrame(coords));
+            await captureTask;
+
+            vm.IsCapturing.Should().BeFalse("command has completed");
+            vm.HasCapture.Should().BeTrue();
+        }
+
+        // ─── Helper: blocking capture source for the IsCapturing test ────────────
+
+        private sealed class BlockingCaptureSource : ICaptureSource {
+            private readonly System.Threading.Tasks.Task<CapturedFrame> blocker;
+            public BlockingCaptureSource(System.Threading.Tasks.Task<CapturedFrame> blocker) {
+                this.blocker = blocker;
+            }
+            public async System.Threading.Tasks.Task<CapturedFrame> CaptureAsync(
+                OrbitalsObjectBase target,
+                OrbitalFramingExposureSettings exposure,
+                IProgress<ApplicationStatus> progress,
+                System.Threading.CancellationToken ct) {
+                return await blocker;
+            }
+        }
+    }
+}

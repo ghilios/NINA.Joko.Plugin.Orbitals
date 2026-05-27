@@ -26,6 +26,8 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
 
         OrbitalElementsAccessorEnum CometAccessor { get; set; }
 
+        CaptureModeEnum CaptureMode { get; set; }
+
         void ResetDefaults();
     }
 }
