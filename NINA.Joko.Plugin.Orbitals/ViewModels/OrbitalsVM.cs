@@ -52,6 +52,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private readonly INighttimeCalculator nighttimeCalculator;
         private readonly IGuiderMediator guiderMediator;
         private readonly ITelescopeMediator telescopeMediator;
+        private readonly ICameraMediator cameraMediator;
         private readonly IFramingAssistantVM framingAssistantVM;
         private readonly IApplicationMediator applicationMediator;
         private readonly IOrbitalsOptions orbitalsOptions;
@@ -73,13 +74,14 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             INighttimeCalculator nighttimeCalculator,
             IGuiderMediator guiderMediator,
             ITelescopeMediator telescopeMediator,
+            ICameraMediator cameraMediator,
             IFramingAssistantVM framingAssistantVM,
             IApplicationMediator applicationMediator,
             IApplicationStatusMediator applicationStatusMediator,
             ISequenceMediator sequenceMediator,
             IImageDataFactory imageDataFactory,
             [ImportMany] IEnumerable<Lazy<ICaptureSource, ICaptureSourceMetadata>> captureSources)
-            : this(profileService, nighttimeCalculator, guiderMediator, telescopeMediator, framingAssistantVM, applicationMediator, applicationStatusMediator, sequenceMediator, captureSources, new SkySurveyFactory(imageDataFactory), OrbitalsPlugin.OrbitalsOptions, OrbitalsPlugin.JPLAccessor, OrbitalsPlugin.MPCAccessor, OrbitalsPlugin.OrbitalElementsAccessor, new OrbitalSearchVM(OrbitalsPlugin.OrbitalElementsAccessor)) {
+            : this(profileService, nighttimeCalculator, guiderMediator, telescopeMediator, cameraMediator, framingAssistantVM, applicationMediator, applicationStatusMediator, sequenceMediator, captureSources, new SkySurveyFactory(imageDataFactory), OrbitalsPlugin.OrbitalsOptions, OrbitalsPlugin.JPLAccessor, OrbitalsPlugin.MPCAccessor, OrbitalsPlugin.OrbitalElementsAccessor, new OrbitalSearchVM(OrbitalsPlugin.OrbitalElementsAccessor)) {
         }
 
         public OrbitalsVM(
@@ -87,6 +89,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             INighttimeCalculator nighttimeCalculator,
             IGuiderMediator guiderMediator,
             ITelescopeMediator telescopeMediator,
+            ICameraMediator cameraMediator,
             IFramingAssistantVM framingAssistantVM,
             IApplicationMediator applicationMediator,
             IApplicationStatusMediator applicationStatusMediator,
@@ -108,6 +111,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             this.nighttimeCalculator = nighttimeCalculator;
             this.guiderMediator = guiderMediator;
             this.telescopeMediator = telescopeMediator;
+            this.cameraMediator = cameraMediator;
             this.framingAssistantVM = framingAssistantVM;
             this.applicationMediator = applicationMediator;
             this.sequenceMediator = sequenceMediator;
@@ -209,7 +213,9 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                         orbitalsOptions,
                         sequenceMediator,
                         applicationMediator,
-                        skySurveyFactory);
+                        skySurveyFactory,
+                        telescopeMediator,
+                        cameraMediator);
 
                     await Application.Current.Dispatcher.InvokeAsync(() => {
                         wizardVm.Initialize(SelectedOrbitalsObject);

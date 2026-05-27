@@ -25,6 +25,15 @@
                HorizontalAlignment="Stretch"
                VerticalAlignment="Stretch" />
 
+        <!-- Layer 1.5: Sky-map annotations (RA/Dec grid + DSO labels) — driven
+             by NINA's SkyMapAnnotator on the VM. Sized identically to the
+             background so the overlay aligns pixel-for-pixel. -->
+        <Image x:Name="AnnotationLayer"
+               Stretch="Uniform"
+               HorizontalAlignment="Stretch"
+               VerticalAlignment="Stretch"
+               IsHitTestVisible="False" />
+
         <!-- Layer 2: Captured image (centred; in native sensor frame, un-rotated) -->
         <Image x:Name="CapturedLayer"
                Stretch="Uniform"

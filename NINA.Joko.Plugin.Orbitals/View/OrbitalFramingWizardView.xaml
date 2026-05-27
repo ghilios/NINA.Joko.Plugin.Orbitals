@@ -7,6 +7,7 @@
     xmlns:localvm="clr-namespace:NINA.Joko.Plugin.Orbitals.ViewModels"
     xmlns:local="clr-namespace:NINA.Joko.Plugin.Orbitals.View"
     xmlns:alt="clr-namespace:NINA.WPF.Base.View;assembly=NINA.WPF.Base"
+    xmlns:ninactrl="clr-namespace:NINA.CustomControlLibrary;assembly=NINA.CustomControlLibrary"
     xmlns:util="clr-namespace:NINA.Core.Utility;assembly=NINA.Core"
     d:DataContext="{d:DesignInstance localvm:OrbitalFramingWizardVM}"
     mc:Ignorable="d"
@@ -32,6 +33,11 @@
 
             <!-- BindingProxy for NighttimeData (matches OrbitalsView.xaml pattern) -->
             <util:BindingProxy x:Key="nighttimeProxy" Data="{Binding NighttimeData}" />
+
+            <!-- CameraInfo proxy so the Capture inputs can pull DefaultGain /
+                 DefaultOffset (and Min/Max) for the empty-state hint text, matching
+                 NINA's AnchorableCameraControlView.xaml pattern. -->
+            <util:BindingProxy x:Key="CameraInfo" Data="{Binding CameraInfo}" />
         </ResourceDictionary>
     </Window.Resources>
 
@@ -64,6 +70,7 @@
                         CapturedImagePixelWidth="{Binding CapturedImageWidthPx}"
                         CapturedImagePixelHeight="{Binding CapturedImageHeightPx}"
                         BackgroundImageSource="{Binding BackgroundImage}"
+                        AnnotationImageSource="{Binding SkyMapOverlay}"
                         BackgroundFovMultiplier="{Binding BackgroundFovMultiplier}"
                         RectangleOffsetX="{Binding RectangleOffsetXPx, Mode=TwoWay}"
                         RectangleOffsetY="{Binding RectangleOffsetYPx, Mode=TwoWay}"
@@ -102,10 +109,11 @@
                         <TextBlock Text="−" FontSize="14"
                                    Foreground="{StaticResource ButtonForegroundBrush}" />
                     </Button>
-                    <Button Width="40" Height="24" Margin="0,0,2,0"
+                    <Button Width="48" Height="24" Margin="0,0,2,0"
                             Click="ZoomReset_Click"
                             ToolTip="Reset zoom to 100%">
-                        <TextBlock Text="100%" FontSize="10"
+                        <TextBlock Text="{Binding CanvasZoom, StringFormat={}{0:0%}}"
+                                   FontSize="10"
                                    Foreground="{StaticResource ButtonForegroundBrush}" />
                     </Button>
                     <Button Width="28" Height="24"
@@ -220,18 +228,40 @@
                                      Text="{Binding ExposureTime, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
                             <TextBlock Grid.Row="1" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Gain:" />
-                            <TextBox Grid.Row="1" Grid.Column="1" Margin="3"
-                                     ToolTip="Leave blank to use the camera-settings default."
-                                     Text="{Binding Gain, Mode=TwoWay,
-                                                    UpdateSourceTrigger=LostFocus,
-                                                    Converter={StaticResource MinusOneToEmptyStringConverter}}" />
+                            <ninactrl:HintTextBox Grid.Row="1" Grid.Column="1" Margin="3"
+                                                  ToolTip="Leave blank to use the camera-settings default.">
+                                <ninactrl:HintTextBox.HintText>
+                                    <Binding Source="{StaticResource CameraInfo}"
+                                             Path="Data.DefaultGain"
+                                             Mode="OneWay"
+                                             Converter="{StaticResource CameraDefaultValueConverter}"
+                                             UpdateSourceTrigger="PropertyChanged" />
+                                </ninactrl:HintTextBox.HintText>
+                                <ninactrl:HintTextBox.Text>
+                                    <Binding Path="Gain"
+                                             Mode="TwoWay"
+                                             UpdateSourceTrigger="LostFocus"
+                                             Converter="{StaticResource MinusOneToEmptyStringConverter}" />
+                                </ninactrl:HintTextBox.Text>
+                            </ninactrl:HintTextBox>
 
                             <TextBlock Grid.Row="2" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Offset:" />
-                            <TextBox Grid.Row="2" Grid.Column="1" Margin="3"
-                                     ToolTip="Leave blank to use the camera-settings default."
-                                     Text="{Binding Offset, Mode=TwoWay,
-                                                    UpdateSourceTrigger=LostFocus,
-                                                    Converter={StaticResource MinusOneToEmptyStringConverter}}" />
+                            <ninactrl:HintTextBox Grid.Row="2" Grid.Column="1" Margin="3"
+                                                  ToolTip="Leave blank to use the camera-settings default.">
+                                <ninactrl:HintTextBox.HintText>
+                                    <Binding Source="{StaticResource CameraInfo}"
+                                             Path="Data.DefaultOffset"
+                                             Mode="OneWay"
+                                             Converter="{StaticResource CameraDefaultValueConverter}"
+                                             UpdateSourceTrigger="PropertyChanged" />
+                                </ninactrl:HintTextBox.HintText>
+                                <ninactrl:HintTextBox.Text>
+                                    <Binding Path="Offset"
+                                             Mode="TwoWay"
+                                             UpdateSourceTrigger="LostFocus"
+                                             Converter="{StaticResource MinusOneToEmptyStringConverter}" />
+                                </ninactrl:HintTextBox.Text>
+                            </ninactrl:HintTextBox>
                         </Grid>
 
                         <Button Margin="0,8,0,0"

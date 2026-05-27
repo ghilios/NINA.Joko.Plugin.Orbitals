@@ -89,10 +89,14 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             var telescopeSettings = new Mock<ITelescopeSettings>();
             telescopeSettings.SetupGet(t => t.FocalLength).Returns(480);
 
+            var framingAssistantSettings = new Mock<IFramingAssistantSettings>();
+            framingAssistantSettings.SetupProperty(f => f.LastSelectedImageSource, SkySurveySource.SKYATLAS);
+
             var activeProfile = new Mock<IProfile>();
             activeProfile.SetupGet(p => p.AstrometrySettings).Returns(astrometrySettings.Object);
             activeProfile.SetupGet(p => p.CameraSettings).Returns(cameraSettings.Object);
             activeProfile.SetupGet(p => p.TelescopeSettings).Returns(telescopeSettings.Object);
+            activeProfile.SetupGet(p => p.FramingAssistantSettings).Returns(framingAssistantSettings.Object);
 
             var profileService = new Mock<IProfileService>();
             profileService.SetupGet(ps => ps.ActiveProfile).Returns(activeProfile.Object);
@@ -203,7 +207,9 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
                 options.Object,
                 seqMediator.Object,
                 appMediator.Object,
-                skySurveyFactory.Object);
+                skySurveyFactory.Object,
+                MakeTelescopeMediator().Object,
+                new Mock<ICameraMediator>().Object);
 
             return (vm, seqMediator, appMediator);
         }
@@ -671,13 +677,11 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             await vm.ExportToSequencerCommand.ExecuteAsync(null);
 
             var exported = (SolarSystemBodyContainer)capturedContainer;
-            // Offsets must be non-zero because we moved the rectangle.
-            var exportedRa = exported.OffsetCoordinates.Coordinates.RA;
-            var exportedDec = exported.OffsetCoordinates.Coordinates.Dec;
-            // With a non-zero pixel offset and valid pixscale, at least one coordinate
-            // must be non-zero (exact value depends on projection, but sign/magnitude are predictable).
-            (Math.Abs(exportedRa) + Math.Abs(exportedDec)).Should().BeGreaterThan(0,
-                "non-zero pixel drag must produce non-zero RA/Dec offset");
+            // Sequencer containers now persist Separation+PA as the canonical offset
+            // (the wizard writes both via IOrbitalsOffsetContainer). A non-zero pixel
+            // drag must produce a non-zero angular separation.
+            exported.OffsetSeparationArcsec.Should().BeGreaterThan(0,
+                "non-zero pixel drag must produce non-zero angular separation");
         }
 
         // ─── Tests: IsExporting flag ──────────────────────────────────────────────

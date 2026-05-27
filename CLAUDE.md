@@ -4,19 +4,21 @@ When plan mode produces a plan file, save it inside this repo's `plans/` directo
 
 # Project layout
 
-This solution has two C# projects.
+This solution has three C# projects.
 
 | Project | Type | What it is |
 |---|---|---|
 | `NINA.Joko.Plugin.Orbitals/` | WPF class library | The plugin itself. Hosted by NINA. |
 | `TestApp/` | WPF executable | A standalone harness app that exercises the plugin against a real mount/ASCOM. Not a test project. |
+| `NINA.Joko.Plugin.Orbitals.Tests/` | NUnit test project | Unit tests for the plugin. Uses NUnit 4 + Moq + FluentAssertions, with coverlet for coverage (`coverlet.runsettings` alongside the csproj). `.github/workflows/tests.yml` runs this on CI. |
 
 When the user says:
 
 - **"TestApp"** → they mean `TestApp/TestApp.csproj`. The standalone WPF exe.
 - **"the plugin"** → `NINA.Joko.Plugin.Orbitals/`.
+- **"the tests"** → `NINA.Joko.Plugin.Orbitals.Tests/`. Run with `dotnet test` from the repo root.
 
-There is no unit-test project yet. `.github/workflows/tests.yml` expects one at `NINA.Joko.Plugin.Orbitals.Tests/NINA.Joko.Plugin.Orbitals.Tests.csproj` with a `coverlet.runsettings` alongside it — the workflow will fail until that project is added.
+Whenever you change plugin code, build the plugin **and** run the test project; the test project references the plugin, so a constructor change will surface there even if it doesn't break TestApp.
 
 When upgrading NINA.Plugin or any package the plugin csproj brings in transitively, both `TestApp/TestApp.csproj` and the plugin csproj usually need bumping together — `TestApp` has its own direct `<PackageReference Include="NINA.Plugin" ... />` which NuGet treats as a separate constraint.
 

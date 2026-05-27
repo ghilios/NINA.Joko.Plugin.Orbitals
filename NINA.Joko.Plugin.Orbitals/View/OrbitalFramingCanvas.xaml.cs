@@ -79,6 +79,13 @@ namespace NINA.Joko.Plugin.Orbitals.View {
                 typeof(OrbitalFramingCanvas),
                 new PropertyMetadata(null, OnBackgroundImageSourceChanged));
 
+        public static readonly DependencyProperty AnnotationImageSourceProperty =
+            DependencyProperty.Register(
+                nameof(AnnotationImageSource),
+                typeof(BitmapSource),
+                typeof(OrbitalFramingCanvas),
+                new PropertyMetadata(null, OnAnnotationImageSourceChanged));
+
         public static readonly DependencyProperty RectangleOffsetXProperty =
             DependencyProperty.Register(
                 nameof(RectangleOffsetX),
@@ -160,6 +167,11 @@ namespace NINA.Joko.Plugin.Orbitals.View {
             set => SetValue(BackgroundImageSourceProperty, value);
         }
 
+        public BitmapSource AnnotationImageSource {
+            get => (BitmapSource)GetValue(AnnotationImageSourceProperty);
+            set => SetValue(AnnotationImageSourceProperty, value);
+        }
+
         /// <summary>
         /// Horizontal offset of the framing rectangle from centre, expressed in
         /// captured-image pixels (sensor frame). The canvas converts to its own pixel
@@ -223,6 +235,11 @@ namespace NINA.Joko.Plugin.Orbitals.View {
         private static void OnBackgroundImageSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) {
             var ctrl = (OrbitalFramingCanvas)d;
             ctrl.BackgroundLayer.Source = (BitmapSource)e.NewValue;
+        }
+
+        private static void OnAnnotationImageSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) {
+            var ctrl = (OrbitalFramingCanvas)d;
+            ctrl.AnnotationLayer.Source = (BitmapSource)e.NewValue;
         }
 
         private static void OnRectangleOffsetXChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) {

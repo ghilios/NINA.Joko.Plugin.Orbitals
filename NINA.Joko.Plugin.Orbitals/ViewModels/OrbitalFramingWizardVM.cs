@@ -17,6 +17,8 @@ using NINA.Astrometry.Interfaces;
 using NINA.Core.Enum;
 using NINA.Core.Model;
 using NINA.Core.Utility;
+using NINA.Equipment.Equipment.MyCamera;
+using NINA.Equipment.Interfaces.Mediator;
 using NINA.Core.Utility.Notification;
 using NINA.Joko.Plugin.Orbitals.Calculations;
 using NINA.Joko.Plugin.Orbitals.Enums;
@@ -57,6 +59,9 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private readonly ISequenceMediator sequenceMediator;
         private readonly IApplicationMediator applicationMediator;
         private readonly ISkySurveyFactory skySurveyFactory;
+        private readonly ITelescopeMediator telescopeMediator;
+        private readonly ICameraMediator cameraMediator;
+        private readonly SkyMapAnnotator skyMapAnnotator;
 
         // Image dimensions requested from sky-survey providers. NINA's framing assistant
         // uses similar values; large enough to look good at the background FOV scale.
@@ -76,7 +81,9 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             IOrbitalsOptions orbitalsOptions,
             ISequenceMediator sequenceMediator,
             IApplicationMediator applicationMediator,
-            ISkySurveyFactory skySurveyFactory) {
+            ISkySurveyFactory skySurveyFactory,
+            ITelescopeMediator telescopeMediator,
+            ICameraMediator cameraMediator) {
             this.profileService = profileService;
             this.nighttimeCalculator = nighttimeCalculator;
             this.applicationStatusMediator = applicationStatusMediator;
@@ -84,6 +91,25 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             this.sequenceMediator = sequenceMediator;
             this.applicationMediator = applicationMediator;
             this.skySurveyFactory = skySurveyFactory;
+            this.telescopeMediator = telescopeMediator;
+            this.cameraMediator = cameraMediator;
+
+            // Snapshot the camera info so the view can bind to DefaultGain /
+            // DefaultOffset for the empty-state hint text in the Capture section.
+            // Refreshed on each Initialize() call below.
+            CameraInfo = cameraMediator?.GetInfo();
+
+            // Sky-map annotator produces the RA/Dec grid + DSO labels overlay
+            // that we layer on top of the raw survey background, matching NINA's
+            // framing assistant. PropertyChanged surfaces SkyMapOverlay updates
+            // (the annotator re-renders the bitmap whenever the FoV changes or
+            // the telescope position updates).
+            skyMapAnnotator = new SkyMapAnnotator(telescopeMediator, profileService);
+            skyMapAnnotator.PropertyChanged += (_, e) => {
+                if (e.PropertyName == nameof(SkyMapAnnotator.SkyMapOverlay)) {
+                    RaisePropertyChanged(nameof(SkyMapOverlay));
+                }
+            };
 
             // Seed image source from the profile (mirroring NINA's framing assistant)
             // and fall back to the offline sky atlas if the profile isn't available
@@ -113,7 +139,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         // ─── Canvas zoom ─────────────────────────────────────────────────────────
 
         public const double ZoomStep = 1.25;
-        public const double MinZoom = 0.25;
+        public const double MinZoom = 1.0;
         public const double MaxZoom = 8.0;
 
         private double canvasZoom = 1.0;
@@ -147,6 +173,10 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             selectedObject = obj;
             Name = obj.Name;
             NighttimeData = nighttimeCalculator.Calculate();
+
+            // Refresh camera info — the camera may have connected (or been
+            // reconfigured) between wizard construction and the window opening.
+            CameraInfo = cameraMediator?.GetInfo();
 
             // Seed live data immediately.
             UpdateLiveData();
@@ -336,6 +366,26 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 if (bmp != null && bmp.CanFreeze && !bmp.IsFrozen) bmp.Freeze();
                 BackgroundImage = bmp;
                 Logger.Info($"Orbital wizard background assigned: bitmap={(bmp == null ? "null" : $"{bmp.PixelWidth}x{bmp.PixelHeight}")}");
+
+                // Initialize the annotator with the SAME center coords / FOV / dims
+                // we just fetched the survey at, so its overlay (RA/Dec grid + DSO
+                // labels) aligns with the survey image pixel-for-pixel.
+                if (bmp != null) {
+                    try {
+                        await skyMapAnnotator.Initialize(
+                            coords,
+                            fovArcmin / 60.0,
+                            BackgroundImagePx,
+                            BackgroundImagePx,
+                            0.0,
+                            null,
+                            ct);
+                    } catch (OperationCanceledException) {
+                        // expected if the user switched source mid-init
+                    } catch (Exception ex) {
+                        Logger.Warning($"Sky-map annotator initialize failed: {ex.Message}");
+                    }
+                }
             } catch (OperationCanceledException) {
                 // expected when the user changes source rapidly
             } catch (Exception ex) {
@@ -752,6 +802,26 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             get => backgroundImage;
             private set { backgroundImage = value; RaisePropertyChanged(); }
         }
+
+        /// <summary>
+        /// Live camera info used to drive default-value hints (e.g. the
+        /// <c>"(0)"</c> placeholder shown in the Gain / Offset inputs when the
+        /// user hasn't typed a value, matching NINA's snapshot dock).
+        /// </summary>
+        private CameraInfo cameraInfoSnapshot;
+        public CameraInfo CameraInfo {
+            get => cameraInfoSnapshot;
+            private set { cameraInfoSnapshot = value; RaisePropertyChanged(); }
+        }
+
+        /// <summary>
+        /// Annotation overlay produced by NINA's <see cref="SkyMapAnnotator"/> —
+        /// RA/Dec grid lines plus labels for named sky objects. The annotator
+        /// re-renders the bitmap whenever its viewport changes, and we surface
+        /// its <c>SkyMapOverlay</c> property through here so the canvas can
+        /// rebind on every refresh.
+        /// </summary>
+        public BitmapSource SkyMapOverlay => skyMapAnnotator?.SkyMapOverlay;
 
         private double backgroundFovMultiplier = 2.0;
         public double BackgroundFovMultiplier {

@@ -5,6 +5,7 @@ using NINA.Astrometry.Interfaces;
 using NINA.Core.Enum;
 using NINA.Core.Model;
 using NINA.Equipment.Interfaces;
+using NINA.Equipment.Interfaces.Mediator;
 using NINA.Joko.Plugin.Orbitals.Calculations;
 using NINA.Joko.Plugin.Orbitals.Imaging;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
@@ -131,7 +132,9 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
                 options.Object,
                 seqMediator.Object,
                 appMediator.Object,
-                skySurveyFactory.Object);
+                skySurveyFactory.Object,
+                new Mock<ITelescopeMediator>().Object,
+                new Mock<ICameraMediator>().Object);
 
             var target = new FakeOrbitalsObject(name, coords, rate);
 
@@ -152,8 +155,9 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             vm.HasCapture.Should().BeFalse();
             vm.CapturedImage.Should().BeNull();
             vm.ExposureTime.Should().Be(30.0);
-            vm.Gain.Should().Be(0);
-            vm.Offset.Should().Be(0);
+            // -1 = "use camera-settings default" sentinel (matches NINA's SnapShotControlSettings).
+            vm.Gain.Should().Be(-1);
+            vm.Offset.Should().Be(-1);
         }
 
         [Test]
@@ -178,9 +182,12 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             cameraSettings.SetupGet(c => c.PixelSize).Returns(4.63);
             var telescopeSettings = new Mock<ITelescopeSettings>();
             telescopeSettings.SetupGet(t => t.FocalLength).Returns(480);
+            var framingAssistantSettings = new Mock<IFramingAssistantSettings>();
+            framingAssistantSettings.SetupProperty(f => f.LastSelectedImageSource, SkySurveySource.SKYATLAS);
             var activeProfile = new Mock<IProfile>();
             activeProfile.SetupGet(p => p.CameraSettings).Returns(cameraSettings.Object);
             activeProfile.SetupGet(p => p.TelescopeSettings).Returns(telescopeSettings.Object);
+            activeProfile.SetupGet(p => p.FramingAssistantSettings).Returns(framingAssistantSettings.Object);
             var profileService = new Mock<IProfileService>();
             profileService.SetupGet(ps => ps.ActiveProfile).Returns(activeProfile.Object);
 
@@ -215,7 +222,9 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
                 options.Object,
                 seqMediator2.Object,
                 appMediator2.Object,
-                skySurveyFactory2.Object);
+                skySurveyFactory2.Object,
+                new Mock<ITelescopeMediator>().Object,
+                new Mock<ICameraMediator>().Object);
 
             var target = new FakeOrbitalsObject("Mars", coords, rate);
             vm.Initialize(target);
@@ -398,9 +407,12 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             cameraSettings.SetupGet(c => c.PixelSize).Returns(4.63);
             var telescopeSettings = new Mock<ITelescopeSettings>();
             telescopeSettings.SetupGet(t => t.FocalLength).Returns(480);
+            var framingAssistantSettings = new Mock<IFramingAssistantSettings>();
+            framingAssistantSettings.SetupProperty(f => f.LastSelectedImageSource, SkySurveySource.SKYATLAS);
             var activeProfile = new Mock<IProfile>();
             activeProfile.SetupGet(p => p.CameraSettings).Returns(cameraSettings.Object);
             activeProfile.SetupGet(p => p.TelescopeSettings).Returns(telescopeSettings.Object);
+            activeProfile.SetupGet(p => p.FramingAssistantSettings).Returns(framingAssistantSettings.Object);
             var profileService = new Mock<IProfileService>();
             profileService.SetupGet(ps => ps.ActiveProfile).Returns(activeProfile.Object);
             var nightCalc = new Mock<INighttimeCalculator>();
@@ -420,7 +432,9 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
                 options.Object,
                 seqMediator3.Object,
                 appMediator3.Object,
-                skySurveyFactory3.Object);
+                skySurveyFactory3.Object,
+                new Mock<ITelescopeMediator>().Object,
+                new Mock<ICameraMediator>().Object);
 
             var target = new FakeOrbitalsObject("1P/Halley", coords, rate);
             vm.Initialize(target);
