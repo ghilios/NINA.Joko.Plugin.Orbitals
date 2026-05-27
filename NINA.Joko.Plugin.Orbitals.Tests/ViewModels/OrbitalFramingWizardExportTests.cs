@@ -209,7 +209,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
                 appMediator.Object,
                 skySurveyFactory.Object,
                 MakeTelescopeMediator().Object,
-                new Mock<ICameraMediator>().Object);
+                new Mock<ICameraMediator>().Object,
+                MakeGuiderMediator().Object);
 
             return (vm, seqMediator, appMediator);
         }
@@ -286,27 +287,33 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
         }
 
         [Test]
-        public async System.Threading.Tasks.Task Export_NoMatchingTemplate_ShowsError_DoesNotCallAddAdvancedTarget() {
+        public async System.Threading.Tasks.Task Export_NoMatchingTemplate_FallsBackToFreshDefaultContainer() {
+            // When the user has no personal template saved for this orbital
+            // type, the wizard now constructs a default container directly
+            // (so the export "just works" on a clean NINA install) — earlier
+            // versions errored out.
             var coords = OrbitalFramingScenarios.Mars_20250615();
             var rate = OrbitalFramingScenarios.Mars_20250615_TrackingRate();
             var (vm, seqMediator, _) = MakeVmWithCapture(coords);
 
-            // No templates registered.
             seqMediator.Setup(s => s.GetDeepSkyObjectContainerTemplates())
                        .Returns(new List<IDeepSkyObjectContainer>());
+
+            IDeepSkyObjectContainer addedContainer = null;
+            seqMediator.Setup(s => s.AddAdvancedTarget(It.IsAny<IDeepSkyObjectContainer>()))
+                       .Callback<IDeepSkyObjectContainer>(c => addedContainer = c);
 
             var ssb = new SolarSystemBodyObject(
                 MakeOrbitalElementsAccessor().Object,
                 SolarSystemBody.Mars,
                 null);
             vm.Initialize(ssb);
-
-            // Simulate a capture.
             await vm.SlewCenterAndImageCommand.ExecuteAsync(null);
 
             await vm.ExportToSequencerCommand.ExecuteAsync(null);
 
-            seqMediator.Verify(s => s.AddAdvancedTarget(It.IsAny<IDeepSkyObjectContainer>()), Times.Never);
+            seqMediator.Verify(s => s.AddAdvancedTarget(It.IsAny<IDeepSkyObjectContainer>()), Times.Once);
+            addedContainer.Should().BeOfType<SolarSystemBodyContainer>();
         }
 
         // ─── Tests: SolarSystemBodyContainer export ───────────────────────────────

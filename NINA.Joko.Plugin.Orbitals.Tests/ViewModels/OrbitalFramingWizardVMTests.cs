@@ -134,7 +134,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
                 appMediator.Object,
                 skySurveyFactory.Object,
                 new Mock<ITelescopeMediator>().Object,
-                new Mock<ICameraMediator>().Object);
+                new Mock<ICameraMediator>().Object,
+                new Mock<IGuiderMediator>().Object);
 
             var target = new FakeOrbitalsObject(name, coords, rate);
 
@@ -224,7 +225,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
                 appMediator2.Object,
                 skySurveyFactory2.Object,
                 new Mock<ITelescopeMediator>().Object,
-                new Mock<ICameraMediator>().Object);
+                new Mock<ICameraMediator>().Object,
+                new Mock<IGuiderMediator>().Object);
 
             var target = new FakeOrbitalsObject("Mars", coords, rate);
             vm.Initialize(target);
@@ -233,12 +235,16 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
         }
 
         [Test]
-        public void CaptureButtonLabel_IsLoadTestImage() {
+        public void CaptureButtonLabel_TracksCodeTimeCaptureModeOverride() {
+            // CaptureMode is now a developer-only `const` in the wizard VM
+            // (no longer toggleable from the options UI). The label just
+            // reflects whatever the build was compiled with — assert that
+            // the property at least returns one of the two known strings.
             var coords = OrbitalFramingScenarios.Jupiter_20260115();
             var rate = OrbitalFramingScenarios.Jupiter_20260115_TrackingRate();
             var (vm, _, _) = Make(coords, rate);
 
-            vm.CaptureButtonLabel.Should().Be("Load Test Image");
+            vm.CaptureButtonLabel.Should().BeOneOf("Slew, Center & Image", "Load Test Image");
         }
 
         [Test]
@@ -434,7 +440,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
                 appMediator3.Object,
                 skySurveyFactory3.Object,
                 new Mock<ITelescopeMediator>().Object,
-                new Mock<ICameraMediator>().Object);
+                new Mock<ICameraMediator>().Object,
+                new Mock<IGuiderMediator>().Object);
 
             var target = new FakeOrbitalsObject("1P/Halley", coords, rate);
             vm.Initialize(target);

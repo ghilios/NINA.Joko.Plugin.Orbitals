@@ -85,67 +85,45 @@
         where the user can enter RA/Dec directly when that's more convenient.
     -->
     <DataTemplate x:Key="OrbitalOffsetBlock">
-        <Grid Margin="0,4,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="100" />
-                <ColumnDefinition Width="80" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="8" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
+        <StackPanel Orientation="Vertical" Margin="0,4,0,0" HorizontalAlignment="Left">
 
-            <TextBlock Grid.Row="0" Grid.Column="0"
-                       VerticalAlignment="Center"
-                       Text="Separation:" />
-            <TextBox Grid.Row="0" Grid.Column="1"
-                     VerticalAlignment="Center"
-                     TextAlignment="Right"
-                     Text="{Binding OffsetSeparationArcsec, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F1}}" />
-            <TextBlock Grid.Row="0" Grid.Column="2"
-                       Margin="6,0,0,0"
-                       VerticalAlignment="Center">
-                <Run Text="arcsec  (" />
-                <Run Text="{Binding OffsetSeparationDisplay, Mode=OneWay}" />
-                <Run Text=")" />
-            </TextBlock>
+            <!-- Separation: [input] arcsec (formatted display) -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                <TextBlock Width="80" VerticalAlignment="Center" Text="Separation:" />
+                <TextBox Width="80" Margin="6,0,0,0"
+                         VerticalAlignment="Center" TextAlignment="Right"
+                         Text="{Binding OffsetSeparationArcsec, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F1}}" />
+                <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">
+                    <Run Text="arcsec  (" />
+                    <Run Text="{Binding OffsetSeparationDisplay, Mode=OneWay}" />
+                    <Run Text=")" />
+                </TextBlock>
+            </StackPanel>
 
-            <TextBlock Grid.Row="1" Grid.Column="0"
-                       Margin="0,4,0,0"
-                       VerticalAlignment="Center"
-                       Text="Offset PA:" />
-            <TextBox Grid.Row="1" Grid.Column="1"
-                     Margin="0,4,0,0"
-                     VerticalAlignment="Center"
-                     TextAlignment="Right"
-                     Text="{Binding OffsetPositionAngleDeg, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F2}}" />
-            <TextBlock Grid.Row="1" Grid.Column="2"
-                       Margin="6,4,0,0"
-                       VerticalAlignment="Center"
-                       Text="degrees N→E" />
+            <!-- Offset PA: [input] degrees N→E -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <TextBlock Width="80" VerticalAlignment="Center" Text="Offset PA:" />
+                <TextBox Width="80" Margin="6,0,0,0"
+                         VerticalAlignment="Center" TextAlignment="Right"
+                         Text="{Binding OffsetPositionAngleDeg, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F2}}" />
+                <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" Text="degrees N→E" />
+            </StackPanel>
 
-            <TextBlock Grid.Row="3" Grid.ColumnSpan="3"
-                       FontWeight="Bold"
-                       Text="Equivalent RA/Dec offset (read-only):" />
-            <TextBlock Grid.Row="4" Grid.Column="0" Text="RA:" />
-            <TextBlock Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2"
-                       Text="{Binding OffsetRADisplay, Mode=OneWay}" />
-            <TextBlock Grid.Row="5" Grid.Column="0" Text="Dec:" />
-            <TextBlock Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2"
-                       Text="{Binding OffsetDecDisplay, Mode=OneWay}" />
+            <!-- RA Offset: value   Dec Offset: value   [Enter RA/Dec…] -->
+            <StackPanel Orientation="Horizontal">
+                <TextBlock VerticalAlignment="Center" Text="RA Offset:" />
+                <TextBlock Margin="6,0,16,0" VerticalAlignment="Center"
+                           Text="{Binding OffsetRADisplay, Mode=OneWay}" />
+                <TextBlock VerticalAlignment="Center" Text="Dec Offset:" />
+                <TextBlock Margin="6,0,16,0" VerticalAlignment="Center"
+                           Text="{Binding OffsetDecDisplay, Mode=OneWay}" />
+                <Button VerticalAlignment="Center"
+                        Click="EnterRADecOffsetButton_Click">
+                    <TextBlock Margin="10,5" Text="Enter RA/Dec offset…" />
+                </Button>
+            </StackPanel>
 
-            <Button Grid.Row="6" Grid.ColumnSpan="3"
-                    Margin="0,10,0,4"
-                    HorizontalAlignment="Left"
-                    Click="EnterRADecOffsetButton_Click">
-                <TextBlock Margin="10,5" Text="Enter RA/Dec offset…" />
-            </Button>
-        </Grid>
+        </StackPanel>
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type local:OrbitalObjectContainer}">
@@ -225,6 +203,7 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
                                 <ComboBox
@@ -289,35 +268,51 @@
                                     Grid.Column="0"
                                     Margin="5"
                                     VerticalAlignment="Center"
+                                    Text="Rotation" />
+                                <TextBox
+                                    Grid.Row="3"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    Width="80"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Center"
+                                    TextAlignment="Right"
+                                    ToolTip="Position angle in degrees (North through East). Used by the plate-solve Center &amp; Rotate items."
+                                    Text="{Binding Target.PositionAngle, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F2}}" />
+                                <TextBlock
+                                    Grid.Row="4"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
                                     Text="RA Shift Rate" />
                                 <TextBlock
-                                    Grid.Row="3"
+                                    Grid.Row="4"
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center">
                                     <Run Text="{Binding ShiftTrackingRate.RASecondsPerSiderealSecond, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="sec/sidereal sec" />
                                 </TextBlock>
                                 <TextBlock
-                                    Grid.Row="4"
+                                    Grid.Row="5"
                                     Grid.Column="0"
                                     Margin="5"
                                     VerticalAlignment="Center"
                                     Text="Dec Shift Rate" />
                                 <TextBlock
-                                    Grid.Row="4"
+                                    Grid.Row="5"
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center">
                                     <Run Text="{Binding ShiftTrackingRate.DecArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
                                 </TextBlock>
                                 <TextBlock
-                                    Grid.Row="5"
+                                    Grid.Row="6"
                                     Grid.Column="0"
                                     Margin="5"
                                     VerticalAlignment="Center"
                                     Text="Distance" />
                                 <TextBlock
-                                    Grid.Row="5"
+                                    Grid.Row="6"
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center">
@@ -325,7 +320,7 @@
                                 </TextBlock>
                                 <alt:AltitudeChart
                                     Grid.Row="0"
-                                    Grid.RowSpan="6"
+                                    Grid.RowSpan="7"
                                     Grid.Column="2"
                                     MinWidth="400"
                                     MinHeight="120"
@@ -438,6 +433,7 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
                                 <TextBlock
@@ -489,35 +485,51 @@
                                     Grid.Column="0"
                                     Margin="5"
                                     VerticalAlignment="Center"
+                                    Text="Rotation" />
+                                <TextBox
+                                    Grid.Row="3"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    Width="80"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Center"
+                                    TextAlignment="Right"
+                                    ToolTip="Position angle in degrees (North through East). Used by the plate-solve Center &amp; Rotate items."
+                                    Text="{Binding Target.PositionAngle, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F2}}" />
+                                <TextBlock
+                                    Grid.Row="4"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
                                     Text="RA Shift Rate" />
                                 <TextBlock
-                                    Grid.Row="3"
+                                    Grid.Row="4"
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center">
                                     <Run Text="{Binding ShiftTrackingRate.RASecondsPerSiderealSecond, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="sec/sidereal sec" />
                                 </TextBlock>
                                 <TextBlock
-                                    Grid.Row="4"
+                                    Grid.Row="5"
                                     Grid.Column="0"
                                     Margin="5"
                                     VerticalAlignment="Center"
                                     Text="Dec Shift Rate" />
                                 <TextBlock
-                                    Grid.Row="4"
+                                    Grid.Row="5"
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center">
                                     <Run Text="{Binding ShiftTrackingRate.DecArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
                                 </TextBlock>
                                 <TextBlock
-                                    Grid.Row="5"
+                                    Grid.Row="6"
                                     Grid.Column="0"
                                     Margin="5"
                                     VerticalAlignment="Center"
                                     Text="Distance" />
                                 <TextBlock
-                                    Grid.Row="5"
+                                    Grid.Row="6"
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center">
@@ -525,7 +537,7 @@
                                 </TextBlock>
                                 <alt:AltitudeChart
                                     Grid.Row="0"
-                                    Grid.RowSpan="6"
+                                    Grid.RowSpan="7"
                                     Grid.Column="2"
                                     MinWidth="400"
                                     MinHeight="120"
@@ -639,6 +651,7 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
                                 <TextBlock
@@ -670,42 +683,58 @@
                                     Grid.Column="0"
                                     Margin="5"
                                     VerticalAlignment="Center"
+                                    Text="Rotation" />
+                                <TextBox
+                                    Grid.Row="3"
+                                    Grid.Column="1"
+                                    Margin="5"
+                                    Width="80"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Center"
+                                    TextAlignment="Right"
+                                    ToolTip="Position angle in degrees (North through East). Used by the plate-solve Center &amp; Rotate items."
+                                    Text="{Binding Target.PositionAngle, UpdateSourceTrigger=LostFocus, StringFormat={}{0:F2}}" />
+                                <TextBlock
+                                    Grid.Row="4"
+                                    Grid.Column="0"
+                                    Margin="5"
+                                    VerticalAlignment="Center"
                                     Text="RA Shift Rate" />
                                 <TextBlock
-                                    Grid.Row="3"
+                                    Grid.Row="4"
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center">
                                     <Run Text="{Binding ShiftTrackingRate.RASecondsPerSiderealSecond, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="sec/sidereal sec" />
                                 </TextBlock>
                                 <TextBlock
-                                    Grid.Row="4"
+                                    Grid.Row="5"
                                     Grid.Column="0"
                                     Margin="5"
                                     VerticalAlignment="Center"
                                     Text="Dec Shift Rate" />
                                 <TextBlock
-                                    Grid.Row="4"
+                                    Grid.Row="5"
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center">
                                     <Run Text="{Binding ShiftTrackingRate.DecArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
                                 </TextBlock>
                                 <TextBlock
-                                    Grid.Row="5"
+                                    Grid.Row="6"
                                     Grid.Column="0"
                                     Margin="5"
                                     VerticalAlignment="Center"
                                     Text="Distance" />
                                 <TextBlock
-                                    Grid.Row="5"
+                                    Grid.Row="6"
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center">
                                     <Run Text="{Binding Distance.DisplayDistance, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="{Binding Distance.DisplayUnits, Mode=OneWay}" />
                                 </TextBlock>
                                 <StackPanel
-                                    Grid.Row="6"
+                                    Grid.Row="7"
                                     Grid.Column="0"
                                     Grid.ColumnSpan="2"
                                     Margin="5"
@@ -732,7 +761,7 @@
                                 </StackPanel>
                                 <alt:AltitudeChart
                                     Grid.Row="0"
-                                    Grid.RowSpan="7"
+                                    Grid.RowSpan="8"
                                     Grid.Column="2"
                                     MinWidth="400"
                                     MinHeight="120"
@@ -848,6 +877,7 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
                                 <TextBlock
@@ -931,47 +961,47 @@
                                     VerticalAlignment="Center"
                                     Text="RA Shift Rate" />
                                 <TextBlock
-                                    Grid.Row="3"
+                                    Grid.Row="4"
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center">
                                     <Run Text="{Binding ShiftTrackingRate.RASecondsPerSiderealSecond, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="sec/sidereal sec" />
                                 </TextBlock>
                                 <TextBlock
-                                    Grid.Row="4"
+                                    Grid.Row="5"
                                     Grid.Column="0"
                                     Margin="5"
                                     VerticalAlignment="Center"
                                     Text="Dec Shift Rate" />
                                 <TextBlock
-                                    Grid.Row="4"
+                                    Grid.Row="5"
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center">
                                     <Run Text="{Binding ShiftTrackingRate.DecArcsecsPerSec, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="arcsec/sec" />
                                 </TextBlock>
                                 <TextBlock
-                                    Grid.Row="5"
+                                    Grid.Row="6"
                                     Grid.Column="0"
                                     Margin="5"
                                     VerticalAlignment="Center"
                                     Text="Distance" />
                                 <TextBlock
-                                    Grid.Row="5"
+                                    Grid.Row="6"
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center">
                                     <Run Text="{Binding Distance.DisplayDistance, StringFormat=\{0:0.####\}, Mode=OneWay}" /> <Run Text="{Binding Distance.DisplayUnits, Mode=OneWay}" />
                                 </TextBlock>
                                 <TextBlock
-                                    Grid.Row="6"
+                                    Grid.Row="7"
                                     Grid.Column="0"
                                     Margin="5"
                                     VerticalAlignment="Center"
                                     Text="Tracking" />
                                 <CheckBox
                                     MinWidth="80"
-                                    Grid.Row="6"
+                                    Grid.Row="7"
                                     Grid.Column="1"
                                     Margin="5"
                                     VerticalAlignment="Center"
@@ -980,7 +1010,7 @@
                                     IsChecked="{Binding TrackingEnabled, Mode=OneWay}" />
                                 <alt:AltitudeChart
                                     Grid.Row="0"
-                                    Grid.RowSpan="7"
+                                    Grid.RowSpan="8"
                                     Grid.Column="4"
                                     MinWidth="400"
                                     MinHeight="120"

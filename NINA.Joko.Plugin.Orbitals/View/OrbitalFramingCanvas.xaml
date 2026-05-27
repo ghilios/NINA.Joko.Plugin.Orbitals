@@ -39,7 +39,7 @@
                Stretch="Uniform"
                HorizontalAlignment="Center"
                VerticalAlignment="Center"
-               Opacity="0.80" />
+               Opacity="0.60" />
 
         <!-- Layer 3: Framing rectangle (draggable / wheel-rotatable) -->
         <Rectangle x:Name="FramingRectangle"

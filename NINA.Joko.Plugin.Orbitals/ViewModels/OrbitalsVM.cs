@@ -215,7 +215,8 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                         applicationMediator,
                         skySurveyFactory,
                         telescopeMediator,
-                        cameraMediator);
+                        cameraMediator,
+                        guiderMediator);
 
                     await Application.Current.Dispatcher.InvokeAsync(() => {
                         wizardVm.Initialize(SelectedOrbitalsObject);

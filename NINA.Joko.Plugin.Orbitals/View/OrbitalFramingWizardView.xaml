@@ -339,9 +339,9 @@
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
-                        <!-- RA / Dec offset (used by sequencer) -->
+                        <!-- RA / Dec offset -->
                         <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Margin="3,3,3,1"
-                                   Text="RA/Dec Offset (used by sequencer):"
+                                   Text="RA/Dec Offset:"
                                    FontWeight="Bold" />
                         <TextBlock Grid.Row="1" Grid.Column="0" Margin="3,1" Text="RA Offset:" />
                         <TextBlock Grid.Row="1" Grid.Column="1" Margin="3,1">
@@ -356,11 +356,11 @@
 
                         <!-- separator row (Row 3 is 8px) -->
 
-                        <!-- Sky-frame offset (display only) -->
+                        <!-- Sky-frame offset -->
                         <TextBlock Grid.Row="4" Grid.ColumnSpan="2" Margin="3,3,3,1"
-                                   Text="Sky-frame Offset (display only):"
+                                   Text="Sky-frame Offset:"
                                    FontWeight="Bold"
-                                   ToolTip="Position-independent offset representation. Same framing at any body position. Will be used by a future container variant." />
+                                   ToolTip="Position-independent offset representation. Same framing at any body position." />
                         <TextBlock Grid.Row="5" Grid.Column="0" Margin="3,1" Text="Separation:" />
                         <TextBlock Grid.Row="5" Grid.Column="1" Margin="3,1"
                                    Text="{Binding OffsetSeparationDisplay, Mode=OneWay}" />

@@ -31,14 +31,12 @@
                 <RowDefinition />
                 <RowDefinition />
                 <RowDefinition />
-                <RowDefinition />
             </Grid.RowDefinitions>
             <Grid.Resources>
                 <TextBlock x:Key="OrbitalRefreshTime_Tooltip" Text="How frequently, in seconds, the coordinates for an orbital object in the sequencer is updated. Setting this too low can negatively impact machine performance." />
                 <TextBlock x:Key="TLERefreshTime_Tooltip" Text="How frequently, in seconds, the coordinates for a TLE object in the sequencer is updated. Rapidly moving satellites benefit from having more frequent updates." />
                 <TextBlock x:Key="QuirksMode_Tooltip" Text="Most people should keep this at None. EQMOD currently needs a 15.0411x adjustment to RA Tracking Rate." />
                 <TextBlock x:Key="TLETrackStartWaitTime_Tooltip" Text="Satellites tend to move quickly, so slew ahead to the position a satellite will be by this amount of time, and wait to start tracking until the object arrives there. This value should be set based on the speed of your mount and dome." />
-                <TextBlock x:Key="CaptureMode_Tooltip" Text="Live: slews the mount, centers on target, and captures a real image. Load Test Image: loads a fixed XISF file for testing the framing workflow without equipment." />
             </Grid.Resources>
             <TextBlock
                 Grid.Row="0"
@@ -120,29 +118,6 @@
                 ToolTip="{StaticResource QuirksMode_Tooltip}"
                 ItemsSource="{Binding Source={util:EnumBindingSource {x:Type enums:QuirksModeEnum}}}"
                 SelectedItem="{Binding QuirksMode}">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding Converter={StaticResource O_EnumStaticDescriptionValueConverter}}" />
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
-            <TextBlock
-                Grid.Row="4"
-                Grid.Column="0"
-                Margin="5,5,0,0"
-                VerticalAlignment="Center"
-                Text="Framing Wizard Capture Mode"
-                ToolTip="{StaticResource CaptureMode_Tooltip}" />
-            <ComboBox
-                Name="PART_CaptureMode"
-                Grid.Row="4" Grid.Column="1"
-                MinWidth="150"
-                Margin="5,5,0,0"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Center"
-                ToolTip="{StaticResource CaptureMode_Tooltip}"
-                ItemsSource="{Binding Source={util:EnumBindingSource {x:Type enums:CaptureModeEnum}}}"
-                SelectedItem="{Binding CaptureMode}">
                 <ComboBox.ItemTemplate>
                     <DataTemplate>
                         <TextBlock Text="{Binding Converter={StaticResource O_EnumStaticDescriptionValueConverter}}" />

@@ -61,6 +61,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private readonly ISkySurveyFactory skySurveyFactory;
         private readonly ITelescopeMediator telescopeMediator;
         private readonly ICameraMediator cameraMediator;
+        private readonly IGuiderMediator guiderMediator;
         private readonly SkyMapAnnotator skyMapAnnotator;
 
         // Image dimensions requested from sky-survey providers. NINA's framing assistant
@@ -71,7 +72,29 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private CancellationTokenSource captureCts;
         private DispatcherTimer liveTimer;
         private bool _disposed;
-        private readonly PropertyChangedEventHandler _captureModeChangedHandler;
+
+        // ═══════════════════════════════════════════════════════════════════════
+        //  ── CAPTURE-SOURCE OVERRIDE  (developer-only — set in code, not in UI) ──
+        //
+        //  Selects which ICaptureSource implementation the wizard uses for the
+        //  "Capture" button. There is intentionally NO user-facing setting for
+        //  this; flip the value below when you need to switch.
+        //
+        //    CaptureModeEnum.Live      → real workflow: slew → plate-solve →
+        //                                 center → capture using the connected
+        //                                 mount + camera.
+        //    CaptureModeEnum.XisfStub  → development workflow: prompt for an
+        //                                 image file the first time the user
+        //                                 clicks Capture, then re-use it for
+        //                                 subsequent captures. No mount needed.
+        //
+        //  This must stay a `const`: it's read into `CaptureButtonLabel` (which
+        //  bindings can't refresh) and ResolveCaptureSource (which is on the
+        //  hot path for every Capture click). Changing the value requires a
+        //  rebuild — that's deliberate so it can't be flipped accidentally in
+        //  a release build.
+        // ═══════════════════════════════════════════════════════════════════════
+        private const CaptureModeEnum CaptureModeOverride = CaptureModeEnum.Live;
 
         public OrbitalFramingWizardVM(
             IProfileService profileService,
@@ -83,7 +106,8 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             IApplicationMediator applicationMediator,
             ISkySurveyFactory skySurveyFactory,
             ITelescopeMediator telescopeMediator,
-            ICameraMediator cameraMediator) {
+            ICameraMediator cameraMediator,
+            IGuiderMediator guiderMediator) {
             this.profileService = profileService;
             this.nighttimeCalculator = nighttimeCalculator;
             this.applicationStatusMediator = applicationStatusMediator;
@@ -93,6 +117,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             this.skySurveyFactory = skySurveyFactory;
             this.telescopeMediator = telescopeMediator;
             this.cameraMediator = cameraMediator;
+            this.guiderMediator = guiderMediator;
 
             // Snapshot the camera info so the view can bind to DefaultGain /
             // DefaultOffset for the empty-state hint text in the Capture section.
@@ -118,13 +143,6 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
             this.captureSources = captureSources?.ToList()
                 ?? throw new ArgumentNullException(nameof(captureSources));
-
-            // Listen to CaptureMode changes so CaptureButtonLabel stays current.
-            _captureModeChangedHandler = (_, e) => {
-                if (e.PropertyName == nameof(IOrbitalsOptions.CaptureMode))
-                    RaisePropertyChanged(nameof(CaptureButtonLabel));
-            };
-            orbitalsOptions.PropertyChanged += _captureModeChangedHandler;
 
             SlewCenterAndImageCommand = new AsyncRelayCommand(SlewCenterAndImageAsync, () => !IsCapturing);
             CancelCaptureCommand = new RelayCommand(CancelCapture, () => IsCapturing);
@@ -198,8 +216,6 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         public void Dispose() {
             if (_disposed) return;
             _disposed = true;
-            if (_captureModeChangedHandler != null)
-                orbitalsOptions.PropertyChanged -= _captureModeChangedHandler;
             liveTimer?.Stop();
             liveTimer = null;
             captureCts?.Cancel();
@@ -601,15 +617,24 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 Type containerType = GetContainerTypeForObject(selectedObject);
                 var template = templates?.FirstOrDefault(t => t.GetType() == containerType);
 
-                if (template == null) {
-                    Notification.ShowError(
-                        $"No sequence container template found for {selectedObject.GetType().Name}. " +
-                        $"Please add a {containerType.Name} container to the sequencer first.");
-                    return;
+                // Step 2: Materialize a fresh container instance. Prefer a user
+                // template clone if one is registered (preserves their custom
+                // sub-items / triggers); otherwise build the default container
+                // directly so the export doesn't break for users who haven't
+                // saved a personal template for this orbital type.
+                ISequenceContainer rawClone;
+                if (template != null) {
+                    rawClone = (ISequenceContainer)template.Clone();
+                } else {
+                    try {
+                        rawClone = ConstructDefaultContainer(selectedObject);
+                    } catch (Exception ex) {
+                        Logger.Error($"ExportToSequencerAsync: failed to construct default {containerType.Name}", ex);
+                        Notification.ShowError(
+                            $"Could not create a {containerType.Name} for {selectedObject.GetType().Name}: {ex.Message}");
+                        return;
+                    }
                 }
-
-                // Step 2: Clone the template and cast to the concrete container base.
-                var rawClone = template.Clone();
 
                 // Step 3: Populate common fields.
                 PopulateContainerSpecificFields(rawClone, selectedObject);
@@ -652,6 +677,27 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 SolarSystemBodyObject => typeof(SolarSystemBodyContainer),
                 TLEObject => typeof(ManualTLEContainer),
                 PVTableObject => typeof(JWSTContainer),
+                _ => throw new InvalidOperationException($"Unknown orbital object type: {obj.GetType().Name}")
+            };
+        }
+
+        /// <summary>
+        /// Builds a fresh container instance using the same dependencies MEF
+        /// would inject into the corresponding <c>[ImportingConstructor]</c>.
+        /// Used as a fallback when the user has no personalized template saved
+        /// for this orbital object type — so the export "just works" on a
+        /// clean NINA install.
+        /// </summary>
+        private ISequenceContainer ConstructDefaultContainer(OrbitalsObjectBase obj) {
+            return obj switch {
+                OrbitalElementsObject =>
+                    new OrbitalObjectContainer(profileService, nighttimeCalculator, applicationMediator),
+                SolarSystemBodyObject =>
+                    new SolarSystemBodyContainer(profileService, nighttimeCalculator, applicationMediator),
+                PVTableObject =>
+                    new JWSTContainer(profileService, nighttimeCalculator, applicationMediator),
+                TLEObject =>
+                    new ManualTLEContainer(profileService, nighttimeCalculator, telescopeMediator, applicationMediator, guiderMediator),
                 _ => throw new InvalidOperationException($"Unknown orbital object type: {obj.GetType().Name}")
             };
         }
@@ -860,18 +906,18 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             private set { nighttimeData = value; RaisePropertyChanged(); }
         }
 
-        /// <summary>Button label switches based on the currently selected capture mode.</summary>
-        public string CaptureButtonLabel => orbitalsOptions.CaptureMode == CaptureModeEnum.Live
+        /// <summary>Button label tracks the developer-only <see cref="CaptureModeOverride"/>.</summary>
+        public string CaptureButtonLabel => CaptureModeOverride == CaptureModeEnum.Live
             ? "Slew, Center & Image"
             : "Load Test Image";
 
         /// <summary>
-        /// Resolves the active <see cref="ICaptureSource"/> by matching
-        /// <see cref="IOrbitalsOptions.CaptureMode"/> against each source's MEF metadata.
-        /// Falls back to the first registered source if no match is found.
+        /// Resolves the active <see cref="ICaptureSource"/> from the developer
+        /// override <see cref="CaptureModeOverride"/> by matching each source's
+        /// MEF metadata. Falls back to the first registered source if no match.
         /// </summary>
         private ICaptureSource ResolveCaptureSource() {
-            var modeKey = orbitalsOptions.CaptureMode == CaptureModeEnum.Live ? "Live" : "XisfStub";
+            var modeKey = CaptureModeOverride == CaptureModeEnum.Live ? "Live" : "XisfStub";
             var match = captureSources.FirstOrDefault(s => s.Metadata.Mode == modeKey);
             if (match == null) {
                 Logger.Warning($"No ICaptureSource registered for mode '{modeKey}', falling back to first available");
