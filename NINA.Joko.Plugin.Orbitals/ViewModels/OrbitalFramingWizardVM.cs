@@ -27,6 +27,7 @@ using NINA.Profile.Interfaces;
 using NINA.Sequencer.Container;
 using NINA.Sequencer.Interfaces.Mediator;
 using NINA.WPF.Base.Interfaces.Mediator;
+using NINA.WPF.Base.SkySurvey;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -55,6 +56,11 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private readonly IOrbitalsOptions orbitalsOptions;
         private readonly ISequenceMediator sequenceMediator;
         private readonly IApplicationMediator applicationMediator;
+        private readonly ISkySurveyFactory skySurveyFactory;
+
+        // Image dimensions requested from sky-survey providers. NINA's framing assistant
+        // uses similar values; large enough to look good at the background FOV scale.
+        private const int BackgroundImagePx = 1200;
 
         private OrbitalsObjectBase selectedObject;
         private CancellationTokenSource captureCts;
@@ -69,13 +75,20 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             IApplicationStatusMediator applicationStatusMediator,
             IOrbitalsOptions orbitalsOptions,
             ISequenceMediator sequenceMediator,
-            IApplicationMediator applicationMediator) {
+            IApplicationMediator applicationMediator,
+            ISkySurveyFactory skySurveyFactory) {
             this.profileService = profileService;
             this.nighttimeCalculator = nighttimeCalculator;
             this.applicationStatusMediator = applicationStatusMediator;
             this.orbitalsOptions = orbitalsOptions;
             this.sequenceMediator = sequenceMediator;
             this.applicationMediator = applicationMediator;
+            this.skySurveyFactory = skySurveyFactory;
+
+            // Seed image source from the profile (mirroring NINA's framing assistant)
+            // and fall back to the offline sky atlas if the profile isn't available
+            // (which only happens in some unit-test paths).
+            selectedImageSource = LoadInitialImageSource();
 
             this.captureSources = captureSources?.ToList()
                 ?? throw new ArgumentNullException(nameof(captureSources));
@@ -95,6 +108,34 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             ExportToSequencerCommand = new AsyncRelayCommand(ExportToSequencerAsync);
 
             CancelCommand = new RelayCommand(Cancel);
+
+            ZoomInCommand = new RelayCommand(() => SetCanvasZoom(CanvasZoom * ZoomStep));
+            ZoomOutCommand = new RelayCommand(() => SetCanvasZoom(CanvasZoom / ZoomStep));
+            ResetZoomCommand = new RelayCommand(() => SetCanvasZoom(1.0));
+        }
+
+        // ─── Canvas zoom ─────────────────────────────────────────────────────────
+
+        private const double ZoomStep = 1.25;
+        private const double MinZoom = 0.25;
+        private const double MaxZoom = 8.0;
+
+        private double canvasZoom = 1.0;
+
+        /// <summary>
+        /// Visual scale of the framing canvas. 1.0 = fit-to-viewport; clamped to
+        /// [<see cref="MinZoom"/>, <see cref="MaxZoom"/>]. The wizard view applies this
+        /// as a <c>LayoutTransform</c> on the canvas UserControl so the wrapping
+        /// <c>ScrollViewer</c> shows scrollbars when content exceeds the viewport.
+        /// </summary>
+        public double CanvasZoom {
+            get => canvasZoom;
+            private set { if (canvasZoom != value) { canvasZoom = value; RaisePropertyChanged(); } }
+        }
+
+        private void SetCanvasZoom(double value) {
+            if (double.IsNaN(value) || double.IsInfinity(value)) return;
+            CanvasZoom = Math.Max(MinZoom, Math.Min(MaxZoom, value));
         }
 
         // -------------------------------------------------------------------------
@@ -118,6 +159,11 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             };
             liveTimer.Tick += (_, __) => UpdateLiveData();
             liveTimer.Start();
+
+            // Kick off an initial sky-survey background fetch centered on the body's
+            // current J2000 position. Fire-and-forget — the helper handles its own
+            // cancellation, error notification, and IsBackgroundLoading flag.
+            _ = ReloadBackgroundAsync();
         }
 
         /// <summary>Stop the live timer (e.g. when the window closes).</summary>
@@ -131,6 +177,9 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             captureCts?.Cancel();
             captureCts?.Dispose();
             captureCts = null;
+            backgroundLoadCts?.Cancel();
+            backgroundLoadCts?.Dispose();
+            backgroundLoadCts = null;
             GC.SuppressFinalize(this);
         }
 
@@ -164,6 +213,141 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             } catch (Exception e) {
                 Logger.Error("Error updating live data in OrbitalFramingWizardVM", e);
             }
+        }
+
+        // -------------------------------------------------------------------------
+        // Sky-survey background
+        // -------------------------------------------------------------------------
+
+        private CancellationTokenSource backgroundLoadCts;
+        private bool isBackgroundLoading;
+
+        /// <summary>True while a sky-survey image is being fetched.</summary>
+        public bool IsBackgroundLoading {
+            get => isBackgroundLoading;
+            private set { if (isBackgroundLoading != value) { isBackgroundLoading = value; RaisePropertyChanged(); } }
+        }
+
+        private SkySurveySource selectedImageSource;
+
+        /// <summary>
+        /// Which sky-survey source to fetch the background from. Initialized from
+        /// <c>ActiveProfile.FramingAssistantSettings.LastSelectedImageSource</c> so
+        /// the wizard shares the user's preference with NINA's built-in framing
+        /// assistant. Changing this persists the new value back to the same profile
+        /// setting and kicks off a re-fetch.
+        /// </summary>
+        public SkySurveySource SelectedImageSource {
+            get => selectedImageSource;
+            set {
+                if (selectedImageSource == value) return;
+                selectedImageSource = value;
+                RaisePropertyChanged();
+                PersistImageSourceToProfile(value);
+                _ = ReloadBackgroundAsync();
+            }
+        }
+
+        /// <summary>All <see cref="SkySurveySource"/> values for the ComboBox ItemsSource.</summary>
+        public IReadOnlyList<SkySurveySource> AvailableImageSources { get; } =
+            (SkySurveySource[])Enum.GetValues(typeof(SkySurveySource));
+
+        private SkySurveySource LoadInitialImageSource() {
+            try {
+                var settings = profileService?.ActiveProfile?.FramingAssistantSettings;
+                if (settings != null) return settings.LastSelectedImageSource;
+            } catch (Exception ex) {
+                Logger.Warning($"Could not read FramingAssistantSettings.LastSelectedImageSource: {ex.Message}");
+            }
+            return SkySurveySource.SKYATLAS;
+        }
+
+        private void PersistImageSourceToProfile(SkySurveySource value) {
+            try {
+                var settings = profileService?.ActiveProfile?.FramingAssistantSettings;
+                if (settings != null) settings.LastSelectedImageSource = value;
+            } catch (Exception ex) {
+                Logger.Warning($"Could not persist image source to profile: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Fetches a sky-survey image centered on the current target (post-capture:
+        /// the captured frame's plate-solved coordinates; pre-capture: the body's
+        /// J2000 position right now) and assigns it to <see cref="BackgroundImage"/>.
+        /// Safe to call concurrently — prior in-flight loads are cancelled.
+        /// </summary>
+        private async Task ReloadBackgroundAsync() {
+            if (skySurveyFactory == null) return;
+            if (selectedObject == null) return;
+
+            // Cancel any in-flight load so a rapid source-change or coord-change
+            // doesn't paint a stale image last.
+            backgroundLoadCts?.Cancel();
+            backgroundLoadCts?.Dispose();
+            backgroundLoadCts = new CancellationTokenSource();
+            var ct = backgroundLoadCts.Token;
+
+            Coordinates coords;
+            double fovArcmin;
+            string name = selectedObject.Name ?? "Target";
+
+            if (HasCapture && CapturedImageCoordinates != null && CapturedImagePixscale > 0 && CapturedImageWidthPx > 0) {
+                coords = CapturedImageCoordinates;
+                fovArcmin = CapturedImagePixscale * CapturedImageWidthPx * BackgroundFovMultiplier / 60.0;
+            } else {
+                try {
+                    coords = selectedObject.PositionAt(DateTime.UtcNow).Coordinates;
+                } catch (Exception ex) {
+                    Logger.Error("Could not compute body position for background fetch", ex);
+                    return;
+                }
+                fovArcmin = EstimatePreCaptureFovArcmin();
+            }
+
+            try {
+                IsBackgroundLoading = true;
+                var survey = skySurveyFactory.Create(SelectedImageSource);
+                var img = await survey.GetImage(
+                    name,
+                    coords,
+                    fovArcmin,
+                    BackgroundImagePx,
+                    BackgroundImagePx,
+                    ct,
+                    null);
+                if (ct.IsCancellationRequested || img == null) return;
+
+                BitmapSource bmp = img.Image;
+                if (bmp != null && bmp.CanFreeze && !bmp.IsFrozen) bmp.Freeze();
+                BackgroundImage = bmp;
+            } catch (OperationCanceledException) {
+                // expected when the user changes source rapidly
+            } catch (Exception ex) {
+                Logger.Error("Failed to load sky-survey background", ex);
+                Notification.ShowError($"Could not load survey image: {ex.Message}");
+                BackgroundImage = null;
+            } finally {
+                IsBackgroundLoading = false;
+            }
+        }
+
+        private double EstimatePreCaptureFovArcmin() {
+            try {
+                var profile = profileService?.ActiveProfile;
+                double pixelSize = profile?.CameraSettings?.PixelSize ?? 0;
+                double focalLength = profile?.TelescopeSettings?.FocalLength ?? 0;
+                if (pixelSize > 0 && focalLength > 0) {
+                    double arcsecPerPx = AstroUtil.ArcsecPerPixel(pixelSize, focalLength);
+                    // Assume a 4000 px sensor width as a reasonable default; the
+                    // resulting FOV is the wizard's pre-capture estimate only.
+                    const int AssumedSensorPx = 4000;
+                    double fovArcsec = arcsecPerPx * AssumedSensorPx;
+                    return fovArcsec / 60.0 * BackgroundFovMultiplier;
+                }
+            } catch { }
+            // Fallback: 60 arcmin × multiplier.
+            return 60.0 * BackgroundFovMultiplier;
         }
 
         // -------------------------------------------------------------------------
@@ -204,9 +388,6 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 CapturedImageWidthPx = frame.WidthPx;
                 CapturedImageHeightPx = frame.HeightPx;
 
-                // Phase C will fetch background image; leave null for Phase B.
-                BackgroundImage = null;
-
                 // Initialise offsets — rectangle centred on the body.
                 _rectangleOffsetXPx = 0;
                 _rectangleOffsetYPx = 0;
@@ -225,6 +406,10 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 OffsetPositionAngleDeg = 0;
 
                 HasCapture = true;
+
+                // Re-fetch the sky-survey background centered on the plate-solved
+                // coordinates at the captured FOV (with BackgroundFovMultiplier).
+                _ = ReloadBackgroundAsync();
             } catch (CaptureSourceUserFacingException ex) {
                 // Capture source already showed the user an error notification — just log.
                 Logger.Info($"Capture aborted (user already notified): {ex.Message}");
@@ -692,5 +877,8 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         public RelayCommand ResetFramingCommand { get; private set; }
         public AsyncRelayCommand ExportToSequencerCommand { get; private set; }
         public RelayCommand CancelCommand { get; private set; }
+        public RelayCommand ZoomInCommand { get; private set; }
+        public RelayCommand ZoomOutCommand { get; private set; }
+        public RelayCommand ResetZoomCommand { get; private set; }
     }
 }

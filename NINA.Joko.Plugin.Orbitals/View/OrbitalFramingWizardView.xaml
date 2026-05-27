@@ -48,29 +48,70 @@
              ═══════════════════════════════════════════════════════════════════════ -->
         <Border Grid.Column="0" Background="#1a1a1a" Margin="5">
             <Grid>
-                <!-- Canvas (visible only when an image has been captured) -->
-                <local:OrbitalFramingCanvas
-                    x:Name="FramingCanvas"
-                    CapturedImageSource="{Binding CapturedImage}"
-                    CapturedImageRotation="{Binding CapturedImageRotation}"
-                    CapturedImagePixelWidth="{Binding CapturedImageWidthPx}"
-                    CapturedImagePixelHeight="{Binding CapturedImageHeightPx}"
-                    BackgroundImageSource="{Binding BackgroundImage}"
-                    BackgroundFovMultiplier="{Binding BackgroundFovMultiplier}"
-                    RectangleOffsetX="{Binding RectangleOffsetXPx, Mode=TwoWay}"
-                    RectangleOffsetY="{Binding RectangleOffsetYPx, Mode=TwoWay}"
-                    RectangleRotation="{Binding RectangleRotationDeg, Mode=TwoWay}"
-                    Visibility="{Binding HasCapture, Converter={StaticResource BooleanToVisibilityCollapsedConverter}}" />
+                <!-- Scrollable / zoomable canvas. CanvasZoom drives a LayoutTransform
+                     on the canvas; Width/Height bind to the ScrollViewer viewport so
+                     at zoom=1 the canvas exactly fits and no scrollbars show. -->
+                <ScrollViewer x:Name="CanvasScroll"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto">
+                    <local:OrbitalFramingCanvas
+                        x:Name="FramingCanvas"
+                        Width="{Binding ViewportWidth, ElementName=CanvasScroll}"
+                        Height="{Binding ViewportHeight, ElementName=CanvasScroll}"
+                        CapturedImageSource="{Binding CapturedImage}"
+                        CapturedImageRotation="{Binding CapturedImageRotation}"
+                        CapturedImagePixelWidth="{Binding CapturedImageWidthPx}"
+                        CapturedImagePixelHeight="{Binding CapturedImageHeightPx}"
+                        BackgroundImageSource="{Binding BackgroundImage}"
+                        BackgroundFovMultiplier="{Binding BackgroundFovMultiplier}"
+                        RectangleOffsetX="{Binding RectangleOffsetXPx, Mode=TwoWay}"
+                        RectangleOffsetY="{Binding RectangleOffsetYPx, Mode=TwoWay}"
+                        RectangleRotation="{Binding RectangleRotationDeg, Mode=TwoWay}">
+                        <local:OrbitalFramingCanvas.LayoutTransform>
+                            <ScaleTransform ScaleX="{Binding CanvasZoom}" ScaleY="{Binding CanvasZoom}" />
+                        </local:OrbitalFramingCanvas.LayoutTransform>
+                    </local:OrbitalFramingCanvas>
+                </ScrollViewer>
 
-                <!-- Placeholder when no image loaded -->
-                <TextBlock
-                    Text="Load an image to begin framing&#x0a;(drag the rectangle to offset, scroll-wheel to rotate)"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    TextAlignment="Center"
-                    Foreground="#888888"
-                    FontSize="14"
-                    Visibility="{Binding HasCapture, Converter={StaticResource InverseBooleanToVisibilityCollapsedConverter}}" />
+                <!-- Pre-capture hint (overlays the survey background; only shown until a frame is captured) -->
+                <Border HorizontalAlignment="Center"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,0,12"
+                        Background="#80000000"
+                        CornerRadius="3"
+                        Padding="10,5"
+                        Visibility="{Binding HasCapture, Converter={StaticResource InverseBooleanToVisibilityCollapsedConverter}}">
+                    <TextBlock
+                        Text="Capture an image to enable the framing rectangle"
+                        Foreground="#DDDDDD"
+                        FontSize="12" />
+                </Border>
+
+                <!-- Zoom toolbar (top-right overlay) -->
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            Margin="5"
+                            Panel.ZIndex="10">
+                    <Button Width="28" Height="24" Margin="0,0,2,0"
+                            Command="{Binding ZoomOutCommand}"
+                            ToolTip="Zoom out">
+                        <TextBlock Text="−" FontSize="14"
+                                   Foreground="{StaticResource ButtonForegroundBrush}" />
+                    </Button>
+                    <Button Width="40" Height="24" Margin="0,0,2,0"
+                            Command="{Binding ResetZoomCommand}"
+                            ToolTip="Reset zoom to 100%">
+                        <TextBlock Text="100%" FontSize="10"
+                                   Foreground="{StaticResource ButtonForegroundBrush}" />
+                    </Button>
+                    <Button Width="28" Height="24"
+                            Command="{Binding ZoomInCommand}"
+                            ToolTip="Zoom in">
+                        <TextBlock Text="+" FontSize="14"
+                                   Foreground="{StaticResource ButtonForegroundBrush}" />
+                    </Button>
+                </StackPanel>
 
                 <!-- Busy overlay while capturing -->
                 <Border
@@ -161,18 +202,25 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Exposure (s):" />
-                            <TextBox Grid.Row="0" Grid.Column="1" Margin="3"
+                            <TextBlock Grid.Row="0" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Image Source:" />
+                            <ComboBox Grid.Row="0" Grid.Column="1" Margin="3"
+                                      ItemsSource="{Binding AvailableImageSources}"
+                                      SelectedItem="{Binding SelectedImageSource, Mode=TwoWay}"
+                                      ToolTip="Sky-survey source used to render the background image. Defaults to NINA's offline sky atlas." />
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Exposure (s):" />
+                            <TextBox Grid.Row="1" Grid.Column="1" Margin="3"
                                      Text="{Binding ExposureTime, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-                            <TextBlock Grid.Row="1" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Gain:" />
-                            <TextBox Grid.Row="1" Grid.Column="1" Margin="3"
+                            <TextBlock Grid.Row="2" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Gain:" />
+                            <TextBox Grid.Row="2" Grid.Column="1" Margin="3"
                                      Text="{Binding Gain, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-                            <TextBlock Grid.Row="2" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Offset:" />
-                            <TextBox Grid.Row="2" Grid.Column="1" Margin="3"
+                            <TextBlock Grid.Row="3" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Offset:" />
+                            <TextBox Grid.Row="3" Grid.Column="1" Margin="3"
                                      Text="{Binding Offset, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         </Grid>
 

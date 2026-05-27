@@ -32,6 +32,7 @@ using NINA.Profile.Interfaces;
 using NINA.Sequencer.Interfaces.Mediator;
 using NINA.WPF.Base.Interfaces.Mediator;
 using NINA.WPF.Base.Interfaces.ViewModel;
+using NINA.WPF.Base.SkySurvey;
 using NINA.WPF.Base.ViewModel;
 using SGPdotNET.TLE;
 using System;
@@ -61,6 +62,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private readonly ISequenceMediator sequenceMediator;
         private readonly IProgress<ApplicationStatus> progress;
         private readonly IEnumerable<Lazy<ICaptureSource, ICaptureSourceMetadata>> captureSources;
+        private readonly ISkySurveyFactory skySurveyFactory;
         private bool initialLoadComplete;
         private Task<bool> refreshTask;
 
@@ -74,8 +76,9 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             IApplicationMediator applicationMediator,
             IApplicationStatusMediator applicationStatusMediator,
             ISequenceMediator sequenceMediator,
-            [ImportMany] IEnumerable<Lazy<ICaptureSource, ICaptureSourceMetadata>> captureSources)
-            : this(profileService, nighttimeCalculator, guiderMediator, telescopeMediator, framingAssistantVM, applicationMediator, applicationStatusMediator, sequenceMediator, captureSources, OrbitalsPlugin.OrbitalsOptions, OrbitalsPlugin.JPLAccessor, OrbitalsPlugin.MPCAccessor, OrbitalsPlugin.OrbitalElementsAccessor, new OrbitalSearchVM(OrbitalsPlugin.OrbitalElementsAccessor)) {
+            [ImportMany] IEnumerable<Lazy<ICaptureSource, ICaptureSourceMetadata>> captureSources,
+            ISkySurveyFactory skySurveyFactory)
+            : this(profileService, nighttimeCalculator, guiderMediator, telescopeMediator, framingAssistantVM, applicationMediator, applicationStatusMediator, sequenceMediator, captureSources, skySurveyFactory, OrbitalsPlugin.OrbitalsOptions, OrbitalsPlugin.JPLAccessor, OrbitalsPlugin.MPCAccessor, OrbitalsPlugin.OrbitalElementsAccessor, new OrbitalSearchVM(OrbitalsPlugin.OrbitalElementsAccessor)) {
         }
 
         public OrbitalsVM(
@@ -88,6 +91,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             IApplicationStatusMediator applicationStatusMediator,
             ISequenceMediator sequenceMediator,
             IEnumerable<Lazy<ICaptureSource, ICaptureSourceMetadata>> captureSources,
+            ISkySurveyFactory skySurveyFactory,
             IOrbitalsOptions orbitalsOptions,
             IJPLAccessor jplAccessor,
             IMPCAccessor mpcAccessor,
@@ -114,6 +118,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             this.profileService = profileService;
             this.applicationStatusMediator = applicationStatusMediator;
             this.captureSources = captureSources;
+            this.skySurveyFactory = skySurveyFactory;
             this.progress = ProgressFactory.Create(applicationStatusMediator, "Orbitals");
             this.orbitalElementsAccessor.Updated += OrbitalElementsAccessor_Updated;
             this.orbitalElementsAccessor.VectorTableUpdated += OrbitalElementsAccessor_VectorTableUpdated;
@@ -202,7 +207,8 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                         applicationStatusMediator,
                         orbitalsOptions,
                         sequenceMediator,
-                        applicationMediator);
+                        applicationMediator,
+                        skySurveyFactory);
 
                     await Application.Current.Dispatcher.InvokeAsync(() => {
                         wizardVm.Initialize(SelectedOrbitalsObject);

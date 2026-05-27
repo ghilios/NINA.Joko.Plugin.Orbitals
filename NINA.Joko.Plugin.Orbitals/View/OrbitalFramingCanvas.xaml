@@ -49,9 +49,13 @@
                 <SolidColorBrush Color="Yellow" Opacity="0.85" />
             </Rectangle.Stroke>
             <Rectangle.RenderTransform>
+                <!-- Rotate before Translate so the translation is applied in
+                     parent (screen) space rather than the rectangle's local frame.
+                     Drag deltas from MouseMove are screen-space; this order keeps
+                     them visually screen-aligned regardless of RectRotation.Angle. -->
                 <TransformGroup>
-                    <TranslateTransform x:Name="RectTranslate" X="0" Y="0" />
                     <RotateTransform x:Name="RectRotation" Angle="0" />
+                    <TranslateTransform x:Name="RectTranslate" X="0" Y="0" />
                 </TransformGroup>
             </Rectangle.RenderTransform>
         </Rectangle>

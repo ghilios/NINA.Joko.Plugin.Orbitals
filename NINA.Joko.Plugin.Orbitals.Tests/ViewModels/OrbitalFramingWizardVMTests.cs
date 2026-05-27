@@ -2,6 +2,7 @@ using FluentAssertions;
 using Moq;
 using NINA.Astrometry;
 using NINA.Astrometry.Interfaces;
+using NINA.Core.Enum;
 using NINA.Core.Model;
 using NINA.Equipment.Interfaces;
 using NINA.Joko.Plugin.Orbitals.Calculations;
@@ -12,8 +13,11 @@ using NINA.Joko.Plugin.Orbitals.Tests.TestHelpers;
 using NINA.Joko.Plugin.Orbitals.ViewModels;
 using NINA.Profile.Interfaces;
 using NINA.WPF.Base.Interfaces.Mediator;
+using NINA.WPF.Base.SkySurvey;
 using NUnit.Framework;
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -54,15 +58,35 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
 
         private static (OrbitalFramingWizardVM vm, FakeCaptureSource capture, FakeOrbitalsObject target)
             Make(Coordinates coords, SiderealShiftTrackingRate rate, string name = "Test Object") {
+            var (vm, capture, target, _, _, _) = MakeWithSurveyMocks(coords, rate, name);
+            return (vm, capture, target);
+        }
+
+        /// <summary>
+        /// Extended factory exposing the sky-survey factory + survey + framing-assistant
+        /// settings mocks so tests can assert on calls / persistence behavior.
+        /// </summary>
+        private static (OrbitalFramingWizardVM vm,
+                        FakeCaptureSource capture,
+                        FakeOrbitalsObject target,
+                        Mock<ISkySurveyFactory> skySurveyFactory,
+                        Mock<ISkySurvey> skySurvey,
+                        Mock<IFramingAssistantSettings> framingAssistantSettings)
+            MakeWithSurveyMocks(Coordinates coords, SiderealShiftTrackingRate rate, string name = "Test Object") {
             // Mock profile service
             var cameraSettings = new Mock<ICameraSettings>();
             cameraSettings.SetupGet(c => c.PixelSize).Returns(4.63); // µm
             var telescopeSettings = new Mock<ITelescopeSettings>();
             telescopeSettings.SetupGet(t => t.FocalLength).Returns(480); // mm
 
+            // Framing-assistant settings — starting point for the wizard's image source.
+            var framingAssistantSettings = new Mock<IFramingAssistantSettings>();
+            framingAssistantSettings.SetupProperty(f => f.LastSelectedImageSource, SkySurveySource.SKYATLAS);
+
             var activeProfile = new Mock<IProfile>();
             activeProfile.SetupGet(p => p.CameraSettings).Returns(cameraSettings.Object);
             activeProfile.SetupGet(p => p.TelescopeSettings).Returns(telescopeSettings.Object);
+            activeProfile.SetupGet(p => p.FramingAssistantSettings).Returns(framingAssistantSettings.Object);
 
             var profileService = new Mock<IProfileService>();
             profileService.SetupGet(ps => ps.ActiveProfile).Returns(activeProfile.Object);
@@ -83,6 +107,22 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             var seqMediator = new Mock<NINA.Sequencer.Interfaces.Mediator.ISequenceMediator>();
             var appMediator = new Mock<NINA.WPF.Base.Interfaces.Mediator.IApplicationMediator>();
 
+            // Sky-survey factory: factory.Create(any) → survey, survey.GetImage(...) → null.
+            // The VM tolerates a null SkySurveyImage and just leaves BackgroundImage unset.
+            var skySurvey = new Mock<ISkySurvey>();
+            skySurvey.Setup(s => s.GetImage(
+                It.IsAny<string>(),
+                It.IsAny<Coordinates>(),
+                It.IsAny<double>(),
+                It.IsAny<int>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<IProgress<int>>()))
+                .Returns(Task.FromResult<SkySurveyImage>(null));
+
+            var skySurveyFactory = new Mock<ISkySurveyFactory>();
+            skySurveyFactory.Setup(f => f.Create(It.IsAny<SkySurveySource>())).Returns(skySurvey.Object);
+
             var vm = new OrbitalFramingWizardVM(
                 profileService.Object,
                 new[] { capture.AsLazy() },
@@ -90,11 +130,12 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
                 statusMediator.Object,
                 options.Object,
                 seqMediator.Object,
-                appMediator.Object);
+                appMediator.Object,
+                skySurveyFactory.Object);
 
             var target = new FakeOrbitalsObject(name, coords, rate);
 
-            return (vm, capture, target);
+            return (vm, capture, target, skySurveyFactory, skySurvey, framingAssistantSettings);
         }
 
         // -------------------------------------------------------------------------
@@ -163,6 +204,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             var capture = new FakeCaptureSource();
             var seqMediator2 = new Mock<NINA.Sequencer.Interfaces.Mediator.ISequenceMediator>();
             var appMediator2 = new Mock<NINA.WPF.Base.Interfaces.Mediator.IApplicationMediator>();
+            var skySurveyFactory2 = new Mock<ISkySurveyFactory>();
+            skySurveyFactory2.Setup(f => f.Create(It.IsAny<SkySurveySource>())).Returns(Mock.Of<ISkySurvey>());
 
             var vm = new OrbitalFramingWizardVM(
                 profileService.Object,
@@ -171,7 +214,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
                 statusMediator.Object,
                 options.Object,
                 seqMediator2.Object,
-                appMediator2.Object);
+                appMediator2.Object,
+                skySurveyFactory2.Object);
 
             var target = new FakeOrbitalsObject("Mars", coords, rate);
             vm.Initialize(target);
@@ -365,6 +409,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             var options = new Mock<IOrbitalsOptions>();
             var seqMediator3 = new Mock<NINA.Sequencer.Interfaces.Mediator.ISequenceMediator>();
             var appMediator3 = new Mock<NINA.WPF.Base.Interfaces.Mediator.IApplicationMediator>();
+            var skySurveyFactory3 = new Mock<ISkySurveyFactory>();
+            skySurveyFactory3.Setup(f => f.Create(It.IsAny<SkySurveySource>())).Returns(Mock.Of<ISkySurvey>());
 
             var vm = new OrbitalFramingWizardVM(
                 profileService.Object,
@@ -373,7 +419,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
                 statusMediator.Object,
                 options.Object,
                 seqMediator3.Object,
-                appMediator3.Object);
+                appMediator3.Object,
+                skySurveyFactory3.Object);
 
             var target = new FakeOrbitalsObject("1P/Halley", coords, rate);
             vm.Initialize(target);
@@ -392,6 +439,87 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
 
             vm.IsCapturing.Should().BeFalse("command has completed");
             vm.HasCapture.Should().BeTrue();
+        }
+
+        /// <summary>
+        /// On <see cref="OrbitalFramingWizardVM.Initialize"/>, the wizard kicks off a
+        /// fire-and-forget sky-survey background fetch centered on the body's current
+        /// position, using the source persisted in the profile (default: SKYATLAS).
+        /// </summary>
+        [Test]
+        public async System.Threading.Tasks.Task Initialize_KicksOffBackgroundLoad_WithDefaultSource() {
+            var coords = OrbitalFramingScenarios.Ceres_JD2460200();
+            var rate = OrbitalFramingScenarios.Ceres_JD2460200_TrackingRate();
+            var (vm, _, target, factory, survey, _) = MakeWithSurveyMocks(coords, rate, "1 Ceres");
+
+            vm.Initialize(target);
+
+            // ReloadBackgroundAsync is fire-and-forget; give it a moment to run before asserting.
+            await WaitForAsync(() =>
+                factory.Invocations.Count > 0 && survey.Invocations.Count > 0,
+                timeoutMs: 1000);
+
+            factory.Verify(f => f.Create(SkySurveySource.SKYATLAS), Times.AtLeastOnce);
+            survey.Verify(s => s.GetImage(
+                It.IsAny<string>(),
+                It.IsAny<Coordinates>(),
+                It.IsAny<double>(),
+                It.IsAny<int>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<IProgress<int>>()),
+                Times.AtLeastOnce);
+        }
+
+        /// <summary>
+        /// Changing <see cref="OrbitalFramingWizardVM.SelectedImageSource"/> writes the new
+        /// value back to <c>FramingAssistantSettings.LastSelectedImageSource</c> (so it
+        /// round-trips with NINA's framing assistant) and re-fetches the background.
+        /// </summary>
+        [Test]
+        public async System.Threading.Tasks.Task SelectedImageSource_Change_PersistsToProfile_AndReloads() {
+            var coords = OrbitalFramingScenarios.Mars_20250615();
+            var rate = OrbitalFramingScenarios.Mars_20250615_TrackingRate();
+            var (vm, _, target, factory, survey, framingAssistantSettings) =
+                MakeWithSurveyMocks(coords, rate, "Mars");
+
+            vm.Initialize(target);
+            // Let the initial Initialize-driven load drain so we only count post-change calls.
+            await WaitForAsync(() => factory.Invocations.Count > 0, timeoutMs: 1000);
+            factory.Invocations.Clear();
+            survey.Invocations.Clear();
+
+            vm.SelectedImageSource = SkySurveySource.HIPS2FITS;
+
+            await WaitForAsync(() => factory.Invocations.Count > 0, timeoutMs: 1000);
+
+            framingAssistantSettings.Object.LastSelectedImageSource
+                .Should().Be(SkySurveySource.HIPS2FITS,
+                "the setter must persist back to the profile so NINA's framing assistant picks up the same choice");
+
+            factory.Verify(f => f.Create(SkySurveySource.HIPS2FITS), Times.AtLeastOnce);
+            survey.Verify(s => s.GetImage(
+                It.IsAny<string>(),
+                It.IsAny<Coordinates>(),
+                It.IsAny<double>(),
+                It.IsAny<int>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<IProgress<int>>()),
+                Times.AtLeastOnce);
+        }
+
+        /// <summary>
+        /// Spin-waits for <paramref name="predicate"/> to become true, up to
+        /// <paramref name="timeoutMs"/> milliseconds. Used to bridge fire-and-forget
+        /// background tasks without taking a hard dependency on Task.Delay durations.
+        /// </summary>
+        private static async Task WaitForAsync(Func<bool> predicate, int timeoutMs) {
+            var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+            while (DateTime.UtcNow < deadline) {
+                if (predicate()) return;
+                await Task.Delay(10);
+            }
         }
 
         // ─── Helper: blocking capture source for the IsCapturing test ────────────

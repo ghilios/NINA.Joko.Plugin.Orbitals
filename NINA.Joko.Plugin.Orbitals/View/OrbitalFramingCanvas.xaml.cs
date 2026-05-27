@@ -266,27 +266,29 @@ namespace NINA.Joko.Plugin.Orbitals.View {
             double pxW = CapturedImagePixelWidth;
             double pxH = CapturedImagePixelHeight;
 
-            double imgW, imgH;
             if (pxW > 0 && pxH > 0) {
                 // Uniform scale that fits the captured frame at 1/fovMultiplier of the
                 // shorter canvas axis, preserving the source aspect.
                 double scale = Math.Min(w / (pxW * fovMultiplier),
                                         h / (pxH * fovMultiplier));
-                imgW = pxW * scale;
-                imgH = pxH * scale;
+                double imgW = pxW * scale;
+                double imgH = pxH * scale;
                 _canvasPxPerImagePx = scale;
+
+                CapturedLayer.Width = imgW;
+                CapturedLayer.Height = imgH;
+                FramingRectangle.Width = imgW;
+                FramingRectangle.Height = imgH;
             } else {
-                // Pre-capture fallback: square footprint, 1/fovMultiplier of each axis.
-                imgW = w / fovMultiplier;
-                imgH = h / fovMultiplier;
+                // Pre-capture: hide the captured-image layer and the framing rectangle.
+                // The background sky-survey layer remains visible so the user can see the
+                // sky context before capturing.
                 _canvasPxPerImagePx = 1.0;
+                CapturedLayer.Width = 0;
+                CapturedLayer.Height = 0;
+                FramingRectangle.Width = 0;
+                FramingRectangle.Height = 0;
             }
-
-            CapturedLayer.Width = imgW;
-            CapturedLayer.Height = imgH;
-
-            FramingRectangle.Width = imgW;
-            FramingRectangle.Height = imgH;
 
             // Re-apply existing image-pixel offset DP values through the new scale so
             // a window resize doesn't visually displace the rectangle.

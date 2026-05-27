@@ -18,6 +18,7 @@ using NINA.Profile.Interfaces;
 using NINA.Sequencer.Container;
 using NINA.Sequencer.Interfaces.Mediator;
 using NINA.WPF.Base.Interfaces.Mediator;
+using NINA.WPF.Base.SkySurvey;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -191,6 +192,9 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
                 PixscaleArcsecPerPx = capturedPixscale,
             };
 
+            var skySurveyFactory = new Mock<ISkySurveyFactory>();
+            skySurveyFactory.Setup(f => f.Create(It.IsAny<SkySurveySource>())).Returns(Mock.Of<ISkySurvey>());
+
             var vm = new OrbitalFramingWizardVM(
                 profileService.Object,
                 new[] { ((ICaptureSource)capture).AsLazy() },
@@ -198,7 +202,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
                 statusMediator.Object,
                 options.Object,
                 seqMediator.Object,
-                appMediator.Object);
+                appMediator.Object,
+                skySurveyFactory.Object);
 
             return (vm, seqMediator, appMediator);
         }
