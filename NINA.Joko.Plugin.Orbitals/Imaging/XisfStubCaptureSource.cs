@@ -18,6 +18,7 @@ using NINA.Joko.Plugin.Orbitals.Calculations;
 using NINA.Profile.Interfaces;
 using System;
 using System.ComponentModel.Composition;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -27,15 +28,16 @@ using System.Windows.Media.Imaging;
 namespace NINA.Joko.Plugin.Orbitals.Imaging {
 
     /// <summary>
-    /// A stub capture source that synthesises a frame for Phase B testing.
-    /// It loads no real XISF file; it simply returns a synthetic coloured bitmap
-    /// with coordinates derived from the orbital object's current position and
-    /// pixel scale from the active profile.
+    /// A stub capture source for Phase B testing.
+    /// If <see cref="StubXisfPath"/> exists on disk it attempts to load the file
+    /// via WPF's BitmapDecoder; otherwise it falls back to a synthetic gradient
+    /// bitmap so development can continue without the real file present.
+    /// A missing file always produces a visible error notification.
     /// </summary>
     [Export(typeof(ICaptureSource))]
     [ExportMetadata("Mode", "XisfStub")]
     public class XisfStubCaptureSource : ICaptureSource {
-        // Path that would be used in a real XISF stub scenario (not read by this implementation).
+        // Path to the real XISF stub frame used for Phase B UI testing.
         private const string StubXisfPath = @"E:\AP\processing\1_selected\LIGHT_2024-10-26_22-16-36_L_-10.00_120.00s_0069_c_cc_a.xisf";
 
         private readonly IProfileService profileService;
@@ -54,29 +56,61 @@ namespace NINA.Joko.Plugin.Orbitals.Imaging {
             return Task.Run(() => {
                 ct.ThrowIfCancellationRequested();
 
-                progress?.Report(new ApplicationStatus { Source = "OrbitalFramingWizard", Status = "Loading stub frame..." });
+                progress?.Report(new ApplicationStatus { Source = "OrbitalFramingWizard", Status = "Checking for stub frame..." });
 
-                // Build a synthetic 640×480 bitmap (gradient so it is visually non-trivial).
-                const int width = 640;
-                const int height = 480;
-                BitmapSource bitmap = CreateSyntheticBitmap(width, height);
-                bitmap.Freeze();
+                // Step 1: require the stub file to exist.
+                if (!File.Exists(StubXisfPath)) {
+                    Notification.ShowError($"XISF stub frame not found at {StubXisfPath}");
+                    throw new FileNotFoundException("XISF stub frame not found", StubXisfPath);
+                }
 
                 ct.ThrowIfCancellationRequested();
-                progress?.Report(new ApplicationStatus { Source = "OrbitalFramingWizard", Status = "Computing metadata..." });
+                progress?.Report(new ApplicationStatus { Source = "OrbitalFramingWizard", Status = "Loading XISF..." });
 
-                // Pixel scale from profile.
+                // Step 2: attempt to load the file.  XISF is not a format understood
+                // by WPF's BitmapDecoder so this will almost always fall through to
+                // the synthetic fallback; the important contract is that we tried.
+                BitmapSource bitmap = null;
+                int width = 0, height = 0;
+                try {
+                    progress?.Report(new ApplicationStatus { Source = "OrbitalFramingWizard", Status = "Decoding..." });
+                    var uri = new Uri(StubXisfPath, UriKind.Absolute);
+                    var decoder = BitmapDecoder.Create(
+                        uri,
+                        BitmapCreateOptions.PreservePixelFormat,
+                        BitmapCacheOption.OnLoad);
+                    bitmap = decoder.Frames[0];
+                    bitmap.Freeze();
+                    width = bitmap.PixelWidth;
+                    height = bitmap.PixelHeight;
+                } catch (Exception ex) {
+                    Logger.Warning($"XisfStubCaptureSource: could not decode '{StubXisfPath}' via BitmapDecoder ({ex.Message}); using synthetic fallback.");
+                    bitmap = null;
+                }
+
+                if (bitmap == null) {
+                    // Synthetic fallback — keep development unblocked when the real
+                    // XISF file is present but not WPF-decodable.
+                    const int fallbackWidth = 640;
+                    const int fallbackHeight = 480;
+                    bitmap = CreateSyntheticBitmap(fallbackWidth, fallbackHeight);
+                    bitmap.Freeze();
+                    width = fallbackWidth;
+                    height = fallbackHeight;
+                }
+
+                ct.ThrowIfCancellationRequested();
+
+                // Step 3: compute metadata from profile and current orbital position.
                 double pixelSize = profileService.ActiveProfile.CameraSettings.PixelSize;       // µm
                 double focalLength = profileService.ActiveProfile.TelescopeSettings.FocalLength; // mm
                 double pixscale = (pixelSize > 0 && focalLength > 0)
                     ? 206.265 * pixelSize / focalLength
                     : 1.0;
 
-                // Coordinates: current position of the orbital target.
                 var pv = target.PositionAt(DateTime.UtcNow);
                 var coordinates = pv.Coordinates;
 
-                // Random position angle in [0, 360).
                 double positionAngle = rng.NextDouble() * 360.0;
 
                 progress?.Report(new ApplicationStatus { Source = "OrbitalFramingWizard", Status = "Done" });

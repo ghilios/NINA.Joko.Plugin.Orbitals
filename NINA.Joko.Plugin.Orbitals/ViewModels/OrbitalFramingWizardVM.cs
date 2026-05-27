@@ -23,6 +23,7 @@ using NINA.Profile.Interfaces;
 using NINA.WPF.Base.Interfaces.Mediator;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -36,6 +37,8 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
     /// ViewModel for the Orbital Framing Wizard dialog.
     /// Phase B: capture via ICaptureSource, live coordinate refresh, basic offset tracking.
     /// </summary>
+    [Export(typeof(OrbitalFramingWizardVM))]
+    [PartCreationPolicy(CreationPolicy.NonShared)]
     public class OrbitalFramingWizardVM : BaseINPC {
         private readonly IProfileService profileService;
         private readonly ICaptureSource captureSource;
@@ -58,8 +61,8 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             this.applicationStatusMediator = applicationStatusMediator;
             this.orbitalsOptions = orbitalsOptions;
 
-            // Pick the first available capture source (Phase B: XisfStub only).
-            this.captureSource = captureSources?.FirstOrDefault()
+            // Exactly one capture source must be registered for Phase B–D.
+            this.captureSource = captureSources?.Single()
                 ?? throw new ArgumentException("No ICaptureSource implementations are available.", nameof(captureSources));
 
             SlewCenterAndImageCommand = new AsyncRelayCommand(SlewCenterAndImageAsync, () => !IsCapturing);
@@ -118,8 +121,8 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 CurrentDecString = coords.DecString;
 
                 var rate = pv.TrackingRate;
-                RATrackingRateArcsecPerSec = rate.RAArcsecsPerSec;
-                DecTrackingRateArcsecPerSec = rate.DecArcsecsPerSec;
+                RATrackingRate = rate.RAArcsecsPerSec;
+                DecTrackingRate = rate.DecArcsecsPerSec;
 
                 // Rough max exposure: 1 pixel of drift.
                 double pixelSize = profileService.ActiveProfile.CameraSettings.PixelSize;
@@ -241,16 +244,16 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             private set { if (currentDecString != value) { currentDecString = value; RaisePropertyChanged(); } }
         }
 
-        private double raTrackingRateArcsecPerSec;
-        public double RATrackingRateArcsecPerSec {
-            get => raTrackingRateArcsecPerSec;
-            private set { if (raTrackingRateArcsecPerSec != value) { raTrackingRateArcsecPerSec = value; RaisePropertyChanged(); } }
+        private double raTrackingRate;
+        public double RATrackingRate {
+            get => raTrackingRate;
+            private set { if (raTrackingRate != value) { raTrackingRate = value; RaisePropertyChanged(); } }
         }
 
-        private double decTrackingRateArcsecPerSec;
-        public double DecTrackingRateArcsecPerSec {
-            get => decTrackingRateArcsecPerSec;
-            private set { if (decTrackingRateArcsecPerSec != value) { decTrackingRateArcsecPerSec = value; RaisePropertyChanged(); } }
+        private double decTrackingRate;
+        public double DecTrackingRate {
+            get => decTrackingRate;
+            private set { if (decTrackingRate != value) { decTrackingRate = value; RaisePropertyChanged(); } }
         }
 
         private double maxExposureSeconds = double.NaN;
