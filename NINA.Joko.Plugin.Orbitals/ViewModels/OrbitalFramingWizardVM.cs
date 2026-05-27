@@ -237,40 +237,44 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         /// <summary>
         /// Converts the current canvas pixel offset (from centre) into RA/Dec offsets
         /// and the sky-frame (separation, position-angle) representation.
-        /// Only runs when a captured image with a valid pixscale is available.
+        /// Offsets are computed RELATIVE TO THE BODY'S CURRENT POSITION so that
+        /// <c>OrbitalsContainerBase.RefreshCoordinates()</c> can apply them on every
+        /// refresh as the body moves.
         /// </summary>
         private void RecalculateOffsets() {
             if (!HasCapture) return;
             if (CapturedImagePixscale <= 0) return;
+            if (CapturedImageCoordinates == null) return;
+            if (selectedObject == null) return;
 
-            // Convert pixel offset → angular offset.
-            // The captured image layer fills 1/BackgroundFovMultiplier of the canvas,
-            // and 1 displayed pixel corresponds to CapturedImagePixscale arcsec.
-            double dRaArcsec = _rectangleOffsetXPx * CapturedImagePixscale;
-            double dDecArcsec = -_rectangleOffsetYPx * CapturedImagePixscale; // Y flipped (pixels down, Dec up)
+            // Step 1: Apply the pixel offset to the captured image centre coordinates
+            // to get the absolute sky position of the framing target.
+            // Coordinates.Shift(deltaX, deltaY, rotation, scaleX, scaleY):
+            //   - deltaX / deltaY are in pixels (positive X → right on screen, positive Y → down).
+            //   - scaleX / scaleY are arcsec/pixel.
+            //   - rotation is the image position angle (clockwise degrees, N-up convention).
+            // Y is negated here because screen-Y increases downward while Dec increases upward.
+            var framingTarget = CapturedImageCoordinates.Shift(
+                _rectangleOffsetXPx,
+                -_rectangleOffsetYPx,
+                CapturedImageRotation,
+                CapturedImagePixscale,
+                CapturedImagePixscale);
 
-            // Arcsec → RA hours and Dec degrees.
-            double decRad = (CapturedImageCoordinates?.Dec ?? 0.0) * Math.PI / 180.0;
-            double cosDecFactor = Math.Max(Math.Cos(decRad), 1e-6);
+            // Step 2: Get the body's current sky position.
+            var bodyCoords = selectedObject.PositionAt(DateTime.UtcNow).Coordinates;
 
-            RAOffsetHours = (dRaArcsec / 3600.0) / 15.0 / cosDecFactor;
-            DecOffsetDegrees = dDecArcsec / 3600.0;
+            // Step 3: Offset = framing target MINUS body current position (body-relative).
+            double rawRaDiff = framingTarget.RA - bodyCoords.RA;
+            // Normalise to [-12, +12] hours.
+            while (rawRaDiff > 12.0) rawRaDiff -= 24.0;
+            while (rawRaDiff < -12.0) rawRaDiff += 24.0;
+            RAOffsetHours = rawRaDiff;
+            DecOffsetDegrees = framingTarget.Dec - bodyCoords.Dec;
 
-            // Sky-frame (separation, PA) — display-only; used by a future container variant.
-            if (CapturedImageCoordinates != null) {
-                var bodyCoords = selectedObject?.PositionAt(DateTime.UtcNow).Coordinates;
-                if (bodyCoords != null) {
-                    double offsetRA = bodyCoords.RA + RAOffsetHours;
-                    double offsetDec = bodyCoords.Dec + DecOffsetDegrees;
-                    var offsetCoords = new Coordinates(
-                        Angle.ByHours(offsetRA),
-                        Angle.ByDegree(offsetDec),
-                        Epoch.J2000);
-
-                    OffsetSeparationArcsec = OrbitalOffsetMath.AngularSeparation(bodyCoords, offsetCoords);
-                    OffsetPositionAngleDeg = OrbitalOffsetMath.PositionAngleNToE(bodyCoords, offsetCoords);
-                }
-            }
+            // Step 4: Sky-frame (separation, PA) from the body to the framing target.
+            OffsetSeparationArcsec = OrbitalOffsetMath.AngularSeparation(bodyCoords, framingTarget);
+            OffsetPositionAngleDeg = OrbitalOffsetMath.PositionAngleNToE(bodyCoords, framingTarget);
 
             RaisePropertyChanged(nameof(RAOffsetHours));
             RaisePropertyChanged(nameof(DecOffsetDegrees));
