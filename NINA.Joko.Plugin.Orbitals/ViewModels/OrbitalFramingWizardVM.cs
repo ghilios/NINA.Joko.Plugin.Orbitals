@@ -225,6 +225,9 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 OffsetPositionAngleDeg = 0;
 
                 HasCapture = true;
+            } catch (CaptureSourceUserFacingException ex) {
+                // Capture source already showed the user an error notification — just log.
+                Logger.Info($"Capture aborted (user already notified): {ex.Message}");
             } catch (OperationCanceledException) {
                 Logger.Info("Orbital Framing Wizard capture cancelled");
             } catch (FileNotFoundException ex) {
