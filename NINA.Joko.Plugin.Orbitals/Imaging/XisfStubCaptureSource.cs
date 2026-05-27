@@ -13,6 +13,8 @@
 using NINA.Astrometry;
 using NINA.Core.Model;
 using NINA.Core.Utility;
+using NINA.Image.FileFormat.XISF;
+using NINA.Image.Interfaces;
 using NINA.Joko.Plugin.Orbitals.Calculations;
 using NINA.Profile.Interfaces;
 using System;
@@ -40,91 +42,98 @@ namespace NINA.Joko.Plugin.Orbitals.Imaging {
         private const string StubXisfPath = @"E:\AP\processing\1_selected\LIGHT_2024-10-26_22-16-36_L_-10.00_120.00s_0069_c_cc_a.xisf";
 
         private readonly IProfileService profileService;
+        private readonly IImageDataFactory imageDataFactory;
         private readonly Random rng = new Random();
 
         [ImportingConstructor]
-        public XisfStubCaptureSource(IProfileService profileService) {
+        public XisfStubCaptureSource(IProfileService profileService, IImageDataFactory imageDataFactory) {
             this.profileService = profileService;
+            this.imageDataFactory = imageDataFactory;
         }
 
-        public Task<CapturedFrame> CaptureAsync(
+        public async Task<CapturedFrame> CaptureAsync(
             OrbitalsObjectBase target,
             OrbitalFramingExposureSettings exposure,
             IProgress<ApplicationStatus> progress,
             CancellationToken ct) {
-            return Task.Run(() => {
-                ct.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
 
-                progress?.Report(new ApplicationStatus { Source = "OrbitalFramingWizard", Status = "Checking for stub frame..." });
+            progress?.Report(new ApplicationStatus { Source = "OrbitalFramingWizard", Status = "Checking for stub frame..." });
 
-                // Step 1: require the stub file to exist.
-                // Do NOT call Notification.ShowError here — we're on a background thread.
-                // The VM's catch block is responsible for user notification.
-                if (!File.Exists(StubXisfPath)) {
-                    throw new FileNotFoundException("XISF stub frame not found at path: " + StubXisfPath, StubXisfPath);
-                }
+            // Step 1: require the stub file to exist.
+            // Do NOT call Notification.ShowError here — we're on a background thread.
+            // The VM's catch block is responsible for user notification.
+            if (!File.Exists(StubXisfPath)) {
+                throw new FileNotFoundException("XISF stub frame not found at path: " + StubXisfPath, StubXisfPath);
+            }
 
-                ct.ThrowIfCancellationRequested();
-                progress?.Report(new ApplicationStatus { Source = "OrbitalFramingWizard", Status = "Loading XISF..." });
+            ct.ThrowIfCancellationRequested();
+            progress?.Report(new ApplicationStatus { Source = "OrbitalFramingWizard", Status = "Loading XISF..." });
 
-                // Step 2: attempt to load the file.  XISF is not a format understood
-                // by WPF's BitmapDecoder so this will almost always fall through to
-                // the synthetic fallback; the important contract is that we tried.
-                BitmapSource bitmap = null;
-                int width = 0, height = 0;
-                try {
-                    progress?.Report(new ApplicationStatus { Source = "OrbitalFramingWizard", Status = "Decoding..." });
-                    var uri = new Uri(StubXisfPath, UriKind.Absolute);
-                    var decoder = BitmapDecoder.Create(
-                        uri,
-                        BitmapCreateOptions.PreservePixelFormat,
-                        BitmapCacheOption.OnLoad);
-                    bitmap = decoder.Frames[0];
-                    bitmap.Freeze();
-                    width = bitmap.PixelWidth;
-                    height = bitmap.PixelHeight;
-                } catch (Exception ex) {
-                    Logger.Warning($"XisfStubCaptureSource: could not decode '{StubXisfPath}' via BitmapDecoder ({ex.Message}); using synthetic fallback.");
-                    bitmap = null;
-                }
+            // Step 2: load + auto-stretch via NINA's standard image pipeline so the
+            // captured frame appears the same as it would in NINA's image viewer.
+            BitmapSource bitmap = null;
+            int width = 0, height = 0;
+            try {
+                progress?.Report(new ApplicationStatus { Source = "OrbitalFramingWizard", Status = "Decoding XISF..." });
+                var uri = new Uri(StubXisfPath, UriKind.Absolute);
+                IImageData imageData = await XISF.Load(uri, isBayered: false, imageDataFactory, ct);
 
-                if (bitmap == null) {
-                    // Synthetic fallback — keep development unblocked when the real
-                    // XISF file is present but not WPF-decodable.
-                    const int fallbackWidth = 640;
-                    const int fallbackHeight = 480;
-                    bitmap = CreateSyntheticBitmap(fallbackWidth, fallbackHeight);
-                    bitmap.Freeze();
-                    width = fallbackWidth;
-                    height = fallbackHeight;
-                }
+                progress?.Report(new ApplicationStatus { Source = "OrbitalFramingWizard", Status = "Auto-stretching..." });
+                var rendered = imageData.RenderImage();
 
-                ct.ThrowIfCancellationRequested();
+                var imgSettings = profileService?.ActiveProfile?.ImageSettings;
+                double factor = imgSettings?.AutoStretchFactor ?? 0.2;
+                double blackClipping = imgSettings?.BlackClipping ?? -2.8;
+                rendered = await rendered.Stretch(factor, blackClipping, unlinked: false);
 
-                // Step 3: compute metadata from profile and current orbital position.
-                double pixelSize = profileService.ActiveProfile.CameraSettings.PixelSize;       // µm
-                double focalLength = profileService.ActiveProfile.TelescopeSettings.FocalLength; // mm
-                double pixscale = (pixelSize > 0 && focalLength > 0)
-                    ? AstroUtil.ArcsecPerPixel(pixelSize, focalLength)
-                    : 1.0;
+                bitmap = rendered.Image;
+                if (bitmap != null && bitmap.CanFreeze && !bitmap.IsFrozen) bitmap.Freeze();
+                width = bitmap?.PixelWidth ?? 0;
+                height = bitmap?.PixelHeight ?? 0;
+            } catch (OperationCanceledException) {
+                throw;
+            } catch (Exception ex) {
+                Logger.Warning($"XisfStubCaptureSource: NINA pipeline load failed for '{StubXisfPath}' ({ex.Message}); using synthetic fallback.");
+                bitmap = null;
+            }
 
-                var pv = target.PositionAt(DateTime.UtcNow);
-                var coordinates = pv.Coordinates;
+            if (bitmap == null) {
+                // Synthetic fallback — keep development unblocked when the XISF can't
+                // be loaded for any reason.
+                const int fallbackWidth = 640;
+                const int fallbackHeight = 480;
+                bitmap = CreateSyntheticBitmap(fallbackWidth, fallbackHeight);
+                bitmap.Freeze();
+                width = fallbackWidth;
+                height = fallbackHeight;
+            }
 
-                double positionAngle = rng.NextDouble() * 360.0;
+            ct.ThrowIfCancellationRequested();
 
-                progress?.Report(new ApplicationStatus { Source = "OrbitalFramingWizard", Status = "Done" });
-                progress?.Report(new ApplicationStatus { Source = "OrbitalFramingWizard", Status = string.Empty });
+            // Step 3: compute metadata from profile and current orbital position.
+            double pixelSize = profileService.ActiveProfile.CameraSettings.PixelSize;       // µm
+            double focalLength = profileService.ActiveProfile.TelescopeSettings.FocalLength; // mm
+            double pixscale = (pixelSize > 0 && focalLength > 0)
+                ? AstroUtil.ArcsecPerPixel(pixelSize, focalLength)
+                : 1.0;
 
-                return new CapturedFrame {
-                    Image = bitmap,
-                    WidthPx = width,
-                    HeightPx = height,
-                    Coordinates = coordinates,
-                    PositionAngleDeg = positionAngle,
-                    PixscaleArcsecPerPx = pixscale,
-                };
-            }, ct);
+            var pv = target.PositionAt(DateTime.UtcNow);
+            var coordinates = pv.Coordinates;
+
+            double positionAngle = rng.NextDouble() * 360.0;
+
+            progress?.Report(new ApplicationStatus { Source = "OrbitalFramingWizard", Status = "Done" });
+            progress?.Report(new ApplicationStatus { Source = "OrbitalFramingWizard", Status = string.Empty });
+
+            return new CapturedFrame {
+                Image = bitmap,
+                WidthPx = width,
+                HeightPx = height,
+                Coordinates = coordinates,
+                PositionAngleDeg = positionAngle,
+                PixscaleArcsecPerPx = pixscale,
+            };
         }
 
         /// <summary>

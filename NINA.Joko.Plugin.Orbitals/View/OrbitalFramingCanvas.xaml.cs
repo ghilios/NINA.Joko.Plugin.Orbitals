@@ -248,12 +248,14 @@ namespace NINA.Joko.Plugin.Orbitals.View {
         }
 
         /// <summary>
-        /// Size the captured-image layer and the framing rectangle so their on-canvas
-        /// footprint matches the captured frame's native aspect ratio
-        /// (CapturedImagePixelWidth × CapturedImagePixelHeight). The image occupies
-        /// 1/BackgroundFovMultiplier of the canvas extent on its longest side.
+        /// Size the captured-image layer and the framing rectangle so the visible
+        /// vertical extent equals BackgroundFovMultiplier × the captured frame's
+        /// height (the user wants the height dimension to drive the FOV ratio).
+        /// Width follows from the source aspect, so on a wide sensor the captured
+        /// image may extend horizontally beyond the viewport; the ScrollViewer
+        /// surfaces horizontal scrollbars once content exceeds the viewport.
         /// Pre-capture (pixel dimensions unset), falls back to a square layout
-        /// 1/BackgroundFovMultiplier on each side so the placeholder text remains readable.
+        /// 1/BackgroundFovMultiplier on each side.
         /// </summary>
         private void UpdateCapturedLayerSize() {
             double fovMultiplier = Math.Max(1.0, BackgroundFovMultiplier);
@@ -267,10 +269,8 @@ namespace NINA.Joko.Plugin.Orbitals.View {
             double pxH = CapturedImagePixelHeight;
 
             if (pxW > 0 && pxH > 0) {
-                // Uniform scale that fits the captured frame at 1/fovMultiplier of the
-                // shorter canvas axis, preserving the source aspect.
-                double scale = Math.Min(w / (pxW * fovMultiplier),
-                                        h / (pxH * fovMultiplier));
+                // Height-driven scale: visible vertical extent = fovMultiplier × captured height.
+                double scale = h / (pxH * fovMultiplier);
                 double imgW = pxW * scale;
                 double imgH = pxH * scale;
                 _canvasPxPerImagePx = scale;

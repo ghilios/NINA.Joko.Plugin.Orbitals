@@ -1,3 +1,7 @@
+# Plan files
+
+When plan mode produces a plan file, save it inside this repo's `plans/` directory (e.g. `plans/<short-feature-name>.md`). Do not leave it under `~/.claude/plans/` — those are user-global and aren't checked in. If the plan-mode harness writes to `~/.claude/plans/` first, copy it over to `plans/` and commit it with the implementation.
+
 # Project layout
 
 This solution has two C# projects.

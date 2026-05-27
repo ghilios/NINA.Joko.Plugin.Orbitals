@@ -53,7 +53,8 @@
                      at zoom=1 the canvas exactly fits and no scrollbars show. -->
                 <ScrollViewer x:Name="CanvasScroll"
                               HorizontalScrollBarVisibility="Auto"
-                              VerticalScrollBarVisibility="Auto">
+                              VerticalScrollBarVisibility="Auto"
+                              PreviewMouseWheel="CanvasScroll_PreviewMouseWheel">
                     <local:OrbitalFramingCanvas
                         x:Name="FramingCanvas"
                         Width="{Binding ViewportWidth, ElementName=CanvasScroll}"
@@ -87,26 +88,28 @@
                         FontSize="12" />
                 </Border>
 
-                <!-- Zoom toolbar (top-right overlay) -->
+                <!-- Zoom toolbar (top-left overlay). Buttons handled in code-behind so
+                     the ScrollViewer can be re-anchored on the viewport center after
+                     each zoom change. Ctrl+wheel also zooms via PreviewMouseWheel. -->
                 <StackPanel Orientation="Horizontal"
-                            HorizontalAlignment="Right"
+                            HorizontalAlignment="Left"
                             VerticalAlignment="Top"
                             Margin="5"
                             Panel.ZIndex="10">
                     <Button Width="28" Height="24" Margin="0,0,2,0"
-                            Command="{Binding ZoomOutCommand}"
+                            Click="ZoomOut_Click"
                             ToolTip="Zoom out">
                         <TextBlock Text="−" FontSize="14"
                                    Foreground="{StaticResource ButtonForegroundBrush}" />
                     </Button>
                     <Button Width="40" Height="24" Margin="0,0,2,0"
-                            Command="{Binding ResetZoomCommand}"
+                            Click="ZoomReset_Click"
                             ToolTip="Reset zoom to 100%">
                         <TextBlock Text="100%" FontSize="10"
                                    Foreground="{StaticResource ButtonForegroundBrush}" />
                     </Button>
                     <Button Width="28" Height="24"
-                            Command="{Binding ZoomInCommand}"
+                            Click="ZoomIn_Click"
                             ToolTip="Zoom in">
                         <TextBlock Text="+" FontSize="14"
                                    Foreground="{StaticResource ButtonForegroundBrush}" />
@@ -178,6 +181,14 @@
                     </Grid>
                 </GroupBox>
 
+                <!-- ── Image Source ───────────────────────────────────────────── -->
+                <GroupBox Header="Image Source" Margin="0,0,0,5">
+                    <ComboBox Margin="5"
+                              ItemsSource="{Binding AvailableImageSources}"
+                              SelectedItem="{Binding SelectedImageSource, Mode=TwoWay}"
+                              ToolTip="Sky-survey source used to render the background image. Defaults to NINA's offline sky atlas." />
+                </GroupBox>
+
                 <!-- ── Altitude Chart ─────────────────────────────────────────── -->
                 <GroupBox Header="Altitude" Margin="0,0,0,5">
                     <alt:AltitudeChart
@@ -202,25 +213,18 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Image Source:" />
-                            <ComboBox Grid.Row="0" Grid.Column="1" Margin="3"
-                                      ItemsSource="{Binding AvailableImageSources}"
-                                      SelectedItem="{Binding SelectedImageSource, Mode=TwoWay}"
-                                      ToolTip="Sky-survey source used to render the background image. Defaults to NINA's offline sky atlas." />
-
-                            <TextBlock Grid.Row="1" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Exposure (s):" />
-                            <TextBox Grid.Row="1" Grid.Column="1" Margin="3"
+                            <TextBlock Grid.Row="0" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Exposure (s):" />
+                            <TextBox Grid.Row="0" Grid.Column="1" Margin="3"
                                      Text="{Binding ExposureTime, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-                            <TextBlock Grid.Row="2" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Gain:" />
-                            <TextBox Grid.Row="2" Grid.Column="1" Margin="3"
+                            <TextBlock Grid.Row="1" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Gain:" />
+                            <TextBox Grid.Row="1" Grid.Column="1" Margin="3"
                                      Text="{Binding Gain, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-                            <TextBlock Grid.Row="3" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Offset:" />
-                            <TextBox Grid.Row="3" Grid.Column="1" Margin="3"
+                            <TextBlock Grid.Row="2" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Offset:" />
+                            <TextBox Grid.Row="2" Grid.Column="1" Margin="3"
                                      Text="{Binding Offset, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         </Grid>
 

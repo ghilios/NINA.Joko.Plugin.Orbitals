@@ -108,34 +108,32 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             ExportToSequencerCommand = new AsyncRelayCommand(ExportToSequencerAsync);
 
             CancelCommand = new RelayCommand(Cancel);
-
-            ZoomInCommand = new RelayCommand(() => SetCanvasZoom(CanvasZoom * ZoomStep));
-            ZoomOutCommand = new RelayCommand(() => SetCanvasZoom(CanvasZoom / ZoomStep));
-            ResetZoomCommand = new RelayCommand(() => SetCanvasZoom(1.0));
         }
 
         // ─── Canvas zoom ─────────────────────────────────────────────────────────
 
-        private const double ZoomStep = 1.25;
-        private const double MinZoom = 0.25;
-        private const double MaxZoom = 8.0;
+        public const double ZoomStep = 1.25;
+        public const double MinZoom = 0.25;
+        public const double MaxZoom = 8.0;
 
         private double canvasZoom = 1.0;
 
         /// <summary>
-        /// Visual scale of the framing canvas. 1.0 = fit-to-viewport; clamped to
-        /// [<see cref="MinZoom"/>, <see cref="MaxZoom"/>]. The wizard view applies this
-        /// as a <c>LayoutTransform</c> on the canvas UserControl so the wrapping
-        /// <c>ScrollViewer</c> shows scrollbars when content exceeds the viewport.
+        /// Visual scale of the framing canvas. 1.0 = fit-to-viewport; values outside
+        /// [<see cref="MinZoom"/>, <see cref="MaxZoom"/>] are clamped on assignment.
+        /// The wizard view applies this as a <c>LayoutTransform</c> on the canvas
+        /// UserControl so the wrapping <c>ScrollViewer</c> shows scrollbars when
+        /// content exceeds the viewport. The view code-behind drives this property
+        /// from its zoom buttons / Ctrl+wheel and re-centers the scroll offsets after
+        /// each change.
         /// </summary>
         public double CanvasZoom {
             get => canvasZoom;
-            private set { if (canvasZoom != value) { canvasZoom = value; RaisePropertyChanged(); } }
-        }
-
-        private void SetCanvasZoom(double value) {
-            if (double.IsNaN(value) || double.IsInfinity(value)) return;
-            CanvasZoom = Math.Max(MinZoom, Math.Min(MaxZoom, value));
+            set {
+                if (double.IsNaN(value) || double.IsInfinity(value)) return;
+                var clamped = Math.Max(MinZoom, Math.Min(MaxZoom, value));
+                if (canvasZoom != clamped) { canvasZoom = clamped; RaisePropertyChanged(); }
+            }
         }
 
         // -------------------------------------------------------------------------
@@ -253,12 +251,11 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             (SkySurveySource[])Enum.GetValues(typeof(SkySurveySource));
 
         private SkySurveySource LoadInitialImageSource() {
-            try {
-                var settings = profileService?.ActiveProfile?.FramingAssistantSettings;
-                if (settings != null) return settings.LastSelectedImageSource;
-            } catch (Exception ex) {
-                Logger.Warning($"Could not read FramingAssistantSettings.LastSelectedImageSource: {ex.Message}");
-            }
+            // Always seed the wizard with NINA's offline sky atlas — the user asked
+            // for the offline source as the default regardless of what their NINA
+            // framing-assistant setting happens to be. The setter on SelectedImageSource
+            // still persists any user-driven change back to the profile so it
+            // round-trips with NINA's framing assistant.
             return SkySurveySource.SKYATLAS;
         }
 
@@ -305,8 +302,18 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 fovArcmin = EstimatePreCaptureFovArcmin();
             }
 
+            // Sky-survey providers expect J2000 coordinates. Transform regardless of
+            // what epoch the body / plate-solve reported so the survey image lines up
+            // with the body's position on the sky.
+            try {
+                coords = coords.Transform(Epoch.J2000);
+            } catch (Exception ex) {
+                Logger.Warning($"Could not transform coords to J2000 ({ex.Message}); using as-is.");
+            }
+
             try {
                 IsBackgroundLoading = true;
+                Logger.Info($"Orbital wizard background fetch: source={SelectedImageSource} name='{name}' ra={coords.RA:F6}h dec={coords.Dec:F6}° fov={fovArcmin:F2}arcmin");
                 var survey = skySurveyFactory.Create(SelectedImageSource);
                 var img = await survey.GetImage(
                     name,
@@ -726,7 +733,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             private set { backgroundImage = value; RaisePropertyChanged(); }
         }
 
-        private double backgroundFovMultiplier = 3.0;
+        private double backgroundFovMultiplier = 2.0;
         public double BackgroundFovMultiplier {
             get => backgroundFovMultiplier;
             set { if (backgroundFovMultiplier != value) { backgroundFovMultiplier = value; RaisePropertyChanged(); } }
@@ -877,8 +884,5 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         public RelayCommand ResetFramingCommand { get; private set; }
         public AsyncRelayCommand ExportToSequencerCommand { get; private set; }
         public RelayCommand CancelCommand { get; private set; }
-        public RelayCommand ZoomInCommand { get; private set; }
-        public RelayCommand ZoomOutCommand { get; private set; }
-        public RelayCommand ResetZoomCommand { get; private set; }
     }
 }
