@@ -267,8 +267,8 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         }
 
         /// <summary>
-        /// Converts the current canvas pixel offset (from centre) into RA/Dec offsets
-        /// and the sky-frame (separation, position-angle) representation.
+        /// Converts the current captured-image-pixel offset (from centre) into RA/Dec
+        /// offsets and the sky-frame (separation, position-angle) representation.
         /// Offsets are computed RELATIVE TO THE BODY'S CURRENT POSITION so that
         /// <c>OrbitalsContainerBase.RefreshCoordinates()</c> can apply them on every
         /// refresh as the body moves.
@@ -279,12 +279,14 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             if (CapturedImageCoordinates == null) return;
             if (selectedObject == null) return;
 
-            // Step 1: Apply the pixel offset to the captured image centre coordinates
-            // to get the absolute sky position of the framing target.
+            // Step 1: Apply the captured-image-pixel offset to the captured image
+            // centre coordinates to get the absolute sky position of the framing target.
             // Coordinates.Shift(deltaX, deltaY, rotation, scaleX, scaleY):
-            //   - deltaX / deltaY are in pixels (positive X → right on screen, positive Y → down).
-            //   - scaleX / scaleY are arcsec/pixel.
-            //   - rotation is the image position angle (clockwise degrees, N-up convention).
+            //   - deltaX / deltaY are in captured-image pixels (sensor frame, positive X → +sensor X, positive Y → +sensor Y).
+            //   - scaleX / scaleY are arcsec per captured-image pixel.
+            //   - rotation is the captured image's plate-solved PA (clockwise degrees, N-up convention).
+            // The canvas converts mouse-drag canvas-pixel deltas to image-pixel deltas
+            // before writing them into RectangleOffsetX/YPx, so the units line up here.
             // NINA's Shift() already handles the screen-Y-to-sky-Dec inversion internally;
             // do NOT negate _rectangleOffsetYPx here (double negation would invert the Dec axis).
             var framingTarget = CapturedImageCoordinates.Shift(
@@ -629,7 +631,11 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         // ─── Canvas state (updated by OrbitalFramingCanvas via TwoWay bindings) ─
 
         private double _rectangleOffsetXPx = 0;
-        /// <summary>Horizontal canvas-pixel offset of the framing rectangle from centre.</summary>
+        /// <summary>
+        /// Horizontal offset of the framing rectangle from centre, in captured-image
+        /// pixels (sensor frame). The canvas converts canvas-pixel drag deltas to
+        /// this unit before writing.
+        /// </summary>
         public double RectangleOffsetXPx {
             get => _rectangleOffsetXPx;
             set {
@@ -642,7 +648,11 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         }
 
         private double _rectangleOffsetYPx = 0;
-        /// <summary>Vertical canvas-pixel offset of the framing rectangle from centre.</summary>
+        /// <summary>
+        /// Vertical offset of the framing rectangle from centre, in captured-image
+        /// pixels (sensor frame). The canvas converts canvas-pixel drag deltas to
+        /// this unit before writing.
+        /// </summary>
         public double RectangleOffsetYPx {
             get => _rectangleOffsetYPx;
             set {
@@ -655,7 +665,11 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         }
 
         private double _rectangleRotationDeg = 0;
-        /// <summary>Framing-rectangle rotation in degrees (relative to captured image).</summary>
+        /// <summary>
+        /// Framing-rectangle rotation in degrees, interpreted as a delta relative to
+        /// the plate-solved <see cref="CapturedImageRotation"/>. A value of 0 means
+        /// "frame as captured" (no rotation offset from the camera's actual PA).
+        /// </summary>
         public double RectangleRotationDeg {
             get => _rectangleRotationDeg;
             set {

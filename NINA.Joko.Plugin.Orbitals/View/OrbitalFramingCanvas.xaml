@@ -10,8 +10,10 @@
 
     <!-- Three-layer framing canvas.
          Layer 1: Background sky-survey image (fills the control).
-         Layer 2: Captured image, centred, scaled to 1/BackgroundFovMultiplier of the control.
-         Layer 3: Draggable/rotatable framing rectangle the user can pan and spin.
+         Layer 2: Captured image, centred, displayed in its native sensor frame
+                  (no rotation applied; plate-solved PA is consumed by the VM only).
+         Layer 3: Draggable/rotatable framing rectangle the user can pan and spin —
+                  sized to match the captured image exactly.
     -->
     <Grid Background="Black" ClipToBounds="True"
           x:Name="RootGrid"
@@ -23,17 +25,12 @@
                HorizontalAlignment="Stretch"
                VerticalAlignment="Stretch" />
 
-        <!-- Layer 2: Captured image (centred; smaller than background) -->
+        <!-- Layer 2: Captured image (centred; in native sensor frame, un-rotated) -->
         <Image x:Name="CapturedLayer"
                Stretch="Uniform"
                HorizontalAlignment="Center"
                VerticalAlignment="Center"
-               Opacity="0.85"
-               RenderTransformOrigin="0.5,0.5">
-            <Image.RenderTransform>
-                <RotateTransform x:Name="CapturedRotation" Angle="0" />
-            </Image.RenderTransform>
-        </Image>
+               Opacity="0.85" />
 
         <!-- Layer 3: Framing rectangle (draggable / wheel-rotatable) -->
         <Rectangle x:Name="FramingRectangle"

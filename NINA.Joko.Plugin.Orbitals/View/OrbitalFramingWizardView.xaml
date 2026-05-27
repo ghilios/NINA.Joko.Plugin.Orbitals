@@ -53,6 +53,8 @@
                     x:Name="FramingCanvas"
                     CapturedImageSource="{Binding CapturedImage}"
                     CapturedImageRotation="{Binding CapturedImageRotation}"
+                    CapturedImagePixelWidth="{Binding CapturedImageWidthPx}"
+                    CapturedImagePixelHeight="{Binding CapturedImageHeightPx}"
                     BackgroundImageSource="{Binding BackgroundImage}"
                     BackgroundFovMultiplier="{Binding BackgroundFovMultiplier}"
                     RectangleOffsetX="{Binding RectangleOffsetXPx, Mode=TwoWay}"
@@ -200,7 +202,7 @@
                           Margin="0,0,0,5"
                           Visibility="{Binding HasCapture, Converter={StaticResource BooleanToVisibilityCollapsedConverter}}">
                     <StackPanel Margin="5">
-                        <TextBlock Text="Rectangle Rotation (drag canvas rectangle or use slider):"
+                        <TextBlock Text="Rotation Δ (offset from captured-image PA — drag canvas rectangle or use slider):"
                                    TextWrapping="Wrap"
                                    Margin="0,0,0,3" />
                         <Slider

@@ -23,11 +23,18 @@ namespace NINA.Joko.Plugin.Orbitals.View {
     /// Three-layer canvas for the Orbital Framing Wizard.
     ///
     /// Layer 1 — Background sky survey (BackgroundImageSource).
-    /// Layer 2 — Captured image centred at 1/BackgroundFovMultiplier scale, with CapturedImageRotation.
-    /// Layer 3 — Draggable/wheel-rotatable yellow framing rectangle.
+    /// Layer 2 — Captured image displayed in its native sensor frame (no rotation applied).
+    ///           The plate-solved CapturedImageRotation is exposed as a DP pass-through for
+    ///           the VM's final-PA math but is intentionally NOT applied to the visual.
+    ///           Layer is sized from CapturedImagePixelWidth/Height so its on-canvas
+    ///           footprint matches the source aspect exactly.
+    /// Layer 3 — Draggable/wheel-rotatable yellow framing rectangle. Sized to the same
+    ///           on-canvas footprint as the captured-image layer.
     ///
-    /// Pan: left-drag on the rectangle updates RectangleOffsetX / RectangleOffsetY.
-    /// Rotate: mouse-wheel on the rectangle updates RectangleRotation.
+    /// Pan: left-drag on the rectangle updates RectangleOffsetX / RectangleOffsetY,
+    /// expressed in captured-image pixels (sensor frame).
+    /// Rotate: mouse-wheel on the rectangle updates RectangleRotation, interpreted by
+    /// the VM as a delta relative to the plate-solved PA.
     /// Right-click on rectangle: resets offset to centre (does NOT reset rotation).
     /// </summary>
     public partial class OrbitalFramingCanvas : UserControl {
@@ -41,12 +48,29 @@ namespace NINA.Joko.Plugin.Orbitals.View {
                 typeof(OrbitalFramingCanvas),
                 new PropertyMetadata(null, OnCapturedImageSourceChanged));
 
+        // Pass-through only: VM binds the plate-solved PA here so it can read it back
+        // for the final-PA math. The canvas does NOT apply this to the captured image
+        // visual — the image always renders in its native sensor frame.
         public static readonly DependencyProperty CapturedImageRotationProperty =
             DependencyProperty.Register(
                 nameof(CapturedImageRotation),
                 typeof(double),
                 typeof(OrbitalFramingCanvas),
-                new PropertyMetadata(0.0, OnCapturedImageRotationChanged));
+                new PropertyMetadata(0.0));
+
+        public static readonly DependencyProperty CapturedImagePixelWidthProperty =
+            DependencyProperty.Register(
+                nameof(CapturedImagePixelWidth),
+                typeof(double),
+                typeof(OrbitalFramingCanvas),
+                new PropertyMetadata(0.0, OnCapturedImagePixelDimensionChanged));
+
+        public static readonly DependencyProperty CapturedImagePixelHeightProperty =
+            DependencyProperty.Register(
+                nameof(CapturedImagePixelHeight),
+                typeof(double),
+                typeof(OrbitalFramingCanvas),
+                new PropertyMetadata(0.0, OnCapturedImagePixelDimensionChanged));
 
         public static readonly DependencyProperty BackgroundImageSourceProperty =
             DependencyProperty.Register(
@@ -113,24 +137,53 @@ namespace NINA.Joko.Plugin.Orbitals.View {
             set => SetValue(CapturedImageRotationProperty, value);
         }
 
+        /// <summary>
+        /// Native pixel width of the captured frame (sensor frame). Drives the captured-image
+        /// layer footprint and the framing rectangle so they share the source aspect ratio.
+        /// </summary>
+        public double CapturedImagePixelWidth {
+            get => (double)GetValue(CapturedImagePixelWidthProperty);
+            set => SetValue(CapturedImagePixelWidthProperty, value);
+        }
+
+        /// <summary>
+        /// Native pixel height of the captured frame (sensor frame). Drives the captured-image
+        /// layer footprint and the framing rectangle so they share the source aspect ratio.
+        /// </summary>
+        public double CapturedImagePixelHeight {
+            get => (double)GetValue(CapturedImagePixelHeightProperty);
+            set => SetValue(CapturedImagePixelHeightProperty, value);
+        }
+
         public BitmapSource BackgroundImageSource {
             get => (BitmapSource)GetValue(BackgroundImageSourceProperty);
             set => SetValue(BackgroundImageSourceProperty, value);
         }
 
-        /// <summary>Horizontal canvas-pixel offset of the framing rectangle from centre.</summary>
+        /// <summary>
+        /// Horizontal offset of the framing rectangle from centre, expressed in
+        /// captured-image pixels (sensor frame). The canvas converts to its own pixel
+        /// space when positioning the rectangle visually.
+        /// </summary>
         public double RectangleOffsetX {
             get => (double)GetValue(RectangleOffsetXProperty);
             set => SetValue(RectangleOffsetXProperty, value);
         }
 
-        /// <summary>Vertical canvas-pixel offset of the framing rectangle from centre.</summary>
+        /// <summary>
+        /// Vertical offset of the framing rectangle from centre, expressed in
+        /// captured-image pixels (sensor frame). The canvas converts to its own pixel
+        /// space when positioning the rectangle visually.
+        /// </summary>
         public double RectangleOffsetY {
             get => (double)GetValue(RectangleOffsetYProperty);
             set => SetValue(RectangleOffsetYProperty, value);
         }
 
-        /// <summary>Rotation of the framing rectangle in degrees.</summary>
+        /// <summary>
+        /// Rotation of the framing rectangle in degrees, interpreted by the VM as a
+        /// delta relative to the plate-solved <see cref="CapturedImageRotation"/>.
+        /// </summary>
         public double RectangleRotation {
             get => (double)GetValue(RectangleRotationProperty);
             set => SetValue(RectangleRotationProperty, value);
@@ -142,6 +195,12 @@ namespace NINA.Joko.Plugin.Orbitals.View {
         private Point _dragStart;
         private double _offsetXAtDragStart;
         private double _offsetYAtDragStart;
+
+        // Canvas pixels per captured-image pixel. Set in UpdateCapturedLayerSize();
+        // 1.0 until a captured-image dimension is known. Used to convert between
+        // image-pixel DP values (RectangleOffsetX/Y) and the visual canvas-pixel
+        // positions of the TranslateTransform.
+        private double _canvasPxPerImagePx = 1.0;
 
         // ─── Constructor ─────────────────────────────────────────────────────────
 
@@ -157,9 +216,8 @@ namespace NINA.Joko.Plugin.Orbitals.View {
             ctrl.UpdateCapturedLayerSize();
         }
 
-        private static void OnCapturedImageRotationChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) {
-            var ctrl = (OrbitalFramingCanvas)d;
-            ctrl.CapturedRotation.Angle = (double)e.NewValue;
+        private static void OnCapturedImagePixelDimensionChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) {
+            ((OrbitalFramingCanvas)d).UpdateCapturedLayerSize();
         }
 
         private static void OnBackgroundImageSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) {
@@ -169,12 +227,12 @@ namespace NINA.Joko.Plugin.Orbitals.View {
 
         private static void OnRectangleOffsetXChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) {
             var ctrl = (OrbitalFramingCanvas)d;
-            ctrl.RectTranslate.X = (double)e.NewValue;
+            ctrl.RectTranslate.X = (double)e.NewValue * ctrl._canvasPxPerImagePx;
         }
 
         private static void OnRectangleOffsetYChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) {
             var ctrl = (OrbitalFramingCanvas)d;
-            ctrl.RectTranslate.Y = (double)e.NewValue;
+            ctrl.RectTranslate.Y = (double)e.NewValue * ctrl._canvasPxPerImagePx;
         }
 
         private static void OnRectangleRotationChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) {
@@ -190,10 +248,12 @@ namespace NINA.Joko.Plugin.Orbitals.View {
         }
 
         /// <summary>
-        /// Size the captured-image layer to 1/BackgroundFovMultiplier of the control.
-        /// The multiplier comes from the <see cref="BackgroundFovMultiplierProperty"/> DP,
-        /// defaulting to 3.0 so the layer is one-third of the canvas dimensions if no
-        /// binding is set.
+        /// Size the captured-image layer and the framing rectangle so their on-canvas
+        /// footprint matches the captured frame's native aspect ratio
+        /// (CapturedImagePixelWidth × CapturedImagePixelHeight). The image occupies
+        /// 1/BackgroundFovMultiplier of the canvas extent on its longest side.
+        /// Pre-capture (pixel dimensions unset), falls back to a square layout
+        /// 1/BackgroundFovMultiplier on each side so the placeholder text remains readable.
         /// </summary>
         private void UpdateCapturedLayerSize() {
             double fovMultiplier = Math.Max(1.0, BackgroundFovMultiplier);
@@ -203,15 +263,35 @@ namespace NINA.Joko.Plugin.Orbitals.View {
 
             if (w <= 0 || h <= 0) return;
 
-            double imgW = w / fovMultiplier;
-            double imgH = h / fovMultiplier;
+            double pxW = CapturedImagePixelWidth;
+            double pxH = CapturedImagePixelHeight;
+
+            double imgW, imgH;
+            if (pxW > 0 && pxH > 0) {
+                // Uniform scale that fits the captured frame at 1/fovMultiplier of the
+                // shorter canvas axis, preserving the source aspect.
+                double scale = Math.Min(w / (pxW * fovMultiplier),
+                                        h / (pxH * fovMultiplier));
+                imgW = pxW * scale;
+                imgH = pxH * scale;
+                _canvasPxPerImagePx = scale;
+            } else {
+                // Pre-capture fallback: square footprint, 1/fovMultiplier of each axis.
+                imgW = w / fovMultiplier;
+                imgH = h / fovMultiplier;
+                _canvasPxPerImagePx = 1.0;
+            }
 
             CapturedLayer.Width = imgW;
             CapturedLayer.Height = imgH;
 
-            // Size the framing rectangle to match the captured-image layer.
             FramingRectangle.Width = imgW;
             FramingRectangle.Height = imgH;
+
+            // Re-apply existing image-pixel offset DP values through the new scale so
+            // a window resize doesn't visually displace the rectangle.
+            RectTranslate.X = RectangleOffsetX * _canvasPxPerImagePx;
+            RectTranslate.Y = RectangleOffsetY * _canvasPxPerImagePx;
         }
 
         private void UpdateCrosshair() {
@@ -246,12 +326,18 @@ namespace NINA.Joko.Plugin.Orbitals.View {
             if (!_isDragging) return;
 
             Point current = e.GetPosition(RootGrid);
-            double deltaX = current.X - _dragStart.X;
-            double deltaY = current.Y - _dragStart.Y;
+            double deltaCanvasX = current.X - _dragStart.X;
+            double deltaCanvasY = current.Y - _dragStart.Y;
 
-            // Update DPs — the callbacks push through to the TranslateTransform.
-            SetCurrentValue(RectangleOffsetXProperty, _offsetXAtDragStart + deltaX);
-            SetCurrentValue(RectangleOffsetYProperty, _offsetYAtDragStart + deltaY);
+            // Convert canvas-pixel drag deltas to captured-image-pixel deltas so the DPs
+            // remain in sensor-frame units. The DP callbacks multiply back by
+            // _canvasPxPerImagePx when positioning the rectangle visually.
+            double scale = _canvasPxPerImagePx > 0 ? _canvasPxPerImagePx : 1.0;
+            double deltaImgX = deltaCanvasX / scale;
+            double deltaImgY = deltaCanvasY / scale;
+
+            SetCurrentValue(RectangleOffsetXProperty, _offsetXAtDragStart + deltaImgX);
+            SetCurrentValue(RectangleOffsetYProperty, _offsetYAtDragStart + deltaImgY);
 
             e.Handled = true;
         }

@@ -273,6 +273,74 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             vm.OffsetPositionAngleDeg.Should().Be(0);
         }
 
+        /// <summary>
+        /// Post-revision, <c>RectangleOffsetXPx</c>/<c>YPx</c> carry captured-image-pixel
+        /// units. The VM feeds them to <c>Coordinates.Shift(dx, dy, capturedPa, pixscale, pixscale)</c>
+        /// directly. This test mirrors that production call exactly and checks the VM
+        /// produces matching RA/Dec offsets relative to the body's current position.
+        /// </summary>
+        [Test]
+        public async System.Threading.Tasks.Task RectangleOffsetPx_PostCapture_MatchesCoordinatesShift() {
+            var coords = OrbitalFramingScenarios.Ceres_JD2460200();
+            var rate = OrbitalFramingScenarios.Ceres_JD2460200_TrackingRate();
+            var (vm, capture, target) = Make(coords, rate, "1 Ceres");
+
+            const double pa = 30.0;
+            const double pixscale = 2.0;
+            capture.Next = MakeFrame(coords, pa: pa, pixscale: pixscale);
+            vm.Initialize(target);
+            await vm.SlewCenterAndImageCommand.ExecuteAsync(null);
+
+            const double dxImgPx = 50.0;
+            const double dyImgPx = -30.0;
+            vm.RectangleOffsetXPx = dxImgPx;
+            vm.RectangleOffsetYPx = dyImgPx;
+
+            var framingTarget = coords.Shift(dxImgPx, dyImgPx, pa, pixscale, pixscale);
+            double expectedRaDiff = framingTarget.RA - coords.RA;
+            while (expectedRaDiff > 12.0) expectedRaDiff -= 24.0;
+            while (expectedRaDiff < -12.0) expectedRaDiff += 24.0;
+            double expectedDec = framingTarget.Dec - coords.Dec;
+
+            vm.RAOffsetHours.Should().BeApproximately(expectedRaDiff, 1e-9);
+            vm.DecOffsetDegrees.Should().BeApproximately(expectedDec, 1e-9);
+        }
+
+        /// <summary>
+        /// Locks in the "delta from plate-solved PA" semantics: <c>FinalPositionAngle</c>
+        /// depends only on the sum <c>CapturedImageRotation + RectangleRotationDeg</c>.
+        /// Different splits with the same sum must yield the same final PA.
+        /// </summary>
+        [Test]
+        public async System.Threading.Tasks.Task FinalPositionAngle_DependsOnlyOnSumOfCapturedPaAndRectangleDelta() {
+            var coords = OrbitalFramingScenarios.Mars_20250615();
+            var rate = OrbitalFramingScenarios.Mars_20250615_TrackingRate();
+
+            var pairs = new[] {
+                (capturedPa: 30.0, delta: 70.0),
+                (capturedPa: 60.0, delta: 40.0),
+                (capturedPa: 90.0, delta: 10.0),
+                (capturedPa: 100.0, delta: 0.0),
+            };
+
+            const double expected = ((360.0 - 100.0) % 360.0 + 360.0) % 360.0;
+
+            foreach (var (capturedPa, delta) in pairs) {
+                var (vm, capture, target) = Make(coords, rate, "Mars");
+                capture.Next = MakeFrame(coords, pa: capturedPa);
+                vm.Initialize(target);
+                await vm.SlewCenterAndImageCommand.ExecuteAsync(null);
+
+                if (delta != 0.0) {
+                    vm.RectangleRotationDeg = delta;
+                }
+
+                vm.FinalPositionAngle.Should().BeApproximately(
+                    expected, 1e-9,
+                    $"pair (capturedPa={capturedPa}, delta={delta}) sums to 100°");
+            }
+        }
+
         [Test]
         public async System.Threading.Tasks.Task SlewCenterAndImageCommand_CanExecute_FalseWhileCapturing() {
             var coords = OrbitalFramingScenarios.Halley_JD2449400();
