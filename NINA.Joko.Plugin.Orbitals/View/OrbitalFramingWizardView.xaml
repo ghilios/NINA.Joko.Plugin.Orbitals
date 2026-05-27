@@ -221,11 +221,17 @@
 
                             <TextBlock Grid.Row="1" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Gain:" />
                             <TextBox Grid.Row="1" Grid.Column="1" Margin="3"
-                                     Text="{Binding Gain, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                     ToolTip="Leave blank to use the camera-settings default."
+                                     Text="{Binding Gain, Mode=TwoWay,
+                                                    UpdateSourceTrigger=LostFocus,
+                                                    Converter={StaticResource MinusOneToEmptyStringConverter}}" />
 
                             <TextBlock Grid.Row="2" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Offset:" />
                             <TextBox Grid.Row="2" Grid.Column="1" Margin="3"
-                                     Text="{Binding Offset, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                     ToolTip="Leave blank to use the camera-settings default."
+                                     Text="{Binding Offset, Mode=TwoWay,
+                                                    UpdateSourceTrigger=LostFocus,
+                                                    Converter={StaticResource MinusOneToEmptyStringConverter}}" />
                         </Grid>
 
                         <Button Margin="0,8,0,0"
@@ -326,10 +332,8 @@
                                    FontWeight="Bold"
                                    ToolTip="Position-independent offset representation. Same framing at any body position. Will be used by a future container variant." />
                         <TextBlock Grid.Row="5" Grid.Column="0" Margin="3,1" Text="Separation:" />
-                        <TextBlock Grid.Row="5" Grid.Column="1" Margin="3,1">
-                            <Run Text="{Binding OffsetSeparationArcsec, Mode=OneWay, StringFormat='{}{0:F1}'}" />
-                            <Run Text="&quot;" />
-                        </TextBlock>
+                        <TextBlock Grid.Row="5" Grid.Column="1" Margin="3,1"
+                                   Text="{Binding OffsetSeparationDisplay, Mode=OneWay}" />
                         <TextBlock Grid.Row="6" Grid.Column="0" Margin="3,1" Text="Offset PA:" />
                         <TextBlock Grid.Row="6" Grid.Column="1" Margin="3,1">
                             <Run Text="{Binding OffsetPositionAngleDeg, Mode=OneWay, StringFormat='{}{0:F1}'}" />

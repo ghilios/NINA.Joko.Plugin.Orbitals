@@ -99,78 +99,65 @@ namespace NINA.Joko.Plugin.Orbitals.Imaging {
                 imagingMediator, telescopeMediator,
                 filterWheelMediator, domeMediator, domeFollower);
 
-            // Subscribe to ImagingMediator to capture the final rendered image that
-            // the centering solver produces internally.
-            IRenderedImage lastRenderedImage = null;
-            EventHandler<ImagePreparedEventArgs> imagePreparedHandler = (_, e) => lastRenderedImage = e.RenderedImage;
-            imagingMediator.ImagePrepared += imagePreparedHandler;
+            var plateSolveSettings = profileService.ActiveProfile.PlateSolveSettings;
+            var telescopeSettings = profileService.ActiveProfile.TelescopeSettings;
+            var cameraSettings = profileService.ActiveProfile.CameraSettings;
 
-            PlateSolveResult plateSolveResult;
-            try {
-                var plateSolveSettings = profileService.ActiveProfile.PlateSolveSettings;
-                var telescopeSettings = profileService.ActiveProfile.TelescopeSettings;
-                var cameraSettings = profileService.ActiveProfile.CameraSettings;
+            var centerCaptureSeq = new CaptureSequence(
+                plateSolveSettings.ExposureTime,
+                CaptureSequence.ImageTypes.SNAPSHOT,
+                plateSolveSettings.Filter,
+                new BinningMode(plateSolveSettings.Binning, plateSolveSettings.Binning),
+                1);
+            centerCaptureSeq.Gain = plateSolveSettings.Gain;
 
-                var captureSeq = new CaptureSequence(
-                    plateSolveSettings.ExposureTime,
-                    CaptureSequence.ImageTypes.SNAPSHOT,
-                    plateSolveSettings.Filter,
-                    new BinningMode(plateSolveSettings.Binning, plateSolveSettings.Binning),
-                    1);
-                captureSeq.Gain = plateSolveSettings.Gain;
+            var centerSolveParams = new CenterSolveParameter {
+                Coordinates = targetCoords,
+                FocalLength = telescopeSettings.FocalLength,
+                PixelSize = cameraSettings.PixelSize,
+                Binning = plateSolveSettings.Binning,
+                SearchRadius = plateSolveSettings.SearchRadius,
+                MaxObjects = plateSolveSettings.MaxObjects,
+                Threshold = plateSolveSettings.Threshold,
+                Attempts = plateSolveSettings.NumberOfAttempts,
+                ReattemptDelay = TimeSpan.FromMinutes(plateSolveSettings.ReattemptDelay),
+                Regions = plateSolveSettings.Regions,
+                DownSampleFactor = plateSolveSettings.DownSampleFactor,
+                NoSync = telescopeSettings.NoSync,
+                BlindFailoverEnabled = plateSolveSettings.BlindFailoverEnabled,
+            };
 
-                var centerSolveParams = new CenterSolveParameter {
-                    Coordinates = targetCoords,
-                    FocalLength = telescopeSettings.FocalLength,
-                    PixelSize = cameraSettings.PixelSize,
-                    Binning = plateSolveSettings.Binning,
-                    SearchRadius = plateSolveSettings.SearchRadius,
-                    MaxObjects = plateSolveSettings.MaxObjects,
-                    Threshold = plateSolveSettings.Threshold,
-                    Attempts = plateSolveSettings.NumberOfAttempts,
-                    ReattemptDelay = TimeSpan.FromMinutes(plateSolveSettings.ReattemptDelay),
-                    Regions = plateSolveSettings.Regions,
-                    DownSampleFactor = plateSolveSettings.DownSampleFactor,
-                    NoSync = telescopeSettings.NoSync,
-                    BlindFailoverEnabled = plateSolveSettings.BlindFailoverEnabled,
-                };
-
-                plateSolveResult = await centeringSolver.Center(captureSeq, centerSolveParams, null, progress, ct);
-            } finally {
-                imagingMediator.ImagePrepared -= imagePreparedHandler;
-            }
+            var plateSolveResult = await centeringSolver.Center(centerCaptureSeq, centerSolveParams, null, progress, ct);
 
             if (plateSolveResult == null || !plateSolveResult.Success) {
                 throw new InvalidOperationException("Plate solve failed during centering. Could not capture framing image.");
             }
 
-            // Step 4: Get the captured bitmap from the event we subscribed to.
-            BitmapSource bitmap = null;
-            if (lastRenderedImage?.Image != null) {
-                bitmap = lastRenderedImage.Image;
-                if (!bitmap.IsFrozen) bitmap.Freeze();
-            }
-
-            if (bitmap == null) {
-                // Fallback: capture one more snapshot since the event-based approach missed it.
-                progress?.Report(new ApplicationStatus { Source = "OrbitalFramingWizard", Status = "Capturing framing image..." });
-                var captureResult = await imagingMediator.CaptureAndPrepareImage(
-                    new CaptureSequence(
-                        exposure.ExposureTime,
-                        CaptureSequence.ImageTypes.SNAPSHOT,
-                        null,
-                        new BinningMode(1, 1),
-                        1),
-                    new PrepareImageParameters(true, true),
-                    ct,
-                    progress);
-                bitmap = captureResult?.Image;
-                if (bitmap != null && !bitmap.IsFrozen) bitmap.Freeze();
-            }
-
+            // Step 4: Take a fresh framing snapshot using the wizard's exposure
+            // settings. We don't reuse the centering loop's last image — that was
+            // taken with plate-solve settings (short exposure, plate-solve gain),
+            // which usually isn't what the user wants to look at.
+            progress?.Report(new ApplicationStatus { Source = "OrbitalFramingWizard", Status = "Capturing framing image..." });
+            var framingSeq = new CaptureSequence(
+                exposure.ExposureTime,
+                CaptureSequence.ImageTypes.SNAPSHOT,
+                null,
+                new BinningMode((short)exposure.Binning, (short)exposure.Binning),
+                1);
+            // -1 in either field tells the camera driver to use the
+            // camera-settings default; otherwise the user's typed value wins.
+            framingSeq.Gain = exposure.Gain;
+            framingSeq.Offset = exposure.Offset;
+            var captureResult = await imagingMediator.CaptureAndPrepareImage(
+                framingSeq,
+                new PrepareImageParameters(true, true),
+                ct,
+                progress);
+            var bitmap = captureResult?.Image;
             if (bitmap == null) {
                 throw new InvalidOperationException("Failed to capture framing image.");
             }
+            if (!bitmap.IsFrozen) bitmap.Freeze();
 
             // Step 5: Derive pixel scale.
             double pixelSize = cameraInfo.PixelSize;

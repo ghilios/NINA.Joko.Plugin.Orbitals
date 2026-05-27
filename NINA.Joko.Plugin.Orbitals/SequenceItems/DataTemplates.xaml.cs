@@ -10,8 +10,11 @@
 
 #endregion "copyright"
 
+using NINA.Core.Utility;
+using NINA.Joko.Plugin.Orbitals.View;
 using System.ComponentModel.Composition;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
@@ -29,6 +32,21 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         private void ManualTLEContainerStackPanel_MouseDown(object sender, MouseButtonEventArgs e) {
             // https://stackoverflow.com/questions/6489032/wpf-remove-focus-when-clicking-outside-of-a-textbox
             Keyboard.ClearFocus();
+        }
+
+        private void EnterRADecOffsetButton_Click(object sender, RoutedEventArgs e) {
+            if (!(sender is Button button) || !(button.DataContext is IOrbitalsOffsetContainer container)) {
+                Logger.Warning("Enter RA/Dec offset button clicked but DataContext is not an IOrbitalsOffsetContainer");
+                return;
+            }
+
+            var dialog = new RADecOffsetDialog(container.DerivedRAOffsetHours, container.DerivedDecOffsetDegrees) {
+                Owner = Window.GetWindow(button)
+            };
+
+            if (dialog.ShowDialog() == true) {
+                container.SetOffsetFromRADec(dialog.RAOffsetHours, dialog.DecOffsetDegrees);
+            }
         }
     }
 }

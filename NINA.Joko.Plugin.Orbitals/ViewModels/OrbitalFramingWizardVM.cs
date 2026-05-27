@@ -251,12 +251,19 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             (SkySurveySource[])Enum.GetValues(typeof(SkySurveySource));
 
         private SkySurveySource LoadInitialImageSource() {
-            // Always seed the wizard with NINA's offline sky atlas — the user asked
-            // for the offline source as the default regardless of what their NINA
-            // framing-assistant setting happens to be. The setter on SelectedImageSource
-            // still persists any user-driven change back to the profile so it
-            // round-trips with NINA's framing assistant.
-            return SkySurveySource.SKYATLAS;
+            // Prefer the user's NINA framing-assistant choice so the wizard shares
+            // their configured/working source. If unset or invalid, fall back to
+            // HIPS2FITS which is the most reliably-available online source.
+            try {
+                var settings = profileService?.ActiveProfile?.FramingAssistantSettings;
+                var fromProfile = settings?.LastSelectedImageSource ?? SkySurveySource.HIPS2FITS;
+                if (!Enum.IsDefined(typeof(SkySurveySource), fromProfile)) {
+                    fromProfile = SkySurveySource.HIPS2FITS;
+                }
+                return fromProfile;
+            } catch {
+                return SkySurveySource.HIPS2FITS;
+            }
         }
 
         private void PersistImageSourceToProfile(SkySurveySource value) {
@@ -313,21 +320,22 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
             try {
                 IsBackgroundLoading = true;
-                Logger.Info($"Orbital wizard background fetch: source={SelectedImageSource} name='{name}' ra={coords.RA:F6}h dec={coords.Dec:F6}° fov={fovArcmin:F2}arcmin");
-                var survey = skySurveyFactory.Create(SelectedImageSource);
-                var img = await survey.GetImage(
-                    name,
-                    coords,
-                    fovArcmin,
-                    BackgroundImagePx,
-                    BackgroundImagePx,
-                    ct,
-                    null);
-                if (ct.IsCancellationRequested || img == null) return;
+                var bmp = await FetchSurveyBitmapAsync(SelectedImageSource, name, coords, fovArcmin, ct);
 
-                BitmapSource bmp = img.Image;
+                // Auto-fallback: if the chosen source produced no image (typical when
+                // the SKYATLAS local file isn't present, or an online source times out
+                // without throwing), try HIPS2FITS once so the user sees *something*
+                // and gets a log line they can paste into a bug report.
+                if (bmp == null && !ct.IsCancellationRequested && SelectedImageSource != SkySurveySource.HIPS2FITS) {
+                    Logger.Info($"Orbital wizard background: {SelectedImageSource} returned no image; falling back to HIPS2FITS");
+                    bmp = await FetchSurveyBitmapAsync(SkySurveySource.HIPS2FITS, name, coords, fovArcmin, ct);
+                }
+
+                if (ct.IsCancellationRequested) return;
+
                 if (bmp != null && bmp.CanFreeze && !bmp.IsFrozen) bmp.Freeze();
                 BackgroundImage = bmp;
+                Logger.Info($"Orbital wizard background assigned: bitmap={(bmp == null ? "null" : $"{bmp.PixelWidth}x{bmp.PixelHeight}")}");
             } catch (OperationCanceledException) {
                 // expected when the user changes source rapidly
             } catch (Exception ex) {
@@ -336,6 +344,31 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 BackgroundImage = null;
             } finally {
                 IsBackgroundLoading = false;
+            }
+        }
+
+        private async Task<BitmapSource> FetchSurveyBitmapAsync(
+            SkySurveySource source,
+            string name,
+            Coordinates coords,
+            double fovArcmin,
+            CancellationToken ct) {
+            Logger.Info($"Orbital wizard background fetch: source={source} name='{name}' ra={coords.RA:F6}h dec={coords.Dec:F6}° fov={fovArcmin:F2}arcmin px={BackgroundImagePx}");
+            try {
+                var survey = skySurveyFactory.Create(source);
+                var img = await survey.GetImage(name, coords, fovArcmin, BackgroundImagePx, BackgroundImagePx, ct, null);
+                if (ct.IsCancellationRequested) return null;
+                if (img == null) {
+                    Logger.Info($"Orbital wizard background fetch: source={source} returned a null SkySurveyImage");
+                    return null;
+                }
+                Logger.Info($"Orbital wizard background fetch: source={source} returned image={(img.Image == null ? "null" : $"{img.Image.PixelWidth}x{img.Image.PixelHeight}")}");
+                return img.Image;
+            } catch (OperationCanceledException) {
+                throw;
+            } catch (Exception ex) {
+                Logger.Warning($"Orbital wizard background fetch from {source} failed: {ex.Message}");
+                return null;
             }
         }
 
@@ -532,30 +565,14 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 PopulateContainerSpecificFields(rawClone, selectedObject);
 
                 // Step 4: Set the offset coordinates and position angle on the base class.
-                if (rawClone is OrbitalsContainerBase<OrbitalElementsObject> oecBase) {
-                    oecBase.Target.PositionAngle = FinalPositionAngle;
-                    oecBase.OffsetCoordinates.Coordinates = new Coordinates(
-                        Angle.ByHours(RAOffsetHours),
-                        Angle.ByDegree(DecOffsetDegrees),
-                        Epoch.J2000);
-                } else if (rawClone is OrbitalsContainerBase<SolarSystemBodyObject> ssbBase) {
-                    ssbBase.Target.PositionAngle = FinalPositionAngle;
-                    ssbBase.OffsetCoordinates.Coordinates = new Coordinates(
-                        Angle.ByHours(RAOffsetHours),
-                        Angle.ByDegree(DecOffsetDegrees),
-                        Epoch.J2000);
-                } else if (rawClone is OrbitalsContainerBase<TLEObject> tlBase) {
-                    tlBase.Target.PositionAngle = FinalPositionAngle;
-                    tlBase.OffsetCoordinates.Coordinates = new Coordinates(
-                        Angle.ByHours(RAOffsetHours),
-                        Angle.ByDegree(DecOffsetDegrees),
-                        Epoch.J2000);
-                } else if (rawClone is OrbitalsContainerBase<PVTableObject> pvBase) {
-                    pvBase.Target.PositionAngle = FinalPositionAngle;
-                    pvBase.OffsetCoordinates.Coordinates = new Coordinates(
-                        Angle.ByHours(RAOffsetHours),
-                        Angle.ByDegree(DecOffsetDegrees),
-                        Epoch.J2000);
+                // Separation + Offset PA is the canonical, position-independent
+                // representation that the container will use to drive its slew math.
+                if (rawClone is IOrbitalsOffsetContainer offsetContainer) {
+                    offsetContainer.OffsetSeparationArcsec = OffsetSeparationArcsec;
+                    offsetContainer.OffsetPositionAngleDeg = OffsetPositionAngleDeg;
+                }
+                if (rawClone is IDeepSkyObjectContainer dsoForPA) {
+                    dsoForPA.Target.PositionAngle = FinalPositionAngle;
                 }
 
                 // Step 5: Add to sequencer and navigate.
@@ -678,13 +695,16 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             set { if (exposureTime != value) { exposureTime = value; RaisePropertyChanged(); } }
         }
 
-        private int gain = 0;
+        // -1 is NINA's "use the camera-settings default" sentinel (same convention
+        // as SnapShotControlSettings). The XAML binds these through
+        // MinusOneToEmptyStringConverter so the input renders blank.
+        private int gain = -1;
         public int Gain {
             get => gain;
             set { if (gain != value) { gain = value; RaisePropertyChanged(); } }
         }
 
-        private int offset = 0;
+        private int offset = -1;
         public int Offset {
             get => offset;
             set { if (offset != value) { offset = value; RaisePropertyChanged(); } }
@@ -811,7 +831,27 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private double offsetSeparationArcsec;
         public double OffsetSeparationArcsec {
             get => offsetSeparationArcsec;
-            private set { if (offsetSeparationArcsec != value) { offsetSeparationArcsec = value; RaisePropertyChanged(); } }
+            private set {
+                if (offsetSeparationArcsec != value) {
+                    offsetSeparationArcsec = value;
+                    RaisePropertyChanged();
+                    RaisePropertyChanged(nameof(OffsetSeparationDisplay));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Separation formatted as d°m′s″ so the user doesn't have to convert
+        /// arcseconds mentally for offsets larger than ~60″.
+        /// </summary>
+        public string OffsetSeparationDisplay {
+            get {
+                var totalArcsec = Math.Abs(offsetSeparationArcsec);
+                var deg = (int)(totalArcsec / 3600.0);
+                var arcmin = (int)((totalArcsec - deg * 3600.0) / 60.0);
+                var arcsec = totalArcsec - deg * 3600.0 - arcmin * 60.0;
+                return $"{deg:D2}° {arcmin:D2}′ {arcsec:F1}″";
+            }
         }
 
         private double offsetPositionAngleDeg;
