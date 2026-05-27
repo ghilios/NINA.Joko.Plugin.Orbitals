@@ -77,13 +77,13 @@ namespace NINA.Joko.Plugin.Orbitals.Imaging {
             var cameraInfo = cameraMediator.GetInfo();
             if (!cameraInfo.Connected) {
                 Notification.ShowError("Camera is not connected. Connect the camera before using Live capture.");
-                throw new InvalidOperationException("Camera not connected");
+                throw new CaptureSourceUserFacingException("Camera not connected");
             }
 
             var telescopeInfo = telescopeMediator.GetInfo();
             if (!telescopeInfo.Connected) {
                 Notification.ShowError("Telescope/mount is not connected. Connect the mount before using Live capture.");
-                throw new InvalidOperationException("Telescope not connected");
+                throw new CaptureSourceUserFacingException("Telescope not connected");
             }
 
             // Step 2: Get current target coordinates.
@@ -177,7 +177,7 @@ namespace NINA.Joko.Plugin.Orbitals.Imaging {
             if (pixelSize <= 0) pixelSize = profileService.ActiveProfile.CameraSettings.PixelSize;
             double focalLength = profileService.ActiveProfile.TelescopeSettings.FocalLength;
             double pixscale = (pixelSize > 0 && focalLength > 0)
-                ? 206.265 * pixelSize / focalLength
+                ? AstroUtil.ArcsecPerPixel(pixelSize, focalLength)
                 : plateSolveResult.Pixscale;
             if (pixscale <= 0) pixscale = 1.0;
 

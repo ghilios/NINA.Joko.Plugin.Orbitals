@@ -105,7 +105,7 @@ namespace NINA.Joko.Plugin.Orbitals.Imaging {
                 double pixelSize = profileService.ActiveProfile.CameraSettings.PixelSize;       // µm
                 double focalLength = profileService.ActiveProfile.TelescopeSettings.FocalLength; // mm
                 double pixscale = (pixelSize > 0 && focalLength > 0)
-                    ? 206.265 * pixelSize / focalLength
+                    ? AstroUtil.ArcsecPerPixel(pixelSize, focalLength)
                     : 1.0;
 
                 var pv = target.PositionAt(DateTime.UtcNow);

@@ -29,6 +29,7 @@ using NINA.Sequencer.Interfaces.Mediator;
 using NINA.WPF.Base.Interfaces.Mediator;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
@@ -59,6 +60,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private CancellationTokenSource captureCts;
         private DispatcherTimer liveTimer;
         private bool _disposed;
+        private readonly PropertyChangedEventHandler _captureModeChangedHandler;
 
         public OrbitalFramingWizardVM(
             IProfileService profileService,
@@ -79,11 +81,11 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 ?? throw new ArgumentNullException(nameof(captureSources));
 
             // Listen to CaptureMode changes so CaptureButtonLabel stays current.
-            orbitalsOptions.PropertyChanged += (_, e) => {
-                if (e.PropertyName == nameof(IOrbitalsOptions.CaptureMode)) {
+            _captureModeChangedHandler = (_, e) => {
+                if (e.PropertyName == nameof(IOrbitalsOptions.CaptureMode))
                     RaisePropertyChanged(nameof(CaptureButtonLabel));
-                }
             };
+            orbitalsOptions.PropertyChanged += _captureModeChangedHandler;
 
             SlewCenterAndImageCommand = new AsyncRelayCommand(SlewCenterAndImageAsync, () => !IsCapturing);
             CancelCaptureCommand = new RelayCommand(CancelCapture, () => IsCapturing);
@@ -122,11 +124,14 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         public void Dispose() {
             if (_disposed) return;
             _disposed = true;
+            if (_captureModeChangedHandler != null)
+                orbitalsOptions.PropertyChanged -= _captureModeChangedHandler;
             liveTimer?.Stop();
             liveTimer = null;
             captureCts?.Cancel();
             captureCts?.Dispose();
             captureCts = null;
+            GC.SuppressFinalize(this);
         }
 
         // -------------------------------------------------------------------------
@@ -150,7 +155,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 double pixelSize = profileService.ActiveProfile.CameraSettings.PixelSize;
                 double focalLength = profileService.ActiveProfile.TelescopeSettings.FocalLength;
                 double pixscale = (pixelSize > 0 && focalLength > 0)
-                    ? 206.265 * pixelSize / focalLength
+                    ? AstroUtil.ArcsecPerPixel(pixelSize, focalLength)
                     : 1.0;
                 double totalRateArcsecPerSec = Math.Sqrt(
                     rate.RAArcsecsPerSec * rate.RAArcsecsPerSec +
