@@ -22,6 +22,7 @@ using NINA.Equipment.Equipment.MyTelescope;
 using NINA.Equipment.Interfaces;
 using NINA.Equipment.Interfaces.Mediator;
 using NINA.Equipment.Interfaces.ViewModel;
+using NINA.Image.Interfaces;
 using NINA.Joko.Plugin.Orbitals.Calculations;
 using NINA.Joko.Plugin.Orbitals.Enums;
 using NINA.Joko.Plugin.Orbitals.Imaging;
@@ -76,9 +77,9 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             IApplicationMediator applicationMediator,
             IApplicationStatusMediator applicationStatusMediator,
             ISequenceMediator sequenceMediator,
-            [ImportMany] IEnumerable<Lazy<ICaptureSource, ICaptureSourceMetadata>> captureSources,
-            ISkySurveyFactory skySurveyFactory)
-            : this(profileService, nighttimeCalculator, guiderMediator, telescopeMediator, framingAssistantVM, applicationMediator, applicationStatusMediator, sequenceMediator, captureSources, skySurveyFactory, OrbitalsPlugin.OrbitalsOptions, OrbitalsPlugin.JPLAccessor, OrbitalsPlugin.MPCAccessor, OrbitalsPlugin.OrbitalElementsAccessor, new OrbitalSearchVM(OrbitalsPlugin.OrbitalElementsAccessor)) {
+            IImageDataFactory imageDataFactory,
+            [ImportMany] IEnumerable<Lazy<ICaptureSource, ICaptureSourceMetadata>> captureSources)
+            : this(profileService, nighttimeCalculator, guiderMediator, telescopeMediator, framingAssistantVM, applicationMediator, applicationStatusMediator, sequenceMediator, captureSources, new SkySurveyFactory(imageDataFactory), OrbitalsPlugin.OrbitalsOptions, OrbitalsPlugin.JPLAccessor, OrbitalsPlugin.MPCAccessor, OrbitalsPlugin.OrbitalElementsAccessor, new OrbitalSearchVM(OrbitalsPlugin.OrbitalElementsAccessor)) {
         }
 
         public OrbitalsVM(
