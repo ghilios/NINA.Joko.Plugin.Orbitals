@@ -24,4 +24,31 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.TestHelpers {
             return Task.FromResult(Next);
         }
     }
+
+    /// <summary>
+    /// Minimal <see cref="ICaptureSourceMetadata"/> implementation for test helpers.
+    /// </summary>
+    internal sealed class FakeCaptureSourceMetadata : ICaptureSourceMetadata {
+        public string Mode { get; }
+        public FakeCaptureSourceMetadata(string mode) => Mode = mode;
+    }
+
+    /// <summary>
+    /// Factory helpers for wrapping test capture sources in the Lazy pattern
+    /// expected by <see cref="NINA.Joko.Plugin.Orbitals.ViewModels.OrbitalFramingWizardVM"/>.
+    /// </summary>
+    internal static class CaptureSourceTestHelpers {
+        /// <summary>
+        /// Wraps a capture source in a <see cref="Lazy{T, TMetadata}"/> with the given mode key.
+        /// If <paramref name="mode"/> is null, defaults to "XisfStub" (the fallback mode used
+        /// when tests don't need mode-specific selection).
+        /// </summary>
+        public static Lazy<ICaptureSource, ICaptureSourceMetadata> AsLazy(
+            this ICaptureSource source,
+            string mode = "XisfStub") {
+            return new Lazy<ICaptureSource, ICaptureSourceMetadata>(
+                () => source,
+                new FakeCaptureSourceMetadata(mode));
+        }
+    }
 }

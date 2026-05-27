@@ -193,7 +193,7 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
 
             var vm = new OrbitalFramingWizardVM(
                 profileService.Object,
-                new[] { (ICaptureSource)capture },
+                new[] { ((ICaptureSource)capture).AsLazy() },
                 nightCalc.Object,
                 statusMediator.Object,
                 options.Object,

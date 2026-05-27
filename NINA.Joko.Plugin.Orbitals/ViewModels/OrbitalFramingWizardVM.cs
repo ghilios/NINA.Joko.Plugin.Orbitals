@@ -19,6 +19,7 @@ using NINA.Core.Model;
 using NINA.Core.Utility;
 using NINA.Core.Utility.Notification;
 using NINA.Joko.Plugin.Orbitals.Calculations;
+using NINA.Joko.Plugin.Orbitals.Enums;
 using NINA.Joko.Plugin.Orbitals.Imaging;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
 using NINA.Joko.Plugin.Orbitals.SequenceItems;
@@ -47,7 +48,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
     [PartCreationPolicy(CreationPolicy.NonShared)]
     public class OrbitalFramingWizardVM : BaseINPC, IDisposable {
         private readonly IProfileService profileService;
-        private readonly ICaptureSource captureSource;
+        private readonly IEnumerable<Lazy<ICaptureSource, ICaptureSourceMetadata>> captureSources;
         private readonly INighttimeCalculator nighttimeCalculator;
         private readonly IApplicationStatusMediator applicationStatusMediator;
         private readonly IOrbitalsOptions orbitalsOptions;
@@ -61,7 +62,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
         public OrbitalFramingWizardVM(
             IProfileService profileService,
-            IEnumerable<ICaptureSource> captureSources,
+            IEnumerable<Lazy<ICaptureSource, ICaptureSourceMetadata>> captureSources,
             INighttimeCalculator nighttimeCalculator,
             IApplicationStatusMediator applicationStatusMediator,
             IOrbitalsOptions orbitalsOptions,
@@ -74,14 +75,15 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             this.sequenceMediator = sequenceMediator;
             this.applicationMediator = applicationMediator;
 
-            // Exactly one capture source must be registered for Phase B–D.
-            var sourceList = captureSources?.ToList()
+            this.captureSources = captureSources?.ToList()
                 ?? throw new ArgumentNullException(nameof(captureSources));
-            if (sourceList.Count == 0)
-                throw new ArgumentException("No ICaptureSource implementations are registered.", nameof(captureSources));
-            if (sourceList.Count > 1)
-                throw new ArgumentException($"Expected exactly one ICaptureSource; found {sourceList.Count}. Use CaptureMode selection (Phase E).", nameof(captureSources));
-            this.captureSource = sourceList[0];
+
+            // Listen to CaptureMode changes so CaptureButtonLabel stays current.
+            orbitalsOptions.PropertyChanged += (_, e) => {
+                if (e.PropertyName == nameof(IOrbitalsOptions.CaptureMode)) {
+                    RaisePropertyChanged(nameof(CaptureButtonLabel));
+                }
+            };
 
             SlewCenterAndImageCommand = new AsyncRelayCommand(SlewCenterAndImageAsync, () => !IsCapturing);
             CancelCaptureCommand = new RelayCommand(CancelCapture, () => IsCapturing);
@@ -174,6 +176,11 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 // Use a null-safe no-op progress for capture; the capture source
                 // is responsible for sending its own status messages.
                 IProgress<ApplicationStatus> progress = null;
+
+                var captureSource = ResolveCaptureSource();
+                if (captureSource == null) {
+                    throw new InvalidOperationException("No ICaptureSource is registered for the current capture mode.");
+                }
 
                 var frame = await captureSource.CaptureAsync(
                     selectedObject,
@@ -561,8 +568,25 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             private set { nighttimeData = value; RaisePropertyChanged(); }
         }
 
-        /// <summary>Phase B: hardcoded label; later phases will update this per mode.</summary>
-        public string CaptureButtonLabel => "Load Test Image";
+        /// <summary>Button label switches based on the currently selected capture mode.</summary>
+        public string CaptureButtonLabel => orbitalsOptions.CaptureMode == CaptureModeEnum.Live
+            ? "Slew, Center & Image"
+            : "Load Test Image";
+
+        /// <summary>
+        /// Resolves the active <see cref="ICaptureSource"/> by matching
+        /// <see cref="IOrbitalsOptions.CaptureMode"/> against each source's MEF metadata.
+        /// Falls back to the first registered source if no match is found.
+        /// </summary>
+        private ICaptureSource ResolveCaptureSource() {
+            var modeKey = orbitalsOptions.CaptureMode == CaptureModeEnum.Live ? "Live" : "XisfStub";
+            var match = captureSources.FirstOrDefault(s => s.Metadata.Mode == modeKey);
+            if (match == null) {
+                Logger.Warning($"No ICaptureSource registered for mode '{modeKey}', falling back to first available");
+                match = captureSources.FirstOrDefault();
+            }
+            return match?.Value;
+        }
 
         private double raOffsetHours;
         public double RAOffsetHours {

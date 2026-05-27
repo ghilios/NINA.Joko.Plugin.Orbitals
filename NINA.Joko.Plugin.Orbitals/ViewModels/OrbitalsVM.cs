@@ -60,7 +60,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private readonly IApplicationStatusMediator applicationStatusMediator;
         private readonly ISequenceMediator sequenceMediator;
         private readonly IProgress<ApplicationStatus> progress;
-        private readonly IEnumerable<ICaptureSource> captureSources;
+        private readonly IEnumerable<Lazy<ICaptureSource, ICaptureSourceMetadata>> captureSources;
         private bool initialLoadComplete;
         private Task<bool> refreshTask;
 
@@ -74,7 +74,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             IApplicationMediator applicationMediator,
             IApplicationStatusMediator applicationStatusMediator,
             ISequenceMediator sequenceMediator,
-            [ImportMany] IEnumerable<ICaptureSource> captureSources)
+            [ImportMany] IEnumerable<Lazy<ICaptureSource, ICaptureSourceMetadata>> captureSources)
             : this(profileService, nighttimeCalculator, guiderMediator, telescopeMediator, framingAssistantVM, applicationMediator, applicationStatusMediator, sequenceMediator, captureSources, OrbitalsPlugin.OrbitalsOptions, OrbitalsPlugin.JPLAccessor, OrbitalsPlugin.MPCAccessor, OrbitalsPlugin.OrbitalElementsAccessor, new OrbitalSearchVM(OrbitalsPlugin.OrbitalElementsAccessor)) {
         }
 
@@ -87,7 +87,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             IApplicationMediator applicationMediator,
             IApplicationStatusMediator applicationStatusMediator,
             ISequenceMediator sequenceMediator,
-            IEnumerable<ICaptureSource> captureSources,
+            IEnumerable<Lazy<ICaptureSource, ICaptureSourceMetadata>> captureSources,
             IOrbitalsOptions orbitalsOptions,
             IJPLAccessor jplAccessor,
             IMPCAccessor mpcAccessor,

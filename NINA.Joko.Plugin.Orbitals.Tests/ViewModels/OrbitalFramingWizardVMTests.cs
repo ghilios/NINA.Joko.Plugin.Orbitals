@@ -85,7 +85,7 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
 
             var vm = new OrbitalFramingWizardVM(
                 profileService.Object,
-                new[] { (ICaptureSource)capture },
+                new[] { capture.AsLazy() },
                 nightCalc.Object,
                 statusMediator.Object,
                 options.Object,
@@ -166,7 +166,7 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
 
             var vm = new OrbitalFramingWizardVM(
                 profileService.Object,
-                new[] { (ICaptureSource)capture },
+                new[] { capture.AsLazy() },
                 nightCalc.Object,
                 statusMediator.Object,
                 options.Object,
@@ -300,7 +300,7 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
 
             var vm = new OrbitalFramingWizardVM(
                 profileService.Object,
-                new[] { (ICaptureSource)blockingCapture },
+                new[] { blockingCapture.AsLazy() },
                 nightCalc.Object,
                 statusMediator.Object,
                 options.Object,

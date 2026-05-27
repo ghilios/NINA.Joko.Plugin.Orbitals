@@ -38,7 +38,7 @@ namespace NINA.Joko.Plugin.Orbitals {
             tleTrackStartWaitTime_sec = optionsAccessor.GetValueInt32(nameof(TLETrackStartWaitTime_sec), 30);
             quirksMode = optionsAccessor.GetValueEnum(nameof(QuirksMode), QuirksModeEnum.None);
             cometAccessor = optionsAccessor.GetValueEnum(nameof(CometAccessor), OrbitalElementsAccessorEnum.MPC);
-            captureMode = optionsAccessor.GetValueEnum(nameof(CaptureMode), CaptureModeEnum.XisfStub);
+            captureMode = optionsAccessor.GetValueEnum(nameof(CaptureMode), CaptureModeEnum.Live);
         }
 
         public void ResetDefaults() {
@@ -47,7 +47,7 @@ namespace NINA.Joko.Plugin.Orbitals {
             TLETrackStartWaitTime_sec = 30;
             QuirksMode = QuirksModeEnum.None;
             CometAccessor = OrbitalElementsAccessorEnum.MPC;
-            CaptureMode = CaptureModeEnum.XisfStub;
+            CaptureMode = CaptureModeEnum.Live;
         }
 
         private int orbitalPositionRefreshTime_sec;
