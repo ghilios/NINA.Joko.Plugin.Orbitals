@@ -155,7 +155,7 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             vm.IsCapturing.Should().BeFalse();
             vm.HasCapture.Should().BeFalse();
             vm.CapturedImage.Should().BeNull();
-            vm.ExposureTime.Should().Be(30.0);
+            vm.ExposureTime.Should().Be(10.0);
             // -1 = "use camera-settings default" sentinel (matches NINA's SnapShotControlSettings).
             vm.Gain.Should().Be(-1);
             vm.Offset.Should().Be(-1);

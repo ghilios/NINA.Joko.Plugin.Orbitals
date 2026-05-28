@@ -846,7 +846,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             private set { if (!maxExposureSeconds.Equals(value)) { maxExposureSeconds = value; RaisePropertyChanged(); } }
         }
 
-        private double exposureTime = 30.0;
+        private double exposureTime = 10.0;
         public double ExposureTime {
             get => exposureTime;
             set { if (exposureTime != value) { exposureTime = value; RaisePropertyChanged(); } }
