@@ -17,7 +17,7 @@ A few concrete differences from `develop` you must preserve when editing here:
 - `NINA.Joko.Plugin.Orbitals/Properties/AssemblyInfo.cs` — `AssemblyMetadata("MinimumApplicationVersion", "3.2.0.9001")`.
 - `NINA.Joko.Plugin.Orbitals/Utility/TrigramStringMap.cs` — the `connection.EnableExtensions(true)` / `connection.LoadExtension("SQLite.Interop.dll", "sqlite3_fts5_init")` calls are **uncommented** here. NINA 3.2 ships a SQLite build without FTS5 loaded, so the plugin must load it. NINA 3.3 includes FTS5 itself, which is why `develop` has those lines commented out.
 - `.github/workflows/build-and-release.yml` — `PLUGIN_MANIFEST_PATH: "o/Orbitals/3.2.0"` (third segment is NINA major.minor and determines where the manifest is published in `nina.plugin.manifests`).
-- `.github/workflows/tests.yml` — triggers on `release/3.2` and `backport/develop-to-3.2`, uses `dotnet-version: '8.0.x'`.
+- `.github/workflows/tests.yml` — triggers **only on `pull_request` into `release/3.2`** (no `push:` trigger), uses `dotnet-version: '8.0.x'`. The `push:` trigger was removed deliberately to avoid double runs (a push to a `backport/develop-to-3.2*` branch + its PR both firing); PRs from backport branches are still covered because their base is `release/3.2`.
 
 # Project layout
 
