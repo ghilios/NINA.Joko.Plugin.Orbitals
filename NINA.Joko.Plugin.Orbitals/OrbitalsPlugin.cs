@@ -18,6 +18,7 @@ using System.ComponentModel.Composition;
 using System.Windows.Input;
 using System.IO;
 using NINA.Joko.Plugin.Orbitals.Calculations;
+using NINA.Joko.Plugin.Orbitals.Interfaces;
 using System.Threading;
 using System.Globalization;
 using NINA.Core.Utility;
@@ -71,7 +72,7 @@ namespace NINA.Joko.Plugin.Orbitals {
             ResetOptionDefaultsCommand = new RelayCommand(OrbitalsOptions.ResetDefaults);
         }
 
-        public static OrbitalsOptions OrbitalsOptions { get; private set; }
+        public static IOrbitalsOptions OrbitalsOptions { get; private set; }
 
         public static OrbitalElementsAccessor OrbitalElementsAccessor { get; private set; }
 
