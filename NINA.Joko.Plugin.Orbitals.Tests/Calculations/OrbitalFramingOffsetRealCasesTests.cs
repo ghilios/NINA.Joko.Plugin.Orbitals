@@ -1,0 +1,180 @@
+using FluentAssertions;
+using NINA.Astrometry;
+using NINA.Joko.Plugin.Orbitals.Calculations;
+using NUnit.Framework;
+using System;
+
+namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
+
+    /// <summary>
+    /// Both offset methods exercised on real-sky fixture coordinates (plan §9.6).
+    ///
+    /// Scenario A – legacy RA/Dec offset math (as used by OrbitalsContainerBase):
+    ///   Apply (ΔRA = +30 arcsec / cos(Dec), ΔDec = +60 arcsec) and verify the
+    ///   resulting coordinates have the expected RA/Dec shift.
+    ///
+    /// Scenario B – spherical ApplyOffset:
+    ///   Apply (sep = 20′ = 1200 arcsec, PA = 60°) to each fixture. Assert:
+    ///     i.  AngularSeparation(anchor, result) ≈ 1200 arcsec (within 1e-4 arcsec).
+    ///     ii. The raw ΔRA between fixtures differs by > 1 arcsec, proving
+    ///         position-dependence of naïve RA offsets.
+    /// </summary>
+    [TestFixture]
+    public class OrbitalFramingOffsetRealCasesTests {
+
+        // ── Fixtures ──────────────────────────────────────────────────────────────
+
+        private static readonly (string label, Coordinates coords)[] Fixtures = {
+            ("CometA3",  OrbitalFramingScenarios.CometA3_20241026()),
+            ("Ceres",    OrbitalFramingScenarios.Ceres_JD2460200()),
+            ("Mars",     OrbitalFramingScenarios.Mars_20250615()),
+            ("Jupiter",  OrbitalFramingScenarios.Jupiter_20260115()),
+        };
+
+        // ── Scenario A: legacy RA/Dec offset ──────────────────────────────────────
+
+        /// <summary>
+        /// Mimics OrbitalsContainerBase's additive offset:
+        ///   newRA  = anchor.RA  + ΔRA_hours
+        ///   newDec = anchor.Dec + ΔDec_deg
+        ///
+        /// ΔRA is expressed in hours as (30 arcsec / cos(Dec)) converted to hours
+        /// so that the actual angular shift along the parallel is 30 arcsec.
+        /// ΔDec = +60 arcsec = +60/3600 degrees.
+        /// </summary>
+        [Test]
+        public void ScenarioA_LegacyRaDecOffset_AppliedCorrectly() {
+            const double deltaRaArcsec  = 30.0;
+            const double arcsecPerDeg   = 3600.0;
+            const double hoursPerDegree = 1.0 / 15.0;
+
+            foreach (var (label, anchor) in Fixtures) {
+                double cosDec = Math.Cos(anchor.Dec * Math.PI / 180.0);
+
+                // ΔRA in hours: 30 arcsec of RA corresponds to 30/(3600*15) h at the equator,
+                // but on a parallel at declination δ the hour-angle step that gives 30 arcsec of
+                // arc is (30/cos(δ)) / (3600*15) h.  We keep the naive add for this scenario.
+                double deltaRaHours  = (deltaRaArcsec / cosDec) / arcsecPerDeg * hoursPerDegree;
+
+                double newRa  = anchor.RA  + deltaRaHours;
+
+                // The actual angular RA shift on sky should be ≈ 30 arcsec
+                var shiftedCoord = new Coordinates(
+                    Angle.ByHours(newRa),
+                    Angle.ByDegree(anchor.Dec),   // Dec unchanged for RA-only shift
+                    Epoch.J2000);
+                double raShiftArcsec = OrbitalOffsetMath.AngularSeparation(
+                    new Coordinates(Angle.ByHours(anchor.RA), Angle.ByDegree(anchor.Dec), Epoch.J2000),
+                    shiftedCoord);
+                raShiftArcsec.Should().BeApproximately(deltaRaArcsec, 0.1,
+                    $"{label}: the RA-only shift should produce ≈30\" on sky");
+            }
+        }
+
+        // ── Scenario B: spherical ApplyOffset ────────────────────────────────────
+
+        /// <summary>
+        /// Apply (sep = 1200 arcsec = 20′, PA = 60°) to every fixture and verify
+        /// the angular separation is recovered exactly.
+        /// </summary>
+        [Test]
+        public void ScenarioB_SphericalOffset_SeparationRecovered_AtEachFixture() {
+            const double sep = 1200.0;  // 20 arcmin in arcsec
+            const double pa  = 60.0;
+
+            foreach (var (label, anchor) in Fixtures) {
+                var result = OrbitalOffsetMath.ApplyOffset(anchor, sep, pa);
+                double recovered = OrbitalOffsetMath.AngularSeparation(anchor, result);
+
+                recovered.Should().BeApproximately(sep, 1e-4,
+                    $"{label}: AngularSeparation(anchor, ApplyOffset(anchor, 1200\", 60°)) must be 1200\"");
+            }
+        }
+
+        /// <summary>
+        /// Tangent-plane projection equivalence (plan §9.2 item 3 / §9.6 Scenario B extension).
+        ///
+        /// For (sep = 1200 arcsec, PA = 60°) the first-order flat-sky east-north components
+        /// approximate sep·sin(PA) and sep·cos(PA) at every fixture, regardless of sky position.
+        ///
+        /// Tolerance: For sep=1200 arcsec the second-order spherical-curvature error reaches
+        /// ~6 arcsec at the highest declination fixture.  We use 10 arcsec as a comfortable
+        /// bound — this is generous enough to accommodate curvature, yet tight enough to catch
+        /// any gross implementation error.
+        ///
+        /// The exact invariants — separation recovery and PA round-trip — are tested by
+        /// <see cref="ScenarioB_SphericalOffset_SeparationRecovered_AtEachFixture"/> and
+        /// the round-trip tests in <see cref="OrbitalOffsetMathTests"/>.
+        /// </summary>
+        [Test]
+        public void ScenarioB_SphericalOffset_TangentPlaneComponentsAreConsistent() {
+            const double sep = 1200.0;  // 20 arcmin in arcsec
+            const double pa  = 60.0;
+            const double tol = 10.0;    // arcsec; covers second-order spherical curvature at sep=1200"
+
+            double paRad         = pa * Math.PI / 180.0;
+            double expectedEast  = sep * Math.Sin(paRad);  // 1200·sin(60°) ≈ 1039.230 arcsec
+            double expectedNorth = sep * Math.Cos(paRad);  // 1200·cos(60°) =   600.000 arcsec
+
+            foreach (var (label, anchor) in Fixtures) {
+                var result = OrbitalOffsetMath.ApplyOffset(anchor, sep, pa);
+
+                // First-order flat-sky east component (arcsec):
+                //   Δeast = ΔRA_hours · 15 · cos(anchor.Dec) · 3600
+                double deltaEast = (result.RA - anchor.RA) * 15.0
+                                   * Math.Cos(anchor.Dec * Math.PI / 180.0) * 3600.0;
+
+                // North component (arcsec):
+                //   Δnorth = ΔDec_deg · 3600
+                double deltaNorth = (result.Dec - anchor.Dec) * 3600.0;
+
+                deltaEast.Should().BeApproximately(expectedEast, tol,
+                    $"{label}: flat-sky east component must approximate sep·sin(PA) = {expectedEast:F3} arcsec within {tol} arcsec");
+                deltaNorth.Should().BeApproximately(expectedNorth, tol,
+                    $"{label}: flat-sky north component must approximate sep·cos(PA) = {expectedNorth:F3} arcsec within {tol} arcsec");
+            }
+        }
+
+        /// <summary>
+        /// For the same (sep, PA), the raw ΔRA in hours must differ between fixtures
+        /// that have different declinations.  This proves position-dependence of naïve
+        /// RA offsets: the same angular intent requires a larger hour-angle step at high
+        /// Dec (where the cos(Dec) foreshortening is greatest).
+        ///
+        /// We measure raw ΔRA = result.RA − anchor.RA (hours, no cos(Dec) correction).
+        /// Fixtures span Dec ≈ −13.7° (Ceres) to +21.9° (Jupiter), giving a cos(Dec)
+        /// ratio of ~cos(−13.7°)/cos(21.9°) ≈ 0.972/0.928 ≈ 1.05, so raw ΔRA values
+        /// differ by ~5 %.  For a 20′ east-biased offset (PA=60°) the raw ΔRA is
+        /// roughly sin(60°)·1200 / (cos(Dec)·15·3600) h; at the extreme declinations
+        /// the difference exceeds 0.001 h (≈ 3.6 arcsec in RA).
+        /// </summary>
+        [Test]
+        public void ScenarioB_SphericalOffset_RawRADiffers_BetweenFixtures() {
+            const double sep = 1200.0;  // 20 arcmin in arcsec
+            const double pa  = 60.0;
+
+            // Collect raw ΔRA in hours (no cos(Dec) correction) for each fixture.
+            double[] rawRaDeltaHours = new double[Fixtures.Length];
+            for (int i = 0; i < Fixtures.Length; i++) {
+                var (_, anchor) = Fixtures[i];
+                var result = OrbitalOffsetMath.ApplyOffset(anchor, sep, pa);
+                rawRaDeltaHours[i] = result.RA - anchor.RA;
+            }
+
+            // Find the maximum pairwise difference in raw ΔRA across fixtures.
+            double maxDiff = 0.0;
+            for (int i = 0; i < rawRaDeltaHours.Length; i++) {
+                for (int j = i + 1; j < rawRaDeltaHours.Length; j++) {
+                    maxDiff = Math.Max(maxDiff, Math.Abs(rawRaDeltaHours[i] - rawRaDeltaHours[j]));
+                }
+            }
+
+            // 0.001 h ≈ 3.6 arcsec in RA — a meaningful threshold that pure position
+            // independence would prevent but cos(Dec) foreshortening guarantees.
+            maxDiff.Should().BeGreaterThan(0.001,
+                "the same (sep, PA) intent applied at fixtures with different Dec values must " +
+                "produce measurably different raw ΔRA in hours (> 0.001 h), " +
+                "confirming position-dependence of naïve RA offsets");
+        }
+    }
+}

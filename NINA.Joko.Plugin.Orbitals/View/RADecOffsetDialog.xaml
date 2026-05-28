@@ -1,0 +1,95 @@
+<Window
+    x:Class="NINA.Joko.Plugin.Orbitals.View.RADecOffsetDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Enter RA/Dec Offset"
+    Height="280" Width="420"
+    MinHeight="240" MinWidth="380"
+    ResizeMode="NoResize"
+    WindowStyle="SingleBorderWindow"
+    WindowStartupLocation="CenterOwner">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/NINA.WPF.Base;component/Resources/StaticResources/Brushes.xaml" />
+                <ResourceDictionary Source="/NINA.WPF.Base;component/Resources/StaticResources/Converters.xaml" />
+                <ResourceDictionary Source="/NINA.WPF.Base;component/Resources/Styles/Button.xaml" />
+                <ResourceDictionary Source="/NINA.WPF.Base;component/Resources/Styles/TextBox.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Margin="0,0,0,12"
+                   TextWrapping="Wrap"
+                   Text="Enter the RA and Dec offset from the body's true position. The dialog will compute the equivalent Separation and Offset PA when you click OK." />
+
+        <Grid Grid.Row="1" Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="RA Offset:" />
+            <TextBox Grid.Column="1"
+                     x:Name="RAOffsetTextBox"
+                     VerticalAlignment="Center"
+                     HorizontalContentAlignment="Right"
+                     Text="{Binding RAOffsetHours, UpdateSourceTrigger=LostFocus, StringFormat={}{0:+0.00000;-0.00000;0.00000}}" />
+            <TextBlock Grid.Column="2"
+                       Margin="6,0,0,0"
+                       VerticalAlignment="Center"
+                       Text="hours (decimal, signed)" />
+        </Grid>
+
+        <Grid Grid.Row="2" Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Dec Offset:" />
+            <TextBox Grid.Column="1"
+                     x:Name="DecOffsetTextBox"
+                     VerticalAlignment="Center"
+                     HorizontalContentAlignment="Right"
+                     Text="{Binding DecOffsetDegrees, UpdateSourceTrigger=LostFocus, StringFormat={}{0:+0.0000;-0.0000;0.0000}}" />
+            <TextBlock Grid.Column="2"
+                       Margin="6,0,0,0"
+                       VerticalAlignment="Center"
+                       Text="degrees (decimal, signed)" />
+        </Grid>
+
+        <StackPanel Grid.Row="4"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Margin="0,12,0,0">
+            <Button x:Name="OkButton"
+                    MinWidth="80"
+                    Margin="0,0,8,0"
+                    Click="OkButton_Click"
+                    IsDefault="True">
+                <TextBlock Margin="10,5" Text="OK" />
+            </Button>
+            <Button x:Name="CancelButton"
+                    MinWidth="80"
+                    Click="CancelButton_Click"
+                    IsCancel="True">
+                <TextBlock Margin="10,5" Text="Cancel" />
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>

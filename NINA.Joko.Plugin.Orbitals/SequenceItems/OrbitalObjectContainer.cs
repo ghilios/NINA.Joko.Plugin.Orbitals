@@ -32,6 +32,8 @@ using System.ComponentModel;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
@@ -174,6 +176,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             clone.Target.DeepSkyObject = (this.Target.DeepSkyObject as OrbitalElementsObject).Clone();
             clone.OrbitalSearchVM.ObjectType = this.OrbitalSearchVM.ObjectType;
             clone.OrbitalSearchVM.SetTargetNameWithoutSearch(this.OrbitalSearchVM.TargetName);
+            clone.SetOffset(this.OffsetSeparationArcsec, this.OffsetPositionAngleDeg);
 
             foreach (var item in clone.Items) {
                 item.AttachNewParent(clone);

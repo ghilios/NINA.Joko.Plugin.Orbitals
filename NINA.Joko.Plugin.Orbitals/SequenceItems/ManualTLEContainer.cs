@@ -93,7 +93,9 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
                     Target.TargetName = parsedTle.Name;
                     Name = parsedTle.Name;
                     RefreshCoordinates();
-                    RaiseAllPropertiesChanged();
+                    RaisePropertyChanged(nameof(TLEData));
+                    RaisePropertyChanged(nameof(TargetAltitude));
+                    RaisePropertyChanged(nameof(TargetAzimuth));
                 }
             }
         }
@@ -140,6 +142,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             clone.Target.PositionAngle = this.Target.PositionAngle;
             clone.Target.InputCoordinates = this.Target.InputCoordinates.Clone();
             clone.Target.DeepSkyObject = (this.Target.DeepSkyObject as TLEObject).Clone();
+            clone.SetOffset(this.OffsetSeparationArcsec, this.OffsetPositionAngleDeg);
 
             foreach (var item in clone.Items) {
                 item.AttachNewParent(clone);

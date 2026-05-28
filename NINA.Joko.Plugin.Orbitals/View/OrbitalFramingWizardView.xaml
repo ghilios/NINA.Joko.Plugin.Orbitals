@@ -1,0 +1,408 @@
+<Window
+    x:Class="NINA.Joko.Plugin.Orbitals.View.OrbitalFramingWizardView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:localvm="clr-namespace:NINA.Joko.Plugin.Orbitals.ViewModels"
+    xmlns:local="clr-namespace:NINA.Joko.Plugin.Orbitals.View"
+    xmlns:alt="clr-namespace:NINA.WPF.Base.View;assembly=NINA.WPF.Base"
+    xmlns:ninactrl="clr-namespace:NINA.CustomControlLibrary;assembly=NINA.CustomControlLibrary"
+    xmlns:util="clr-namespace:NINA.Core.Utility;assembly=NINA.Core"
+    d:DataContext="{d:DesignInstance localvm:OrbitalFramingWizardVM}"
+    mc:Ignorable="d"
+    Title="Orbital Framing Wizard"
+    Height="780" Width="1200"
+    MinHeight="600" MinWidth="900"
+    ResizeMode="CanResize"
+    WindowStyle="SingleBorderWindow"
+    WindowStartupLocation="CenterOwner">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Bring in NINA's shared brushes, converters, and styles.
+                     These are already loaded in App.ResourceDictionary when the plugin
+                     runs inside NINA; duplicating them here ensures design-time and
+                     standalone test scenarios also work. -->
+                <ResourceDictionary Source="/NINA.WPF.Base;component/Resources/StaticResources/Brushes.xaml" />
+                <ResourceDictionary Source="/NINA.WPF.Base;component/Resources/StaticResources/Converters.xaml" />
+                <ResourceDictionary Source="/NINA.WPF.Base;component/Resources/Styles/Button.xaml" />
+                <ResourceDictionary Source="/NINA.WPF.Base;component/Resources/Styles/TextBox.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- BindingProxy for NighttimeData (matches OrbitalsView.xaml pattern) -->
+            <util:BindingProxy x:Key="nighttimeProxy" Data="{Binding NighttimeData}" />
+
+            <!-- CameraInfo proxy so the Capture inputs can pull DefaultGain /
+                 DefaultOffset (and Min/Max) for the empty-state hint text, matching
+                 NINA's AnchorableCameraControlView.xaml pattern. -->
+            <util:BindingProxy x:Key="CameraInfo" Data="{Binding CameraInfo}" />
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <!-- Left panel: framing canvas (2/3 width) -->
+            <ColumnDefinition Width="2*" />
+            <!-- Right panel: controls (1/3 width) -->
+            <ColumnDefinition Width="*" MinWidth="320" />
+        </Grid.ColumnDefinitions>
+
+        <!-- ═══════════════════════════════════════════════════════════════════════
+             LEFT PANEL — framing canvas
+             ═══════════════════════════════════════════════════════════════════════ -->
+        <Border Grid.Column="0" Background="#1a1a1a" Margin="5">
+            <Grid>
+                <!-- Scrollable / zoomable canvas. CanvasZoom drives a LayoutTransform
+                     on the canvas; Width/Height bind to the ScrollViewer viewport so
+                     at zoom=1 the canvas exactly fits and no scrollbars show. -->
+                <ScrollViewer x:Name="CanvasScroll"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto"
+                              PreviewMouseWheel="CanvasScroll_PreviewMouseWheel">
+                    <local:OrbitalFramingCanvas
+                        x:Name="FramingCanvas"
+                        Width="{Binding ViewportWidth, ElementName=CanvasScroll}"
+                        Height="{Binding ViewportHeight, ElementName=CanvasScroll}"
+                        CapturedImageSource="{Binding CapturedImage}"
+                        CapturedImageRotation="{Binding CapturedImageRotation}"
+                        CapturedImagePixelWidth="{Binding CapturedImageWidthPx}"
+                        CapturedImagePixelHeight="{Binding CapturedImageHeightPx}"
+                        BackgroundImageSource="{Binding BackgroundImage}"
+                        AnnotationImageSource="{Binding SkyMapOverlay}"
+                        BackgroundFovMultiplier="{Binding BackgroundFovMultiplier}"
+                        RectangleOffsetX="{Binding RectangleOffsetXPx, Mode=TwoWay}"
+                        RectangleOffsetY="{Binding RectangleOffsetYPx, Mode=TwoWay}"
+                        RectangleRotation="{Binding RectangleRotationDeg, Mode=TwoWay}">
+                        <local:OrbitalFramingCanvas.LayoutTransform>
+                            <ScaleTransform ScaleX="{Binding CanvasZoom}" ScaleY="{Binding CanvasZoom}" />
+                        </local:OrbitalFramingCanvas.LayoutTransform>
+                    </local:OrbitalFramingCanvas>
+                </ScrollViewer>
+
+                <!-- Pre-capture hint (overlays the survey background; only shown until a frame is captured) -->
+                <Border HorizontalAlignment="Center"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,0,12"
+                        Background="#80000000"
+                        CornerRadius="3"
+                        Padding="10,5"
+                        Visibility="{Binding HasCapture, Converter={StaticResource InverseBooleanToVisibilityCollapsedConverter}}">
+                    <TextBlock
+                        Text="Capture an image to enable the framing rectangle"
+                        Foreground="#DDDDDD"
+                        FontSize="12" />
+                </Border>
+
+                <!-- Zoom toolbar (top-left overlay). Buttons handled in code-behind so
+                     the ScrollViewer can be re-anchored on the viewport center after
+                     each zoom change. Ctrl+wheel also zooms via PreviewMouseWheel. -->
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Top"
+                            Margin="5"
+                            Panel.ZIndex="10">
+                    <Button Width="28" Height="24" Margin="0,0,2,0"
+                            Click="ZoomOut_Click"
+                            ToolTip="Zoom out">
+                        <TextBlock Text="−" FontSize="14"
+                                   Foreground="{StaticResource ButtonForegroundBrush}" />
+                    </Button>
+                    <Button Width="48" Height="24" Margin="0,0,2,0"
+                            Click="ZoomReset_Click"
+                            ToolTip="Reset zoom to 100%">
+                        <TextBlock Text="{Binding CanvasZoom, StringFormat={}{0:0%}}"
+                                   FontSize="10"
+                                   Foreground="{StaticResource ButtonForegroundBrush}" />
+                    </Button>
+                    <Button Width="28" Height="24"
+                            Click="ZoomIn_Click"
+                            ToolTip="Zoom in">
+                        <TextBlock Text="+" FontSize="14"
+                                   Foreground="{StaticResource ButtonForegroundBrush}" />
+                    </Button>
+                </StackPanel>
+
+                <!-- Busy overlay while capturing -->
+                <Border
+                    Background="#AA000000"
+                    Visibility="{Binding IsCapturing, Converter={StaticResource BooleanToVisibilityCollapsedConverter}}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="Capturing…"
+                                   Foreground="White"
+                                   FontSize="18"
+                                   HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ═══════════════════════════════════════════════════════════════════════
+             RIGHT PANEL — controls and info
+             ═══════════════════════════════════════════════════════════════════════ -->
+        <ScrollViewer Grid.Column="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      Margin="0,5,5,5">
+            <StackPanel Margin="5">
+
+                <!-- ── Target Summary ─────────────────────────────────────────── -->
+                <GroupBox Header="Target" Margin="0,0,0,5">
+                    <Grid Margin="5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Margin="3" Text="Name:" FontWeight="Bold" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" Margin="3" Text="{Binding Name, Mode=OneWay}" FontWeight="Bold" />
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Margin="3" Text="RA:" FontWeight="Bold" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Margin="3" Text="{Binding CurrentRAString, Mode=OneWay}" />
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Margin="3" Text="Dec:" FontWeight="Bold" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Margin="3" Text="{Binding CurrentDecString, Mode=OneWay}" />
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Margin="3" Text="RA Rate:" FontWeight="Bold" />
+                        <TextBlock Grid.Row="3" Grid.Column="1" Margin="3">
+                            <Run Text="{Binding RATrackingRate, Mode=OneWay, StringFormat='{}{0:F3}'}" /><Run Text=" arcsec/s" />
+                        </TextBlock>
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Margin="3" Text="Dec Rate:" FontWeight="Bold" />
+                        <TextBlock Grid.Row="4" Grid.Column="1" Margin="3">
+                            <Run Text="{Binding DecTrackingRate, Mode=OneWay, StringFormat='{}{0:F3}'}" /><Run Text=" arcsec/s" />
+                        </TextBlock>
+
+                        <TextBlock Grid.Row="5" Grid.Column="0" Margin="3" Text="Max Exp:" FontWeight="Bold" />
+                        <TextBlock Grid.Row="5" Grid.Column="1" Margin="3">
+                            <Run Text="{Binding MaxExposureSeconds, Mode=OneWay, StringFormat='{}{0:F2}'}" /><Run Text=" s" />
+                        </TextBlock>
+                    </Grid>
+                </GroupBox>
+
+                <!-- ── Image Source ───────────────────────────────────────────── -->
+                <GroupBox Header="Image Source" Margin="0,0,0,5">
+                    <ComboBox Margin="5"
+                              ItemsSource="{Binding AvailableImageSources}"
+                              SelectedItem="{Binding SelectedImageSource, Mode=TwoWay}"
+                              ToolTip="Sky-survey source used to render the background image. Defaults to NINA's offline sky atlas." />
+                </GroupBox>
+
+                <!-- ── Altitude Chart ─────────────────────────────────────────── -->
+                <GroupBox Header="Altitude" Margin="0,0,0,5">
+                    <alt:AltitudeChart
+                        MinWidth="200"
+                        MinHeight="140"
+                        Margin="3"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch"
+                        AnnotateAltitudeAxis="False"
+                        NighttimeData="{Binding Source={StaticResource nighttimeProxy}, Path=Data}" />
+                </GroupBox>
+
+                <!-- ── Capture Controls ───────────────────────────────────────── -->
+                <GroupBox Header="Capture" Margin="0,0,0,5">
+                    <StackPanel Margin="5">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Exposure (s):" />
+                            <TextBox Grid.Row="0" Grid.Column="1" Margin="3"
+                                     Text="{Binding ExposureTime, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Gain:" />
+                            <ninactrl:HintTextBox Grid.Row="1" Grid.Column="1" Margin="3"
+                                                  ToolTip="Leave blank to use the camera-settings default.">
+                                <ninactrl:HintTextBox.HintText>
+                                    <Binding Source="{StaticResource CameraInfo}"
+                                             Path="Data.DefaultGain"
+                                             Mode="OneWay"
+                                             Converter="{StaticResource CameraDefaultValueConverter}"
+                                             UpdateSourceTrigger="PropertyChanged" />
+                                </ninactrl:HintTextBox.HintText>
+                                <ninactrl:HintTextBox.Text>
+                                    <Binding Path="Gain"
+                                             Mode="TwoWay"
+                                             UpdateSourceTrigger="LostFocus"
+                                             Converter="{StaticResource MinusOneToEmptyStringConverter}" />
+                                </ninactrl:HintTextBox.Text>
+                            </ninactrl:HintTextBox>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Margin="3" VerticalAlignment="Center" Text="Offset:" />
+                            <ninactrl:HintTextBox Grid.Row="2" Grid.Column="1" Margin="3"
+                                                  ToolTip="Leave blank to use the camera-settings default.">
+                                <ninactrl:HintTextBox.HintText>
+                                    <Binding Source="{StaticResource CameraInfo}"
+                                             Path="Data.DefaultOffset"
+                                             Mode="OneWay"
+                                             Converter="{StaticResource CameraDefaultValueConverter}"
+                                             UpdateSourceTrigger="PropertyChanged" />
+                                </ninactrl:HintTextBox.HintText>
+                                <ninactrl:HintTextBox.Text>
+                                    <Binding Path="Offset"
+                                             Mode="TwoWay"
+                                             UpdateSourceTrigger="LostFocus"
+                                             Converter="{StaticResource MinusOneToEmptyStringConverter}" />
+                                </ninactrl:HintTextBox.Text>
+                            </ninactrl:HintTextBox>
+                        </Grid>
+
+                        <Button Margin="0,8,0,0"
+                                HorizontalAlignment="Stretch"
+                                Command="{Binding SlewCenterAndImageCommand}">
+                            <TextBlock
+                                Margin="10,5,10,5"
+                                Foreground="{StaticResource ButtonForegroundBrush}"
+                                Text="{Binding CaptureButtonLabel, Mode=OneWay}" />
+                        </Button>
+
+                        <Button Margin="0,3,0,0"
+                                HorizontalAlignment="Stretch"
+                                Command="{Binding CancelCaptureCommand}"
+                                Visibility="{Binding IsCapturing, Converter={StaticResource BooleanToVisibilityCollapsedConverter}}">
+                            <TextBlock
+                                Margin="10,5,10,5"
+                                Foreground="{StaticResource ButtonForegroundBrush}"
+                                Text="Cancel Capture" />
+                        </Button>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- ── Framing Controls (post-capture) ───────────────────────── -->
+                <GroupBox Header="Framing"
+                          Margin="0,0,0,5"
+                          Visibility="{Binding HasCapture, Converter={StaticResource BooleanToVisibilityCollapsedConverter}}">
+                    <StackPanel Margin="5">
+                        <TextBlock Text="Rotation Δ (offset from captured-image PA — drag canvas rectangle or use slider):"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,3" />
+                        <Slider
+                            Minimum="0"
+                            Maximum="360"
+                            Value="{Binding RectangleRotationDeg, Mode=TwoWay}"
+                            TickFrequency="10"
+                            IsSnapToTickEnabled="False"
+                            SmallChange="1"
+                            LargeChange="10" />
+                        <TextBlock Margin="0,2,0,5">
+                            <Run Text="Rotation: " />
+                            <Run Text="{Binding RectangleRotationDeg, Mode=OneWay, StringFormat='{}{0:F1}'}" />
+                            <Run Text="°" />
+                        </TextBlock>
+
+                        <Button Margin="0,3,0,0"
+                                HorizontalAlignment="Left"
+                                Command="{Binding ResetFramingCommand}">
+                            <TextBlock
+                                Margin="10,5,10,5"
+                                Foreground="{StaticResource ButtonForegroundBrush}"
+                                Text="Reset Framing" />
+                        </Button>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- ── Offsets Display (post-capture) ────────────────────────── -->
+                <GroupBox Header="Offsets"
+                          Margin="0,0,0,5"
+                          Visibility="{Binding HasCapture, Converter={StaticResource BooleanToVisibilityCollapsedConverter}}">
+                    <Grid Margin="5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="8" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <!-- RA / Dec offset -->
+                        <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Margin="3,3,3,1"
+                                   Text="RA/Dec Offset:"
+                                   FontWeight="Bold" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Margin="3,1" Text="RA Offset:" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Margin="3,1">
+                            <Run Text="{Binding RAOffsetHours, Mode=OneWay, StringFormat='{}{0:+0.000000;-0.000000;0.000000}'}" />
+                            <Run Text=" h" />
+                        </TextBlock>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Margin="3,1" Text="Dec Offset:" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Margin="3,1">
+                            <Run Text="{Binding DecOffsetDegrees, Mode=OneWay, StringFormat='{}{0:+0.0000;-0.0000;0.0000}'}" />
+                            <Run Text="°" />
+                        </TextBlock>
+
+                        <!-- separator row (Row 3 is 8px) -->
+
+                        <!-- Sky-frame offset -->
+                        <TextBlock Grid.Row="4" Grid.ColumnSpan="2" Margin="3,3,3,1"
+                                   Text="Sky-frame Offset:"
+                                   FontWeight="Bold"
+                                   ToolTip="Position-independent offset representation. Same framing at any body position." />
+                        <TextBlock Grid.Row="5" Grid.Column="0" Margin="3,1" Text="Separation:" />
+                        <TextBlock Grid.Row="5" Grid.Column="1" Margin="3,1"
+                                   Text="{Binding OffsetSeparationDisplay, Mode=OneWay}" />
+                        <TextBlock Grid.Row="6" Grid.Column="0" Margin="3,1" Text="Offset PA:" />
+                        <TextBlock Grid.Row="6" Grid.Column="1" Margin="3,1">
+                            <Run Text="{Binding OffsetPositionAngleDeg, Mode=OneWay, StringFormat='{}{0:F1}'}" />
+                            <Run Text="°" />
+                        </TextBlock>
+
+                        <!-- Position angle -->
+                        <TextBlock Grid.Row="7" Grid.ColumnSpan="2" Margin="3,6,3,1"
+                                   Text="Final Sequencer Position Angle:"
+                                   FontWeight="Bold" />
+                        <TextBlock Grid.Row="8" Grid.Column="0" Margin="3,1" Text="PA:" />
+                        <TextBlock Grid.Row="8" Grid.Column="1" Margin="3,1">
+                            <Run Text="{Binding FinalPositionAngle, Mode=OneWay, StringFormat='{}{0:F1}'}" />
+                            <Run Text="°" />
+                        </TextBlock>
+                    </Grid>
+                </GroupBox>
+
+                <!-- ── Action Buttons ─────────────────────────────────────────── -->
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            Margin="0,10,0,0">
+                    <Button Margin="0,0,5,0"
+                            IsEnabled="{Binding HasCapture}"
+                            Command="{Binding ExportToSequencerCommand}">
+                        <TextBlock
+                            Margin="10,5,10,5"
+                            Foreground="{StaticResource ButtonForegroundBrush}"
+                            Text="Export to Sequencer" />
+                    </Button>
+                    <Button Command="{Binding CancelCommand}">
+                        <TextBlock
+                            Margin="10,5,10,5"
+                            Foreground="{StaticResource ButtonForegroundBrush}"
+                            Text="Close" />
+                    </Button>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>
