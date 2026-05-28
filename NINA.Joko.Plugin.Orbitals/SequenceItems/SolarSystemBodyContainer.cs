@@ -92,6 +92,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             clone.Target.PositionAngle = this.Target.PositionAngle;
             clone.Target.InputCoordinates = this.Target.InputCoordinates.Clone();
             clone.Target.DeepSkyObject = (this.Target.DeepSkyObject as SolarSystemBodyObject).Clone();
+            clone.SetOffset(this.OffsetSeparationArcsec, this.OffsetPositionAngleDeg);
 
             foreach (var item in clone.Items) {
                 item.AttachNewParent(clone);

@@ -112,5 +112,6 @@ namespace NINA.Joko.Plugin.Orbitals {
                 }
             }
         }
+
     }
 }

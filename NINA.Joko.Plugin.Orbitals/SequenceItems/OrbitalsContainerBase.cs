@@ -29,7 +29,34 @@ using System.Windows;
 
 namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
 
-    public abstract class OrbitalsContainerBase<T> : SequenceContainer, IDeepSkyObjectContainer where T : OrbitalsObjectBase {
+    /// <summary>
+    /// Non-generic surface for the click-handler that opens the RA/Dec offset
+    /// modal. WPF binds the button to the concrete container as <c>DataContext</c>;
+    /// this interface lets the handler poke at it without knowing T.
+    /// </summary>
+    public interface IOrbitalsOffsetContainer {
+        double OffsetSeparationArcsec { get; set; }
+        double OffsetPositionAngleDeg { get; set; }
+        double DerivedRAOffsetHours { get; }
+        double DerivedDecOffsetDegrees { get; }
+
+        /// <summary>
+        /// Atomically write both offset components and trigger a single coordinate
+        /// refresh. Writing the two fields through their individual setters fires
+        /// RefreshCoordinates twice — first with the new Sep but the stale PA,
+        /// which can momentarily slew the target the wrong direction or trip the
+        /// 'Invalid dec after applying offset' notification on high-Dec bodies.
+        /// </summary>
+        void SetOffset(double separationArcsec, double positionAngleDeg);
+
+        /// <summary>
+        /// Convert an RA/Dec offset (anchored at the current body position) into
+        /// the canonical Separation + Offset PA and apply it to this container.
+        /// </summary>
+        void SetOffsetFromRADec(double raOffsetHours, double decOffsetDegrees);
+    }
+
+    public abstract class OrbitalsContainerBase<T> : SequenceContainer, IDeepSkyObjectContainer, IOrbitalsOffsetContainer where T : OrbitalsObjectBase {
         protected readonly IProfileService profileService;
         protected readonly INighttimeCalculator nighttimeCalculator;
         protected readonly IOrbitalsOptions orbitalsOptions;
@@ -70,20 +97,70 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
 
         private InputCoordinatesEx offsetCoordinates;
 
+        /// <summary>
+        /// Retained as a [JsonProperty] for backward compatibility with sequences
+        /// saved before Separation+PA became the canonical offset. The
+        /// <see cref="OnOrbitalsDeserialized"/> hook detects legacy state (nonzero
+        /// RA/Dec, zero Separation+PA) and migrates it on the first refresh.
+        /// Going forward this field is unused at runtime — derived display values
+        /// come from <see cref="OffsetRADisplay"/> / <see cref="OffsetDecDisplay"/>.
+        /// </summary>
         [JsonProperty]
         public InputCoordinatesEx OffsetCoordinates {
             get => offsetCoordinates;
             set {
-                if (offsetCoordinates != null) {
-                    offsetCoordinates.CoordinatesChanged -= OffsetCoordinates_OnCoordinatesChanged;
-                }
                 offsetCoordinates = value;
-                if (offsetCoordinates != null) {
-                    offsetCoordinates.CoordinatesChanged += OffsetCoordinates_OnCoordinatesChanged;
-                }
-                RaiseOffsetChanged();
+                RaisePropertyChanged();
             }
         }
+
+        private double offsetSeparationArcsec;
+
+        /// <summary>
+        /// Canonical angular separation between the body's true position and the
+        /// framed target, in arcseconds. Position-independent — slewing math
+        /// uses <see cref="OrbitalOffsetMath.ApplyOffset"/> with this value plus
+        /// <see cref="OffsetPositionAngleDeg"/>.
+        /// </summary>
+        [JsonProperty]
+        public double OffsetSeparationArcsec {
+            get => offsetSeparationArcsec;
+            set {
+                // Clamp negative values to 0. Negative separation is not a
+                // meaningful sky offset (PA already covers direction), and
+                // OffsetSeparationDisplay formats with Math.Abs — without the
+                // clamp the displayed value and the applied offset disagree.
+                var clamped = value < 0.0 ? 0.0 : value;
+                if (offsetSeparationArcsec != clamped) {
+                    offsetSeparationArcsec = clamped;
+                    RaisePropertyChanged();
+                    RaiseOffsetChanged();
+                }
+            }
+        }
+
+        private double offsetPositionAngleDeg;
+
+        /// <summary>
+        /// Canonical position angle of the framed target as seen from the body's
+        /// true position, measured North-through-East in degrees, [0, 360).
+        /// </summary>
+        [JsonProperty]
+        public double OffsetPositionAngleDeg {
+            get => offsetPositionAngleDeg;
+            set {
+                if (offsetPositionAngleDeg != value) {
+                    offsetPositionAngleDeg = value;
+                    RaisePropertyChanged();
+                    RaiseOffsetChanged();
+                }
+            }
+        }
+
+        // Migration latch: set in OnDeserialized when a pre-Sep/PA save is detected.
+        // Cleared on the first successful RefreshCoordinates, which has access to
+        // the target body's position and can convert the legacy RA/Dec offset.
+        private bool legacyOffsetMigrationPending = false;
 
         private bool deserializing = false;
 
@@ -95,18 +172,102 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         [OnDeserialized]
         public void OnOrbitalsDeserialized(StreamingContext context) {
             deserializing = false;
-            RaiseOffsetChanged();
-        }
-
-        private void OffsetCoordinates_OnCoordinatesChanged(object sender, EventArgs e) {
-            RaiseOffsetChanged();
+            if (offsetSeparationArcsec == 0.0 && offsetPositionAngleDeg == 0.0
+                && offsetCoordinates != null
+                && (offsetCoordinates.Coordinates.RA != 0.0 || offsetCoordinates.Coordinates.Dec != 0.0)) {
+                legacyOffsetMigrationPending = true;
+            }
+            // Intentionally do NOT call RaiseOffsetChanged here. The synchronous
+            // RefreshCoordinates it triggers can pop the 'Invalid dec after applying
+            // offset' notification at sequence-load time, before the user has
+            // touched anything. The first RefreshCoordinates fires automatically
+            // via AfterParentChanged once the container is attached to its parent,
+            // which is the right moment for any user-visible offset notification.
         }
 
         private void RaiseOffsetChanged() {
             if (!deserializing) {
-                RaisePropertyChanged(nameof(OffsetCoordinates));
+                RaisePropertyChanged(nameof(OffsetSeparationArcsec));
+                RaisePropertyChanged(nameof(OffsetPositionAngleDeg));
+                RaisePropertyChanged(nameof(OffsetRADisplay));
+                RaisePropertyChanged(nameof(OffsetDecDisplay));
+                RaisePropertyChanged(nameof(OffsetSeparationDisplay));
                 RefreshCoordinates();
             }
+        }
+
+        /// <summary>Pretty-print the angular separation as d°m′s″.</summary>
+        public string OffsetSeparationDisplay {
+            get {
+                var totalArcsec = Math.Abs(offsetSeparationArcsec);
+                var deg = (int)(totalArcsec / 3600.0);
+                var arcmin = (int)((totalArcsec - deg * 3600.0) / 60.0);
+                var arcsec = totalArcsec - deg * 3600.0 - arcmin * 60.0;
+                return $"{deg:D2}° {arcmin:D2}′ {arcsec:F1}″";
+            }
+        }
+
+        /// <summary>Read-only RA offset (the shifted target's RA minus the body's RA).</summary>
+        public string OffsetRADisplay => FormatRAOffset(_derivedRAOffsetHours);
+
+        /// <summary>Read-only Dec offset (the shifted target's Dec minus the body's Dec).</summary>
+        public string OffsetDecDisplay => FormatDecOffset(_derivedDecOffsetDegrees);
+
+        // Derived RA/Dec offset, refreshed from Sep+PA at the current body position
+        // every time RefreshCoordinates runs. Used by the new offset display panel.
+        private double _derivedRAOffsetHours;
+        private double _derivedDecOffsetDegrees;
+
+        public double DerivedRAOffsetHours => _derivedRAOffsetHours;
+        public double DerivedDecOffsetDegrees => _derivedDecOffsetDegrees;
+
+        public void SetOffsetFromRADec(double raOffsetHours, double decOffsetDegrees) {
+            try {
+                var origin = TargetObject.PositionAt(DateTime.UtcNow).Coordinates;
+                var shiftedDec = Math.Max(-90.0, Math.Min(90.0, origin.Dec + decOffsetDegrees));
+                var shifted = new Coordinates(
+                    Angle.ByHours(AstroUtil.EuclidianModulus(origin.RA + raOffsetHours, 24.0)),
+                    Angle.ByDegree(shiftedDec),
+                    origin.Epoch);
+                SetOffset(
+                    OrbitalOffsetMath.AngularSeparation(origin, shifted),
+                    OrbitalOffsetMath.PositionAngleNToE(origin, shifted));
+            } catch (Exception ex) {
+                Logger.Error("Could not convert RA/Dec offset to Separation+PA", ex);
+            }
+        }
+
+        /// <summary>
+        /// Atomic Sep+PA write. See <see cref="IOrbitalsOffsetContainer.SetOffset"/>.
+        /// </summary>
+        public void SetOffset(double separationArcsec, double positionAngleDeg) {
+            var clampedSep = separationArcsec < 0.0 ? 0.0 : separationArcsec;
+            var sepChanged = offsetSeparationArcsec != clampedSep;
+            var paChanged = offsetPositionAngleDeg != positionAngleDeg;
+            if (!sepChanged && !paChanged) return;
+            offsetSeparationArcsec = clampedSep;
+            offsetPositionAngleDeg = positionAngleDeg;
+            // RaiseOffsetChanged raises Sep + PA + displays and calls
+            // RefreshCoordinates exactly once — no intermediate stale-PA state.
+            RaiseOffsetChanged();
+        }
+
+        private static string FormatRAOffset(double hours) {
+            var sign = hours < 0 ? "-" : "+";
+            var abs = Math.Abs(hours);
+            var h = (int)abs;
+            var m = (int)((abs - h) * 60.0);
+            var s = (abs - h - m / 60.0) * 3600.0;
+            return $"{sign}{h:D2}h {m:D2}m {s:F1}s";
+        }
+
+        private static string FormatDecOffset(double degrees) {
+            var sign = degrees < 0 ? "-" : "+";
+            var abs = Math.Abs(degrees);
+            var d = (int)abs;
+            var m = (int)((abs - d) * 60.0);
+            var s = (abs - d - m / 60.0) * 3600.0;
+            return $"{sign}{d:D2}° {m:D2}′ {s:F1}″";
         }
 
         private async Task CoordinateUpdateLoop(CancellationToken ct) {
@@ -131,19 +292,52 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         protected void RefreshCoordinates() {
             try {
                 var targetPosition = TargetObject.PositionAt(DateTime.UtcNow);
-                var targetCoordinates = targetPosition.Coordinates;
-                if (OffsetCoordinates != null) {
-                    var newDec = targetCoordinates.Dec + offsetCoordinates.Coordinates.Dec;
-                    var newRa = targetCoordinates.RA + offsetCoordinates.Coordinates.RA;
-                    if (newDec < -90.0 || newDec > 90.0) {
+                var originalTarget = targetPosition.Coordinates;
+                var targetCoordinates = originalTarget;
+
+                // Legacy migration: convert the saved RA/Dec offset to Separation+PA
+                // now that we have a target position to anchor it to.
+                if (legacyOffsetMigrationPending && offsetCoordinates != null) {
+                    var legacyRA = AstroUtil.EuclidianModulus(originalTarget.RA + offsetCoordinates.Coordinates.RA, 24.0);
+                    var legacyDec = originalTarget.Dec + offsetCoordinates.Coordinates.Dec;
+                    if (legacyDec >= -90.0 && legacyDec <= 90.0) {
+                        var legacyShifted = new Coordinates(
+                            Angle.ByHours(legacyRA),
+                            Angle.ByDegree(legacyDec),
+                            originalTarget.Epoch);
+                        offsetSeparationArcsec = OrbitalOffsetMath.AngularSeparation(originalTarget, legacyShifted);
+                        offsetPositionAngleDeg = OrbitalOffsetMath.PositionAngleNToE(originalTarget, legacyShifted);
+                        RaisePropertyChanged(nameof(OffsetSeparationArcsec));
+                        RaisePropertyChanged(nameof(OffsetPositionAngleDeg));
+                        RaisePropertyChanged(nameof(OffsetSeparationDisplay));
+                    }
+                    legacyOffsetMigrationPending = false;
+                }
+
+                if (offsetSeparationArcsec > 0.0) {
+                    var shifted = OrbitalOffsetMath.ApplyOffset(originalTarget, offsetSeparationArcsec, offsetPositionAngleDeg);
+                    if (shifted.Dec < -90.0 || shifted.Dec > 90.0) {
                         Notification.ShowWarning("Invalid dec after applying offset. Resetting offset.");
-                        OffsetCoordinates.Coordinates = new Coordinates(Angle.Zero, Angle.Zero, Epoch.J2000);
+                        offsetSeparationArcsec = 0.0;
+                        offsetPositionAngleDeg = 0.0;
+                        RaisePropertyChanged(nameof(OffsetSeparationArcsec));
+                        RaisePropertyChanged(nameof(OffsetPositionAngleDeg));
+                        RaisePropertyChanged(nameof(OffsetSeparationDisplay));
                     } else {
-                        newRa = AstroUtil.EuclidianModulus(newRa, 24.0);
-                        targetCoordinates.Dec = newDec;
-                        targetCoordinates.RA = newRa;
+                        targetCoordinates = shifted;
                     }
                 }
+
+                // Derive the RA/Dec offset (display only). Wrap dRA into [-12, 12)
+                // so small offsets render as a small signed value rather than
+                // jumping near the 0/24 boundary.
+                var dRa = targetCoordinates.RA - originalTarget.RA;
+                if (dRa > 12.0) dRa -= 24.0;
+                if (dRa < -12.0) dRa += 24.0;
+                _derivedRAOffsetHours = dRa;
+                _derivedDecOffsetDegrees = targetCoordinates.Dec - originalTarget.Dec;
+                RaisePropertyChanged(nameof(OffsetRADisplay));
+                RaisePropertyChanged(nameof(OffsetDecDisplay));
 
                 Position = targetPosition;
                 Target.InputCoordinates.Coordinates = targetCoordinates;

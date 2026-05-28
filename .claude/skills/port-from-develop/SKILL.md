@@ -77,7 +77,7 @@ These values must hold after the merge. Audit each one; only edit if develop has
 | `.github/workflows/build-and-release.yml` | `on.push.tags` patterns | `'release/v3.1.[0-9]+.[0-9]+'` and `'release/v3.2.[0-9]+.[0-9]+'` — scoped so 3.3.x tags can't accidentally fire this branch's release workflow |
 | `.github/workflows/build-and-release.yml` | `PLUGIN_MANIFEST_PATH` | `"o/Orbitals/3.2.0"` |
 | `.github/workflows/build-and-release.yml` | `Prepare package` build dir | `net8.0-windows7.0` |
-| `.github/workflows/tests.yml` | trigger branches | `release/3.2`, `backport/develop-to-3.2*` |
+| `.github/workflows/tests.yml` | triggers | **`pull_request` into `release/3.2` only** — no `push:` trigger (removed to avoid double runs from a backport-branch push + its PR) |
 | `.github/workflows/tests.yml` | `dotnet-version` | `'8.0.x'` |
 
 ## Red flags
