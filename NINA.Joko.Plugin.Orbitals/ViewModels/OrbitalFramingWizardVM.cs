@@ -34,7 +34,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Composition;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -72,6 +71,15 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private CancellationTokenSource captureCts;
         private DispatcherTimer liveTimer;
         private bool _disposed;
+
+        // Body's sky position at the moment the framing capture completed.
+        // RecalculateOffsets uses THIS instead of a fresh PositionAt(UtcNow), so the
+        // body's motion between capture and the user dragging the framing rectangle
+        // does NOT contaminate the Sep/PA the wizard hands to the sequencer. The
+        // captured image's plate-solved coordinates anchor "where the body was" at
+        // the same instant, so the Sep/PA we compute genuinely reflects the user's
+        // drag intent. Null until the first successful capture.
+        private Coordinates bodyCoordsAtCapture;
 
         // ═══════════════════════════════════════════════════════════════════════
         //  ── CAPTURE-SOURCE OVERRIDE  (developer-only — set in code, not in UI) ──
@@ -130,11 +138,11 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             // (the annotator re-renders the bitmap whenever the FoV changes or
             // the telescope position updates).
             skyMapAnnotator = new SkyMapAnnotator(telescopeMediator, profileService);
-            skyMapAnnotator.PropertyChanged += (_, e) => {
-                if (e.PropertyName == nameof(SkyMapAnnotator.SkyMapOverlay)) {
-                    RaisePropertyChanged(nameof(SkyMapOverlay));
-                }
-            };
+            // Subscribe via a named method (not a lambda) so Dispose() can unsubscribe.
+            // The annotator outlives any one wizard session (it transitively holds
+            // long-lived service references), so leaving the handler attached pins
+            // the entire VM — captured bitmaps and all — in memory forever.
+            skyMapAnnotator.PropertyChanged += SkyMapAnnotator_PropertyChanged;
 
             // Seed image source from the profile (mirroring NINA's framing assistant)
             // and fall back to the offline sky atlas if the profile isn't available
@@ -152,6 +160,12 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             ExportToSequencerCommand = new AsyncRelayCommand(ExportToSequencerAsync);
 
             CancelCommand = new RelayCommand(Cancel);
+        }
+
+        private void SkyMapAnnotator_PropertyChanged(object sender, PropertyChangedEventArgs e) {
+            if (e.PropertyName == nameof(SkyMapAnnotator.SkyMapOverlay)) {
+                RaisePropertyChanged(nameof(SkyMapOverlay));
+            }
         }
 
         // ─── Canvas zoom ─────────────────────────────────────────────────────────
@@ -216,6 +230,9 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         public void Dispose() {
             if (_disposed) return;
             _disposed = true;
+            if (skyMapAnnotator != null) {
+                skyMapAnnotator.PropertyChanged -= SkyMapAnnotator_PropertyChanged;
+            }
             liveTimer?.Stop();
             liveTimer = null;
             captureCts?.Cancel();
@@ -292,18 +309,26 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             }
         }
 
-        /// <summary>All <see cref="SkySurveySource"/> values for the ComboBox ItemsSource.</summary>
+        /// <summary>
+        /// Sky-survey sources offered by the wizard. <see cref="SkySurveySource.FILE"/>
+        /// is intentionally excluded — the wizard fetches its background image
+        /// programmatically from a survey, so a user-picked local file has no
+        /// meaningful coordinate frame to align the overlay against.
+        /// </summary>
         public IReadOnlyList<SkySurveySource> AvailableImageSources { get; } =
-            (SkySurveySource[])Enum.GetValues(typeof(SkySurveySource));
+            ((SkySurveySource[])Enum.GetValues(typeof(SkySurveySource)))
+                .Where(s => s != SkySurveySource.FILE)
+                .ToList();
 
         private SkySurveySource LoadInitialImageSource() {
             // Prefer the user's NINA framing-assistant choice so the wizard shares
-            // their configured/working source. If unset or invalid, fall back to
-            // HIPS2FITS which is the most reliably-available online source.
+            // their configured/working source. If unset, invalid, or FILE (which
+            // the wizard doesn't offer), fall back to HIPS2FITS — the most
+            // reliably-available online source.
             try {
                 var settings = profileService?.ActiveProfile?.FramingAssistantSettings;
                 var fromProfile = settings?.LastSelectedImageSource ?? SkySurveySource.HIPS2FITS;
-                if (!Enum.IsDefined(typeof(SkySurveySource), fromProfile)) {
+                if (!Enum.IsDefined(typeof(SkySurveySource), fromProfile) || fromProfile == SkySurveySource.FILE) {
                     fromProfile = SkySurveySource.HIPS2FITS;
                 }
                 return fromProfile;
@@ -494,6 +519,17 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 CapturedImageWidthPx = frame.WidthPx;
                 CapturedImageHeightPx = frame.HeightPx;
 
+                // Freeze the body's sky position AT capture time. RecalculateOffsets
+                // uses this snapshot so the body's motion between capture and the user
+                // dragging the framing rectangle doesn't contaminate the exported Sep/PA.
+                // This is the dominant correctness fix for fast-moving TLE targets.
+                try {
+                    bodyCoordsAtCapture = selectedObject?.PositionAt(DateTime.UtcNow).Coordinates;
+                } catch (Exception ex) {
+                    Logger.Warning($"Could not snapshot body coords at capture time: {ex.Message}");
+                    bodyCoordsAtCapture = null;
+                }
+
                 // Initialise offsets — rectangle centred on the body.
                 _rectangleOffsetXPx = 0;
                 _rectangleOffsetYPx = 0;
@@ -507,7 +543,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 // Compute the "natural" sequencer PA from the captured image rotation.
                 // CapturedImageRotation is the camera's position angle on sky; the
                 // sequencer uses the complementary convention: PA = (360 - imgPA) % 360.
-                FinalPositionAngle = (((360.0 - frame.PositionAngleDeg) % 360.0) + 360.0) % 360.0;
+                FinalPositionAngle = ImagePAToSequencerPA(frame.PositionAngleDeg);
                 OffsetSeparationArcsec = 0;
                 OffsetPositionAngleDeg = 0;
 
@@ -521,9 +557,6 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 Logger.Info($"Capture aborted (user already notified): {ex.Message}");
             } catch (OperationCanceledException) {
                 Logger.Info("Orbital Framing Wizard capture cancelled");
-            } catch (FileNotFoundException ex) {
-                Logger.Error("Orbital Framing Wizard capture failed: stub frame not found", ex);
-                NINA.Core.Utility.Notification.Notification.ShowError($"XISF stub frame not found: {ex.FileName}");
             } catch (Exception e) {
                 Logger.Error("Orbital Framing Wizard capture failed", e);
                 NINA.Core.Utility.Notification.Notification.ShowError($"Capture failed: {e.Message}");
@@ -550,11 +583,21 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             RAOffsetHours = 0;
             DecOffsetDegrees = 0;
             // When a capture exists, restore the natural PA derived from the captured image.
-            FinalPositionAngle = HasCapture
-                ? (((360.0 - CapturedImageRotation) % 360.0) + 360.0) % 360.0
-                : 0.0;
+            FinalPositionAngle = HasCapture ? ImagePAToSequencerPA(CapturedImageRotation) : 0.0;
             OffsetSeparationArcsec = 0;
             OffsetPositionAngleDeg = 0;
+        }
+
+        /// <summary>
+        /// Convert the camera's image-rotation angle (PA, N-through-E) into the
+        /// sequencer's complementary PA convention, normalised to [0, 360).
+        /// Returns 0 if the input is NaN/Inf so a partial plate-solve doesn't
+        /// poison Target.PositionAngle downstream.
+        /// </summary>
+        private static double ImagePAToSequencerPA(double imageDegrees) {
+            if (!double.IsFinite(imageDegrees)) return 0.0;
+            var raw = (360.0 - imageDegrees) % 360.0;
+            return raw < 0.0 ? raw + 360.0 : raw;
         }
 
         /// <summary>
@@ -587,8 +630,14 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 CapturedImagePixscale,
                 CapturedImagePixscale);
 
-            // Step 2: Get the body's current sky position.
-            var bodyCoords = selectedObject.PositionAt(DateTime.UtcNow).Coordinates;
+            // Step 2: Body's sky position AT CAPTURE TIME, not now. The captured
+            // image's plate-solved coordinates are frozen at that same instant;
+            // anchoring the offset to the live body position would let the body's
+            // motion between capture and drag leak into the exported Sep/PA — a
+            // catastrophic error for fast TLE targets where the body can move
+            // many arcseconds per second.
+            var bodyCoords = bodyCoordsAtCapture
+                ?? selectedObject.PositionAt(DateTime.UtcNow).Coordinates;
 
             // Step 3: Offset = framing target MINUS body current position (body-relative).
             double rawRaDiff = framingTarget.RA - bodyCoords.RA;
@@ -641,10 +690,12 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
                 // Step 4: Set the offset coordinates and position angle on the base class.
                 // Separation + Offset PA is the canonical, position-independent
-                // representation that the container will use to drive its slew math.
+                // representation the container uses to drive its slew math. Write
+                // both atomically so the intermediate RefreshCoordinates doesn't
+                // see (new-Sep, stale-PA=0), which can trip the high-Dec invalid
+                // notification and briefly mis-position Target.InputCoordinates.
                 if (rawClone is IOrbitalsOffsetContainer offsetContainer) {
-                    offsetContainer.OffsetSeparationArcsec = OffsetSeparationArcsec;
-                    offsetContainer.OffsetPositionAngleDeg = OffsetPositionAngleDeg;
+                    offsetContainer.SetOffset(OffsetSeparationArcsec, OffsetPositionAngleDeg);
                 }
                 if (rawClone is IDeepSkyObjectContainer dsoForPA) {
                     dsoForPA.Target.PositionAngle = FinalPositionAngle;
@@ -665,7 +716,14 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                     Logger.Error("ExportToSequencerAsync: failed to add target to sequencer", innerEx);
                     Notification.ShowError($"Export failed: {innerEx.Message}");
                 }
-
+            } catch (Exception ex) {
+                // Catches exceptions from GetContainerTypeForObject (unknown orbital
+                // subtype), template.Clone(), and PopulateContainerSpecificFields.
+                // Without this the AsyncRelayCommand would swallow the fault as
+                // unobserved — the Export button would silently appear to do
+                // nothing with only a debug-log line as evidence.
+                Logger.Error("ExportToSequencerAsync: unexpected failure", ex);
+                Notification.ShowError($"Export failed: {ex.Message}");
             } finally {
                 IsExporting = false;
             }
@@ -782,7 +840,10 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         private double maxExposureSeconds = double.NaN;
         public double MaxExposureSeconds {
             get => maxExposureSeconds;
-            private set { if (maxExposureSeconds != value) { maxExposureSeconds = value; RaisePropertyChanged(); } }
+            // double.Equals(double) treats NaN==NaN as equal, so the property no
+            // longer raises PropertyChanged on every 2-second timer tick while
+            // pixscale is still unavailable (which holds the value at NaN).
+            private set { if (!maxExposureSeconds.Equals(value)) { maxExposureSeconds = value; RaisePropertyChanged(); } }
         }
 
         private double exposureTime = 30.0;
@@ -1026,7 +1087,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                     RaisePropertyChanged();
                     // Final PA = camera-image PA + rectangle rotation, normalised.
                     // FinalPositionAngle setter already raises PropertyChanged — no manual call needed.
-                    FinalPositionAngle = (((360.0 - (CapturedImageRotation + _rectangleRotationDeg)) % 360.0) + 360.0) % 360.0;
+                    FinalPositionAngle = ImagePAToSequencerPA(CapturedImageRotation + _rectangleRotationDeg);
                 }
             }
         }

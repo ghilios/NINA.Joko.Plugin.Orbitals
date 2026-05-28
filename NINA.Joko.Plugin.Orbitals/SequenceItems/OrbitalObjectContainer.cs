@@ -178,6 +178,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             clone.Target.DeepSkyObject.SetDateAndPosition(NighttimeCalculator.GetReferenceDate(DateTime.Now), latitude: profileService.ActiveProfile.AstrometrySettings.Latitude, longitude: profileService.ActiveProfile.AstrometrySettings.Longitude);
             clone.OrbitalSearchVM.ObjectType = this.OrbitalSearchVM.ObjectType;
             clone.OrbitalSearchVM.SetTargetNameWithoutSearch(this.OrbitalSearchVM.TargetName);
+            clone.SetOffset(this.OffsetSeparationArcsec, this.OffsetPositionAngleDeg);
 
             foreach (var item in clone.Items) {
                 item.AttachNewParent(clone);

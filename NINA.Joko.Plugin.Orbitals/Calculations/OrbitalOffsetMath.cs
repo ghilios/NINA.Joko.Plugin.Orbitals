@@ -71,13 +71,17 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
         /// <summary>
         /// Applies a polar-offset (separation + position angle) to a sky coordinate.
+        /// The returned <see cref="Coordinates"/> inherits <paramref name="from"/>'s
+        /// epoch so callers that track JNow targets (e.g. ManualTLEContainer) don't
+        /// silently get their epoch flipped to J2000 by the slew math.
         /// </summary>
         /// <param name="from">Starting position (RA in hours, Dec in degrees).</param>
         /// <param name="separationArcsec">Angular separation in arcseconds.</param>
         /// <param name="positionAngleDeg">Position angle in degrees, North-through-East.</param>
         /// <returns>
         /// A new <see cref="Coordinates"/> displaced from <paramref name="from"/> by
-        /// the given separation and position angle (J2000).
+        /// the given separation and position angle, in the same epoch as
+        /// <paramref name="from"/>.
         /// </returns>
         public static Coordinates ApplyOffset(Coordinates from, double separationArcsec, double positionAngleDeg) {
             double dec1 = from.Dec * RadiansPerDegree;
@@ -108,7 +112,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             // Normalise RA to [0, 24)
             ra2Hours = (ra2Hours % 24.0 + 24.0) % 24.0;
 
-            return new Coordinates(Angle.ByHours(ra2Hours), Angle.ByDegree(dec2Deg), Epoch.J2000);
+            return new Coordinates(Angle.ByHours(ra2Hours), Angle.ByDegree(dec2Deg), from.Epoch);
         }
     }
 }

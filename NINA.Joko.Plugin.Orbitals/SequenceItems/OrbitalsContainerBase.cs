@@ -41,6 +41,15 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         double DerivedDecOffsetDegrees { get; }
 
         /// <summary>
+        /// Atomically write both offset components and trigger a single coordinate
+        /// refresh. Writing the two fields through their individual setters fires
+        /// RefreshCoordinates twice — first with the new Sep but the stale PA,
+        /// which can momentarily slew the target the wrong direction or trip the
+        /// 'Invalid dec after applying offset' notification on high-Dec bodies.
+        /// </summary>
+        void SetOffset(double separationArcsec, double positionAngleDeg);
+
+        /// <summary>
         /// Convert an RA/Dec offset (anchored at the current body position) into
         /// the canonical Separation + Offset PA and apply it to this container.
         /// </summary>
@@ -117,8 +126,13 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         public double OffsetSeparationArcsec {
             get => offsetSeparationArcsec;
             set {
-                if (offsetSeparationArcsec != value) {
-                    offsetSeparationArcsec = value;
+                // Clamp negative values to 0. Negative separation is not a
+                // meaningful sky offset (PA already covers direction), and
+                // OffsetSeparationDisplay formats with Math.Abs — without the
+                // clamp the displayed value and the applied offset disagree.
+                var clamped = value < 0.0 ? 0.0 : value;
+                if (offsetSeparationArcsec != clamped) {
+                    offsetSeparationArcsec = clamped;
                     RaisePropertyChanged();
                     RaiseOffsetChanged();
                 }
@@ -163,7 +177,12 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
                 && (offsetCoordinates.Coordinates.RA != 0.0 || offsetCoordinates.Coordinates.Dec != 0.0)) {
                 legacyOffsetMigrationPending = true;
             }
-            RaiseOffsetChanged();
+            // Intentionally do NOT call RaiseOffsetChanged here. The synchronous
+            // RefreshCoordinates it triggers can pop the 'Invalid dec after applying
+            // offset' notification at sequence-load time, before the user has
+            // touched anything. The first RefreshCoordinates fires automatically
+            // via AfterParentChanged once the container is attached to its parent,
+            // which is the right moment for any user-visible offset notification.
         }
 
         private void RaiseOffsetChanged() {
@@ -210,11 +229,27 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
                     Angle.ByHours(AstroUtil.EuclidianModulus(origin.RA + raOffsetHours, 24.0)),
                     Angle.ByDegree(shiftedDec),
                     origin.Epoch);
-                OffsetSeparationArcsec = OrbitalOffsetMath.AngularSeparation(origin, shifted);
-                OffsetPositionAngleDeg = OrbitalOffsetMath.PositionAngleNToE(origin, shifted);
+                SetOffset(
+                    OrbitalOffsetMath.AngularSeparation(origin, shifted),
+                    OrbitalOffsetMath.PositionAngleNToE(origin, shifted));
             } catch (Exception ex) {
                 Logger.Error("Could not convert RA/Dec offset to Separation+PA", ex);
             }
+        }
+
+        /// <summary>
+        /// Atomic Sep+PA write. See <see cref="IOrbitalsOffsetContainer.SetOffset"/>.
+        /// </summary>
+        public void SetOffset(double separationArcsec, double positionAngleDeg) {
+            var clampedSep = separationArcsec < 0.0 ? 0.0 : separationArcsec;
+            var sepChanged = offsetSeparationArcsec != clampedSep;
+            var paChanged = offsetPositionAngleDeg != positionAngleDeg;
+            if (!sepChanged && !paChanged) return;
+            offsetSeparationArcsec = clampedSep;
+            offsetPositionAngleDeg = positionAngleDeg;
+            // RaiseOffsetChanged raises Sep + PA + displays and calls
+            // RefreshCoordinates exactly once — no intermediate stale-PA state.
+            RaiseOffsetChanged();
         }
 
         private static string FormatRAOffset(double hours) {

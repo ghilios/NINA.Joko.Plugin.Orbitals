@@ -13,8 +13,14 @@ namespace NINA.Joko.Plugin.Orbitals.Imaging {
     /// </summary>
     public sealed class OrbitalFramingExposureSettings {
         public double ExposureTime { get; init; }
-        public int Gain { get; init; }
-        public int Offset { get; init; }
+
+        // -1 is the camera-driver convention for "use the camera-settings default"
+        // (matches NINA's SnapShotControlSettings). The wizard VM seeds Gain/Offset
+        // to -1 so a user who never touches the input gets the camera default,
+        // not gain 0. Defaulting here keeps that contract intact for any other
+        // caller that constructs the settings without naming Gain/Offset.
+        public int Gain { get; init; } = -1;
+        public int Offset { get; init; } = -1;
         public int Binning { get; init; } = 1;
     }
 

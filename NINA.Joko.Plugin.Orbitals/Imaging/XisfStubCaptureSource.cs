@@ -13,6 +13,7 @@
 using NINA.Astrometry;
 using NINA.Core.Model;
 using NINA.Core.Utility;
+using NINA.Core.Utility.Notification;
 using NINA.Image.ImageData;
 using NINA.Image.Interfaces;
 using NINA.Joko.Plugin.Orbitals.Calculations;
@@ -23,7 +24,6 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 namespace NINA.Joko.Plugin.Orbitals.Imaging {
@@ -83,7 +83,12 @@ namespace NINA.Joko.Plugin.Orbitals.Imaging {
             }
 
             if (!BaseImageData.FileIsSupported(path)) {
-                throw new FileNotFoundException($"File type not supported by NINA's image loader: {path}", path);
+                // Surface as a user-facing error so the wizard's catch path treats
+                // it as already-notified (no double-toast). Throwing
+                // FileNotFoundException here would mis-label an existing-but-
+                // unsupported file as "not found", confusing the user.
+                Notification.ShowError($"File type not supported by NINA's image loader: {Path.GetFileName(path)}");
+                throw new CaptureSourceUserFacingException($"Unsupported file type: {path}");
             }
 
             ct.ThrowIfCancellationRequested();
@@ -93,8 +98,8 @@ namespace NINA.Joko.Plugin.Orbitals.Imaging {
             // camera's path — handles FITS / XISF / TIFF / PNG / RAW / etc.) and
             // apply the user's profile auto-stretch settings so the framing
             // canvas displays the image the same way NINA's viewer would.
-            BitmapSource bitmap = null;
-            int width = 0, height = 0;
+            BitmapSource bitmap;
+            int width, height;
             try {
                 int bitDepth = (int)(profileService?.ActiveProfile?.CameraSettings?.BitDepth ?? 16);
                 var rawConverter = profileService?.ActiveProfile?.CameraSettings?.RawConverter ?? default;
@@ -113,25 +118,22 @@ namespace NINA.Joko.Plugin.Orbitals.Imaging {
                 rendered = await rendered.Stretch(factor, blackClipping, unlinked: false);
 
                 bitmap = rendered.Image;
-                if (bitmap != null && bitmap.CanFreeze && !bitmap.IsFrozen) bitmap.Freeze();
-                width = bitmap?.PixelWidth ?? 0;
-                height = bitmap?.PixelHeight ?? 0;
+                if (bitmap == null) {
+                    throw new InvalidOperationException("Image pipeline returned a null bitmap");
+                }
+                if (bitmap.CanFreeze && !bitmap.IsFrozen) bitmap.Freeze();
+                width = bitmap.PixelWidth;
+                height = bitmap.PixelHeight;
             } catch (OperationCanceledException) {
                 throw;
             } catch (Exception ex) {
-                Logger.Warning($"XisfStubCaptureSource: NINA pipeline load failed for '{path}' ({ex.Message}); using synthetic fallback.");
-                bitmap = null;
-            }
-
-            if (bitmap == null) {
-                // Synthetic fallback — keep development unblocked when the file
-                // can't be loaded for any reason.
-                const int fallbackWidth = 640;
-                const int fallbackHeight = 480;
-                bitmap = CreateSyntheticBitmap(fallbackWidth, fallbackHeight);
-                bitmap.Freeze();
-                width = fallbackWidth;
-                height = fallbackHeight;
+                // Do NOT fall back to a synthetic gradient on load failure: the
+                // user would frame against placeholder data and export bogus
+                // coordinates with no warning. Surface a user-facing error and
+                // let the wizard catch path log without double-notifying.
+                Logger.Error($"XisfStubCaptureSource: NINA pipeline load failed for '{path}'", ex);
+                Notification.ShowError($"Could not load test image '{Path.GetFileName(path)}': {ex.Message}");
+                throw new CaptureSourceUserFacingException("Test image load failed");
             }
 
             ct.ThrowIfCancellationRequested();
@@ -185,34 +187,5 @@ namespace NINA.Joko.Plugin.Orbitals.Imaging {
             }).Task;
         }
 
-        /// <summary>
-        /// Creates a synthetic 640×480 32-bit BGRA bitmap with a simple gradient
-        /// so the image panel shows something non-trivial in the UI.
-        /// </summary>
-        private static BitmapSource CreateSyntheticBitmap(int width, int height) {
-            var visual = new DrawingVisual();
-            using (var ctx = visual.RenderOpen()) {
-                var brush = new LinearGradientBrush(
-                    Colors.MidnightBlue,
-                    Colors.DarkSlateBlue,
-                    new Point(0, 0),
-                    new Point(1, 1));
-                ctx.DrawRectangle(brush, null, new Rect(0, 0, width, height));
-
-                var starBrush = Brushes.White;
-                var rand = new Random(42);
-                for (int i = 0; i < 200; i++) {
-                    double x = rand.NextDouble() * width;
-                    double y = rand.NextDouble() * height;
-                    double r = rand.NextDouble() * 1.5 + 0.5;
-                    ctx.DrawEllipse(starBrush, null, new Point(x, y), r, r);
-                }
-            }
-
-            var rtb = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
-            rtb.Render(visual);
-            rtb.Freeze();
-            return rtb;
-        }
     }
 }
