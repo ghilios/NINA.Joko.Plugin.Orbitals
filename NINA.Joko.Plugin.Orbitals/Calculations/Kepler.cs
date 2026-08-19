@@ -185,23 +185,44 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         }
 
         public static RectangularPV GetPVOnEarthSurface(DateTime asof, Angle latitude, Angle longitude, double elevation) {
-            var observer = new NOVAS.Observer() {
-                Where = 1,
+            return GetPVFromObserver(asof, OnSurfaceObserver(latitude, longitude, elevation));
+        }
+
+        /// <summary>Overload for callers that already hold a TT julian date. See
+        /// <see cref="GetPVFromObserver(double, NOVAS.Observer)"/>.</summary>
+        public static RectangularPV GetPVOnEarthSurface(double jdtt, Angle latitude, Angle longitude, double elevation) {
+            return GetPVFromObserver(jdtt, OnSurfaceObserver(latitude, longitude, elevation));
+        }
+
+        private static NOVAS.Observer OnSurfaceObserver(Angle latitude, Angle longitude, double elevation) {
+            return new NOVAS.Observer() {
+                Where = (short)NOVAS.ObserverLocation.EarthSurface,
                 OnSurf = new NOVAS.OnSurface() {
                     Latitude = latitude.Degree,
                     Longitude = longitude.Degree,
                     Height = elevation
                 }
             };
-            return GetPVFromObserver(asof, observer);
         }
 
         public static RectangularPV GetPVFromObserver(DateTime asof, NOVAS.Observer observer) {
-            var jd = AstroUtil.GetJulianDate(asof);
-            var deltaT = AstroUtil.DeltaT(asof);
+            return GetPVFromObserver(AstroUtil.GetJulianDateTT(asof), observer);
+        }
+
+        /// <summary>
+        /// Overload taking the TT julian date directly. Callers that already hold a TT
+        /// julian date must use this rather than round-tripping through
+        /// <see cref="NOVAS.JulianToDateTime"/> and the DateTime overload -- that round
+        /// trip would re-apply the TT offset and put the observer ~69 s of Earth rotation
+        /// out of place.
+        /// </summary>
+        public static RectangularPV GetPVFromObserver(double jdtt, NOVAS.Observer observer) {
+            // delta-T changes by milliseconds per year, so deriving it from the TT instant
+            // rather than the UTC one is immaterial.
+            var deltaT = AstroUtil.DeltaT(NOVAS.JulianToDateTime(jdtt));
             var pos = new double[3];
             var vel = new double[3];
-            var result = NOVAS.NOVAS_geo_posvel(jd, deltaT, NOVAS.Accuracy.Full, observer, pos, vel);
+            var result = NOVAS.NOVAS_geo_posvel(jdtt, deltaT, NOVAS.Accuracy.Full, observer, pos, vel);
             if (result != 0) {
                 throw new Exception($"NOVAS geo_posvel failed. Result={result}");
             }
@@ -289,8 +310,10 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             var centerPosition = NOVAS.BodyPositionAndVelocity(observerJdtt, orbitalCenterBody, NOVAS.SolarSystemOrigin.SolarCenterOfMass);
 
             // Observer's geocentric position at the OBSERVER's time (NOVAS geo_posvel).
-            var asof = NOVAS.JulianToDateTime(observerJdtt);
-            var pvOnSurface = GetPVOnEarthSurface(asof, latitude, longitude, elevation);
+            // observerJdtt is already a TT julian date, so hand it over directly -- going
+            // via NOVAS.JulianToDateTime and the DateTime overload would re-apply the TT
+            // offset and displace the observer by ~69 s of Earth rotation.
+            var pvOnSurface = GetPVOnEarthSurface(observerJdtt, latitude, longitude, elevation);
 
             // Object's heliocentric position is in the orbital plane reduced to J2000
             // mean ecliptic; rotate it once into J2000 mean equatorial via NOVAS.

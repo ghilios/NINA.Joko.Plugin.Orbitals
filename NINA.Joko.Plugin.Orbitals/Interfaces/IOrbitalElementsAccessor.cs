@@ -85,7 +85,7 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
 
         void Clear(OrbitalObjectTypeEnum objectType);
 
-        OrbitalPositionVelocity GetSolarSystemBodyPV(DateTime asof, SolarSystemBody solarSystemBody, TimeSpan rateDriftDelta);
+        OrbitalPositionVelocity GetSolarSystemBodyPV(DateTime asof, SolarSystemBody solarSystemBody, Angle latitude, Angle longitude, double elevation, TimeSpan rateDriftDelta);
 
         OrbitalPositionVelocity GetObjectPV(DateTime asof, OrbitalElements orbitalElements, Angle latitude, Angle longitude, double elevation, TimeSpan rateDriftDelta);
 

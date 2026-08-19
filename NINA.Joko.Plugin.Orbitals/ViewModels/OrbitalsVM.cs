@@ -621,7 +621,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             private set {
                 selectedOrbitalElementsObject = value;
                 if (value != null) {
-                    SelectedOrbitalPosition = Kepler.CalculateOrbitalElements(value.OrbitalElements, AstroUtil.GetJulianDate(DateTime.Now));
+                    SelectedOrbitalPosition = Kepler.CalculateOrbitalElements(value.OrbitalElements, AstroUtil.GetJulianDateTT(DateTime.Now));
                 } else {
                     SelectedOrbitalPosition = null;
                 }
@@ -858,7 +858,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         }
 
         private void LoadSolarSystemObject(SolarSystemBody solarSystemBody) {
-            var bodyObject = new SolarSystemBodyObject(orbitalElementsAccessor, solarSystemBody, profileService.ActiveProfile.AstrometrySettings.Horizon);
+            var bodyObject = new SolarSystemBodyObject(orbitalElementsAccessor, solarSystemBody, profileService.ActiveProfile.AstrometrySettings.Horizon, profileService);
             bodyObject.SetDateAndPosition(NighttimeCalculator.GetReferenceDate(DateTime.Now), latitude: profileService.ActiveProfile.AstrometrySettings.Latitude, longitude: profileService.ActiveProfile.AstrometrySettings.Longitude);
             SelectedOrbitalsObject = bodyObject;
         }

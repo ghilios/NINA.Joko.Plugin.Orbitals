@@ -14,18 +14,22 @@ using NINA.Astrometry;
 using NINA.Core.Model;
 using NINA.Joko.Plugin.Orbitals.Enums;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
+using NINA.Profile.Interfaces;
 using System;
 
 namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
     public class SolarSystemBodyObject : OrbitalsObjectBase {
         private readonly IOrbitalElementsAccessor orbitalElementsAccessor;
+        private readonly IProfileService profileService;
 
         public SolarSystemBodyObject(
             IOrbitalElementsAccessor orbitalElementsAccessor,
             SolarSystemBody solarSystemBody,
-            CustomHorizon customHorizon) : base(solarSystemBody.ToString(), customHorizon, TimeSpan.FromSeconds(1)) {
+            CustomHorizon customHorizon,
+            IProfileService profileService) : base(solarSystemBody.ToString(), customHorizon, TimeSpan.FromSeconds(1)) {
             this.orbitalElementsAccessor = orbitalElementsAccessor;
+            this.profileService = profileService;
             this.solarSystemBody = solarSystemBody;
             Moon = new MoonInfo(Coordinates);
         }
@@ -46,11 +50,14 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         }
 
         protected override OrbitalPositionVelocity CalculateObjectPosition(DateTime at) {
-            return orbitalElementsAccessor.GetSolarSystemBodyPV(at, SolarSystemBody, rateDriftDelta);
+            var latitude = Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Latitude);
+            var longitude = Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Longitude);
+            var elevation = profileService.ActiveProfile.AstrometrySettings.Elevation;
+            return orbitalElementsAccessor.GetSolarSystemBodyPV(at, SolarSystemBody, latitude, longitude, elevation, rateDriftDelta);
         }
 
         public SolarSystemBodyObject Clone() {
-            var cloned = new SolarSystemBodyObject(orbitalElementsAccessor, SolarSystemBody, customHorizon);
+            var cloned = new SolarSystemBodyObject(orbitalElementsAccessor, SolarSystemBody, customHorizon, profileService);
             cloned.SetDateAndPosition(this._referenceDate, this._latitude, this._longitude);
             return cloned;
         }
