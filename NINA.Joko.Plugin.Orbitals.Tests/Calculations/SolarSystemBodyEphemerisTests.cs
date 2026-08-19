@@ -96,6 +96,12 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
         }
 
         [Test]
+        public void Mercury_TopocentricAstrometricRaDecFromGreenwich() {
+            AssertAstrometricRaDec(SolarSystemBody.Mercury, Epoch2026,
+                expectedRaDeg: 139.580681661, expectedDecDeg: 17.237093460);
+        }
+
+        [Test]
         public void Venus_TopocentricAstrometricRaDecFromGreenwich() {
             AssertAstrometricRaDec(SolarSystemBody.Venus, Epoch2026,
                 expectedRaDeg: 189.855860130, expectedDecDeg: -6.222824713);
@@ -117,6 +123,22 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
         public void Saturn_TopocentricAstrometricRaDecFromGreenwich() {
             AssertAstrometricRaDec(SolarSystemBody.Saturn, Epoch2026,
                 expectedRaDeg: 13.822899736, expectedDecDeg: 3.088962996);
+        }
+
+        // Mercury sampled across a full day. It is the fastest-moving of the planets, so
+        // this doubles as a check that the TT time scale is right: a UTC julian date would
+        // show up as a constant along-track offset.
+        // REF: Horizons, topocentric at Greenwich, 2026-Aug-19.
+        [Test]
+        [TestCase(4, 139.917667523, 17.150790335)]
+        [TestCase(8, 140.253462757, 17.063597862)]
+        [TestCase(12, 140.588202324, 16.975184496)]
+        [TestCase(16, 140.923003013, 16.885435314)]
+        [TestCase(20, 141.258822793, 16.794574399)]
+        public void Mercury_TracksAcrossTheDay(int hourOfDay, double expectedRaDeg, double expectedDecDeg) {
+            AssertAstrometricRaDec(SolarSystemBody.Mercury,
+                new DateTime(2026, 8, 19, hourOfDay, 0, 0, DateTimeKind.Utc),
+                expectedRaDeg, expectedDecDeg);
         }
 
         // The Moon's parallax swings with hour angle, so a single-instant test could in
