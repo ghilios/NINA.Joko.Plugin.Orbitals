@@ -112,14 +112,14 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
         [Test]
         public void GetSolarSystemBodyPV_Jupiter_RunsEndToEnd_ProducesValidCoordinates() {
             // Sanity-check that the NOVAS pipeline runs end-to-end and emits a result
-            // with plausible RA [0,24) and Dec [-90,+90]. A tighter assertion against
-            // a JPL Horizons snapshot is deferred until a captured-snapshot fixture is
-            // committed (the exact value depends on the ephemeris source, time scale,
-            // and aberration/light-time conventions, which differ slightly between
-            // JPL Horizons and NOVAS's PlanetApparentCoordinates).
+            // with plausible RA [0,24) and Dec [-90,+90]. Accuracy against JPL Horizons
+            // is asserted in SolarSystemBodyEphemerisTests.
             var asof = new DateTime(2000, 1, 1, 12, 0, 0, DateTimeKind.Utc);
 
-            var pv = sut.GetSolarSystemBodyPV(asof, SolarSystemBody.Jupiter, TimeSpan.FromSeconds(1));
+            var pv = sut.GetSolarSystemBodyPV(
+                asof, SolarSystemBody.Jupiter,
+                Angle.ByDegree(51.4769), Angle.ByDegree(-0.0014), 46.0,
+                TimeSpan.FromSeconds(1));
 
             pv.Should().NotBeNull();
             pv.Coordinates.Should().NotBeNull();

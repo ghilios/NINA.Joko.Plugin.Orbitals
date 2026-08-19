@@ -273,19 +273,81 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             });
         }
 
-        public OrbitalPositionVelocity GetSolarSystemBodyPV(DateTime asof, SolarSystemBody solarSystemBody, TimeSpan rateDriftDelta) {
-            var jdtt = AstroUtil.GetJulianDate(asof);
-            var startPosition = NOVAS.BodyPositionAndVelocity(jdtt, solarSystemBody.ToNOVAS(), NOVAS.SolarSystemOrigin.SolarCenterOfMass);
-            var earthPosition = NOVAS.BodyPositionAndVelocity(jdtt, NOVAS.Body.Earth, NOVAS.SolarSystemOrigin.SolarCenterOfMass);
-            var earthCenteredPosition = startPosition.Position - earthPosition.Position;
-            var startCoordinates = NOVAS.PlanetApparentCoordinates(jdtt, solarSystemBody.ToNOVAS());
-            var nextCoordinates = NOVAS.PlanetApparentCoordinates(jdtt + AstrometricConstants.JD_SEC * rateDriftDelta.TotalSeconds, solarSystemBody.ToNOVAS());
-            var trackingRate = SiderealShiftTrackingRate.Create(startCoordinates, nextCoordinates, rateDriftDelta);
-            return new OrbitalPositionVelocity(asof, earthCenteredPosition, null, startCoordinates, trackingRate);
+        public OrbitalPositionVelocity GetSolarSystemBodyPV(
+            DateTime asof, SolarSystemBody solarSystemBody, Angle latitude, Angle longitude, double elevation, TimeSpan rateDriftDelta) {
+            var startResult = AstrometricTopocentric(asof, solarSystemBody, latitude, longitude, elevation);
+            var nextResult = AstrometricTopocentric(asof + rateDriftDelta, solarSystemBody, latitude, longitude, elevation);
+
+            var trackingRate = SiderealShiftTrackingRate.Create(startResult.Coords, nextResult.Coords, rateDriftDelta);
+            return new OrbitalPositionVelocity(asof, startResult.Vector, null, startResult.Coords, trackingRate);
+        }
+
+        /// <summary>
+        /// Astrometric topocentric place of a major solar system body, via NOVAS place().
+        ///
+        /// "Topocentric" is the important part: NOVAS app_planet (what
+        /// <see cref="NOVAS.PlanetApparentCoordinates"/> wraps) produces a strictly
+        /// GEOCENTRIC place, which for the Moon is wrong by up to ~1 degree of diurnal
+        /// parallax -- more than enough to put the target outside the FOV. Passing an
+        /// on-surface observer to place() applies the parallax, and also makes the
+        /// differenced tracking rate pick up the parallax rate (~240 arcsec/hr in RA for
+        /// the Moon).
+        ///
+        /// "Astrometric" (light-time corrected, but no aberration, deflection, or
+        /// precession/nutation) is chosen to match what <see cref="GetObjectPV"/> returns
+        /// for asteroids and comets, and because it is what NINA expects: NINA's
+        /// Coordinates.Transform(Epoch.JNOW) applies SOFA Atci13, which adds aberration,
+        /// light deflection, and precession/nutation on top of an ICRS/J2000 input.
+        ///
+        /// Verified against JPL Horizons "R.A.___(ICRF)___DEC" for a topocentric center:
+        /// agreement is better than 0.05 arcsec for the Moon, Sun, Venus, Mars, Jupiter
+        /// and Saturn.
+        /// </summary>
+        private (RectangularCoordinates Vector, Coordinates Coords) AstrometricTopocentric(
+            DateTime asof, SolarSystemBody solarSystemBody, Angle latitude, Angle longitude, double elevation) {
+            var celestialObject = new NOVAS.CelestialObject() {
+                Type = (short)NOVAS.ObjectType.MajorPlanetSunOrMoon,
+                Number = (short)solarSystemBody,
+                Name = solarSystemBody.ToString(),
+                Star = default
+            };
+            var observer = new NOVAS.Observer() {
+                Where = (short)NOVAS.ObserverLocation.EarthSurface,
+                OnSurf = new NOVAS.OnSurface() {
+                    Latitude = latitude.Degree,
+                    Longitude = longitude.Degree,
+                    Height = elevation
+                }
+            };
+
+            var skyPosition = default(NOVAS.SkyPosition);
+            // place() wants a TT julian date, and delta-T separately so it can recover UT1
+            // for the Earth-rotation part of the observer's geocentric position.
+            var result = NOVAS.Place(
+                AstroUtil.GetJulianDateTT(asof), celestialObject, observer, AstroUtil.DeltaT(asof),
+                NOVAS.CoordinateSystem.Astrometric, NOVAS.Accuracy.Full, ref skyPosition);
+            if (result != 0) {
+                throw new Exception($"NOVAS place failed for {solarSystemBody}. Result={result}");
+            }
+
+            var coordinates = new Coordinates(Angle.ByHours(skyPosition.RA), Angle.ByDegree(skyPosition.Dec), Epoch.J2000);
+
+            // Rebuild the topocentric vector from RA/Dec/distance rather than reading
+            // SkyPosition.RHat: RHat is a ByValArray field that is null going in, so it is
+            // not dependable across marshalling. Only Distance is consumed downstream
+            // (OrbitalsVM, OrbitalsContainerBase), and this keeps the frame consistent with
+            // the vector GetObjectPV returns for asteroids.
+            var ra = coordinates.RA * Math.PI / 12.0;
+            var dec = AstroUtil.ToRadians(coordinates.Dec);
+            var vector = new RectangularCoordinates(
+                skyPosition.Dis * Math.Cos(dec) * Math.Cos(ra),
+                skyPosition.Dis * Math.Cos(dec) * Math.Sin(ra),
+                skyPosition.Dis * Math.Sin(dec));
+            return (vector, coordinates);
         }
 
         public OrbitalPositionVelocity GetObjectPV(DateTime asof, OrbitalElements orbitalElements, Angle latitude, Angle longitude, double elevation, TimeSpan rateDriftDelta) {
-            var observerJdtt = AstroUtil.GetJulianDate(asof);
+            var observerJdtt = AstroUtil.GetJulianDateTT(asof);
             var startResult = ApparentTopocentricWithLightTime(observerJdtt, orbitalElements, latitude, longitude, elevation);
 
             var nextObserverJdtt = observerJdtt + AstrometricConstants.JD_SEC * rateDriftDelta.TotalSeconds;
@@ -396,7 +458,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
             var startJd = vectorTable.Rows.First().Epoch_jd;
             var endJd = vectorTable.Rows.Last().Epoch_jd;
-            var asofJd = AstroUtil.GetJulianDate(asof);
+            var asofJd = AstroUtil.GetJulianDateTT(asof);
             if (asofJd < startJd) {
                 Logger.Trace($"No vector data available for JWST at {asof}. The earliest available is {NOVAS.JulianToDateTime(startJd)}");
                 return null;

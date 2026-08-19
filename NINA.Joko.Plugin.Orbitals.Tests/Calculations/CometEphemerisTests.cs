@@ -359,6 +359,91 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
             actual.Distance.AU.Should().BeApproximately(q_au, 1e-12);
         }
 
+        // ===== Element-source comparison: 220P/McNaught from the two production bundles =====
+        //
+        // Every other case in this file feeds the solver elements taken at (or very near)
+        // the observation epoch, which isolates the propagation maths. This pair instead
+        // feeds it the *actual rows the plugin downloads*, to check that the shipped data
+        // sources are fit for purpose. They are not equally fit.
+        //
+        // JPL publishes each comet's osculating elements at that orbit solution's own
+        // reference epoch, not at a common current epoch. For 220P that is MJD 59114
+        // (2020-Sep-22), so the plugin two-body propagates across ~6 years and a full
+        // revolution. MPC republishes every comet at a single current epoch.
+        //
+        // Measured 2026-08-19 against Horizons (DES=220P; CAP<2026-08-19;), topocentric
+        // ICRF from Greenwich:
+        //     JPL row  -> 5067" (84.5') off
+        //     MPC row  -> 0.41" off
+        // The divergence is almost entirely perihelion timing: propagating JPL's
+        // tp = 2459194.14096 forward one revolution lands ~2.0 days before MPC's
+        // tp = 2461205.6177 (Horizons' own osculating fit says 2461205.61863, i.e. MPC is
+        // right to ~80 seconds).
+        //
+        // Staleness in the JPL bundle is systemic rather than specific to this comet: of
+        // its 3841 entries, only 1.4% carry an epoch less than a year old and 78.6% are
+        // more than a decade stale. MPC's bundle has 946 of 949 entries at one current
+        // epoch. IOrbitalsOptions.CometAccessor already defaults to MPC, so this is a
+        // trap only for users who switch the source to JPL.
+        //
+        // Only the MPC path is asserted. Asserting the JPL error would encode a defect as
+        // expected behaviour and would start failing if JPL ever re-anchors the file.
+
+        // REF: MPC CometEls.txt row, downloaded 2026-08-19:
+        // 0220P         2026 06 14.1177  1.559302  0.500331  180.5619  150.0839    8.1208  20260819 ...
+        [Test]
+        public void McNaught220P_FromMpcBundle_ApparentRaDecFromGreenwich() {
+            var elements = new MPCCometElements() {
+                name = "220P/McNaught",
+                number = 220,
+                tpYear = 2026,
+                tpMonth = 6,
+                tpDay_tt = 14.1177,
+                perihelionDistance_au = 1.559302,
+                eccentricity = 0.500331,
+                argOfPerihelion_deg = 180.5619,
+                longOfAscendingNode_deg = 150.0839,
+                incAscendingNode_deg = 8.1208,
+                epoch = new DateTime(2026, 8, 19)
+            }.ToOrbitalElements();
+
+            var pv = sut.GetObjectPV(
+                asof: new DateTime(2026, 8, 19, 0, 0, 0, DateTimeKind.Utc),
+                orbitalElements: elements,
+                latitude: GreenwichLat, longitude: GreenwichLon, elevation: GreenwichElev_m,
+                rateDriftDelta: TimeSpan.FromSeconds(1));
+
+            // REF: Horizons ICRF (astrometric) RA = 45.305221 deg, Dec = +9.484476 deg.
+            pv.Coordinates.RA.Should().BeApproximately(DegToHours(45.305221), Tolerance_Hours);
+            pv.Coordinates.Dec.Should().BeApproximately(9.484476, Tolerance_Degrees);
+        }
+
+        /// <summary>
+        /// Guards the MPC epoch parse. MPC epochs are TT at 0h, and the record is read with
+        /// DateTime.ParseExact, which yields DateTimeKind.Unspecified -- routing that through
+        /// AstroUtil.GetJulianDate would call ToUniversalTime() and shift the epoch by the
+        /// machine's UTC offset. Epoch_jd must be the plain calendar julian date regardless
+        /// of the test machine's time zone.
+        /// </summary>
+        [Test]
+        public void McNaught220P_FromMpcBundle_EpochIsTimeZoneIndependent() {
+            var elements = new MPCCometElements() {
+                name = "220P/McNaught",
+                tpYear = 2026,
+                tpMonth = 6,
+                tpDay_tt = 14.1177,
+                perihelionDistance_au = 1.559302,
+                eccentricity = 0.500331,
+                argOfPerihelion_deg = 180.5619,
+                longOfAscendingNode_deg = 150.0839,
+                incAscendingNode_deg = 8.1208,
+                epoch = new DateTime(2026, 8, 19)
+            }.ToOrbitalElements();
+
+            elements.Epoch_jd.Should().Be(2461271.5);
+            elements.tp_PeriapsisTime_jd.Should().BeApproximately(2461205.6177, 1e-4);
+        }
+
         /// <summary>
         /// Newton's method on the cubic D^3 + 3D - 2W = 0. The closed-form solution
         /// is the classic Cardano expression, but Newton converges in a handful of
