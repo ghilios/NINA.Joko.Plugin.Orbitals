@@ -11,6 +11,7 @@
 #endregion "copyright"
 
 using NINA.Astrometry;
+using NINA.Joko.Plugin.Orbitals.Enums;
 using NINA.Joko.Plugin.Orbitals.Utility;
 using ProtoBuf;
 using System;
@@ -65,8 +66,10 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             private OrbitalElements() {
             }
 
+            // Settable so CometElementsMerger can append "(JPL)"/"(MPC)" when both feeds
+            // would otherwise contribute records with the same name.
             [ProtoMember(1)]
-            public string Name { get; private set; }
+            public string Name { get; set; }
 
             [ProtoMember(2)]
             public GravitationalParameter PrimaryGravitationalParameter { get; set; } = GravitationalParameter.Zero;
@@ -100,6 +103,16 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
             [ProtoMember(12)]
             public double? a_SemiMajorAxis_au { get; set; }
+
+            /// <summary>
+            /// Which published dataset these elements came from. Added after the on-disk
+            /// format was already in the field, so caches written before it exist and
+            /// deserialize as <see cref="OrbitalElementsSourceEnum.Unknown"/>;
+            /// OrbitalElementsAccessor.LoadObjectType backfills those from the feed file
+            /// it read them out of.
+            /// </summary>
+            [ProtoMember(13)]
+            public OrbitalElementsSourceEnum Source { get; set; } = OrbitalElementsSourceEnum.Unknown;
 
             public override string ToString() {
                 return $"{{{nameof(Name)}={Name}, {nameof(PrimaryGravitationalParameter)}={PrimaryGravitationalParameter}, {nameof(SecondaryGravitationalParameter)}={SecondaryGravitationalParameter}, {nameof(Epoch_jd)}={Epoch_jd.ToString()}, {nameof(q_Perihelion_au)}={q_Perihelion_au.ToString()}, {nameof(e_Eccentricity)}={e_Eccentricity.ToString()}, {nameof(i_Inclination_rad)}={i_Inclination_rad.ToString()}, {nameof(w_ArgOfPerihelion_rad)}={w_ArgOfPerihelion_rad.ToString()}, {nameof(node_LongitudeOfAscending_rad)}={node_LongitudeOfAscending_rad.ToString()}, {nameof(tp_PeriapsisTime_jd)}={tp_PeriapsisTime_jd.ToString()}, {nameof(M_MeanAnomalyAtEpoch)}={M_MeanAnomalyAtEpoch.ToString()}, {nameof(a_SemiMajorAxis_au)}={a_SemiMajorAxis_au.ToString()}}}";

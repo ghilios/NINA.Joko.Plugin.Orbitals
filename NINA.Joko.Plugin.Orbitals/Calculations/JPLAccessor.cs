@@ -13,6 +13,7 @@
 using FlatFiles;
 using FlatFiles.TypeMapping;
 using NINA.Astrometry;
+using NINA.Joko.Plugin.Orbitals.Enums;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
 using NINA.Joko.Plugin.Orbitals.Utility;
 using System;
@@ -37,6 +38,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         public double node { get; set; }
         public string ref_ { get; set; }
         public string Name => name;
+        public OrbitalElementsSourceEnum Source => OrbitalElementsSourceEnum.JPL;
 
         public abstract OrbitalElements ToOrbitalElements();
     }

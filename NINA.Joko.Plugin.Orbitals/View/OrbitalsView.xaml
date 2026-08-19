@@ -17,7 +17,29 @@
     mc:Ignorable="d">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <ScrollViewer.Resources>
-            <TextBlock x:Key="UpdateCometElements_Tooltip" Text="Updates comet orbital elements" />
+            <TextBlock x:Key="UpdateCometElements_Tooltip" Text="Downloads comet orbital elements from the selected source" />
+            <TextBlock x:Key="CometAccessor_Tooltip">
+                <Run Text="Where comet orbital elements are downloaded from:" /><LineBreak />
+                <Run Text="  JPL - ~4,000 comets, but elements are often years out of date" /><LineBreak />
+                <Run Text="  MPC - ~950 comets, refreshed within days of new observations" /><LineBreak />
+                <Run Text="  Both - downloads both, keeps the newer elements for each comet (recommended)" />
+            </TextBlock>
+            <TextBlock x:Key="ImportCometElements_Tooltip">
+                <Run Text="Load comet elements from a file instead of downloading." /><LineBreak />
+                <Run Text="Use this if your network cannot reach MPC or JPL (some VPN and hosting IPs are blocked)." /><LineBreak />
+                <Run Text="Accepted files, downloadable on any other machine:" /><LineBreak />
+                <Run Text="  MPC:  minorplanetcenter.net/iau/MPCORB/CometEls.txt" /><LineBreak />
+                <Run Text="  JPL:  ssd.jpl.nasa.gov/dat/ELEMENTS.COMET" />
+            </TextBlock>
+            <TextBlock x:Key="ImportNumberedAsteroidElements_Tooltip">
+                <Run Text="Load numbered asteroid elements from a file instead of downloading." /><LineBreak />
+                <Run Text="Accepted file: ssd.jpl.nasa.gov/dat/ELEMENTS.NUMBR.gz (gzipped or extracted)" />
+            </TextBlock>
+            <TextBlock x:Key="ImportUnnumberedAsteroidElements_Tooltip">
+                <Run Text="Load un-numbered asteroid elements from a file instead of downloading." /><LineBreak />
+                <Run Text="Accepted file: ssd.jpl.nasa.gov/dat/ELEMENTS.UNNUM.gz (gzipped or extracted)" />
+            </TextBlock>
+            <TextBlock x:Key="ElementSource_Tooltip" Text="Which dataset these orbital elements came from, and the epoch they were computed for" />
             <TextBlock x:Key="UpdateNumberedAsteroidElements_Tooltip" Text="Updates numbered asteroid orbital elements" />
             <TextBlock x:Key="UpdateUnnumberedAsteroidElements_Tooltip" Text="Updates un-numbered asteroid orbital elements" />
             <TextBlock x:Key="UpdateJWSTVectorTable_Tooltip" Text="Updates James-Webb Telescope vector table, which is valid for 1 week" />
@@ -89,6 +111,9 @@
 
                     <!-- JWST -->
                     <RowDefinition Height="Auto" />
+
+                    <!-- Comet feed failure badge -->
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <!-- Type -->
@@ -105,13 +130,17 @@
 
                     <!-- Source -->
                     <ColumnDefinition Width="Auto" />
+
+                    <!-- Import Button -->
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <!-- Comets -->
                 <TextBlock
                     Grid.Row="0" Grid.Column="0"
                     Margin="5"
-                    VerticalAlignment="Center">
+                    VerticalAlignment="Center"
+                    ToolTip="{Binding CometSourceBreakdown, Mode=OneWay}">
                     <Run Text="Comets (" /><Run Text="{Binding CometCount, Mode=OneWay}" /><Run Text=")" />
                 </TextBlock>
                 <ninactrl:CancellableButton
@@ -152,6 +181,7 @@
                     Margin="10,5,0,5"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Center"
+                    ToolTip="{StaticResource CometAccessor_Tooltip}"
                     ItemsSource="{Binding Source={util:EnumBindingSource {x:Type enums:OrbitalElementsAccessorEnum}}}"
                     SelectedItem="{Binding Options.CometAccessor}">
                     <ComboBox.ItemTemplate>
@@ -160,6 +190,19 @@
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
+                <Button
+                    Grid.Row="0" Grid.Column="5"
+                    Margin="10,5,0,5"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Command="{Binding ImportCometElementsCommand}"
+                    ToolTip="{StaticResource ImportCometElements_Tooltip}">
+                    <TextBlock
+                        Margin="10,5,10,5"
+                        Foreground="{StaticResource ButtonForegroundBrush}"
+                        Text="Import..."
+                        TextWrapping="Wrap" />
+                </Button>
 
                 <!-- Numbered Asteroids -->
                 <TextBlock
@@ -199,6 +242,19 @@
                     VerticalAlignment="Center">
                     <Run Text="Last Updated: " /><Run Text="{Binding NumberedAsteroidLastUpdated, Mode=OneWay, Converter={StaticResource O_DateTimeMinToNeverConverter}}" />
                 </TextBlock>
+                <Button
+                    Grid.Row="1" Grid.Column="5"
+                    Margin="10,5,0,5"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Command="{Binding ImportNumberedAsteroidElementsCommand}"
+                    ToolTip="{StaticResource ImportNumberedAsteroidElements_Tooltip}">
+                    <TextBlock
+                        Margin="10,5,10,5"
+                        Foreground="{StaticResource ButtonForegroundBrush}"
+                        Text="Import..."
+                        TextWrapping="Wrap" />
+                </Button>
 
                 <!-- Unnumbered Asteroids -->
                 <TextBlock
@@ -238,6 +294,19 @@
                     VerticalAlignment="Center">
                     <Run Text="Last Updated: " /><Run Text="{Binding UnnumberedAsteroidLastUpdated, Mode=OneWay, Converter={StaticResource O_DateTimeMinToNeverConverter}}" />
                 </TextBlock>
+                <Button
+                    Grid.Row="2" Grid.Column="5"
+                    Margin="10,5,0,5"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Command="{Binding ImportUnnumberedAsteroidElementsCommand}"
+                    ToolTip="{StaticResource ImportUnnumberedAsteroidElements_Tooltip}">
+                    <TextBlock
+                        Margin="10,5,10,5"
+                        Foreground="{StaticResource ButtonForegroundBrush}"
+                        Text="Import..."
+                        TextWrapping="Wrap" />
+                </Button>
 
                 <!-- JWST -->
                 <TextBlock
@@ -265,6 +334,32 @@
                     VerticalAlignment="Center">
                     <Run Text="Valid Until: " /><Run Text="{Binding JWSTVectorTableValidUntil, Mode=OneWay, Converter={StaticResource O_DateTimeMinToNeverConverter}}" />
                 </TextBlock>
+
+                <!-- Shown when a comet feed could not be downloaded. Persistent rather than
+                     toast-only, so a user who missed the notification still finds Import. -->
+                <StackPanel
+                    Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="6"
+                    Margin="5,4,5,0"
+                    Orientation="Horizontal"
+                    Visibility="{Binding CometFeedFailed, Converter={StaticResource BooleanToVisibilityCollapsedConverter}}">
+                    <Border
+                        Width="16" Height="16"
+                        Margin="0,0,5,0"
+                        VerticalAlignment="Center"
+                        Background="{StaticResource NotificationWarningBrush}"
+                        BorderBrush="Transparent"
+                        CornerRadius="8">
+                        <Path
+                            Data="{StaticResource ExclamationCircledSVG}"
+                            Fill="{StaticResource ButtonForegroundBrush}"
+                            Stretch="Uniform" />
+                    </Border>
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="11"
+                        Text="{Binding CometFeedFailureMessage, Mode=OneWay}"
+                        TextWrapping="Wrap" />
+                </StackPanel>
             </Grid>
 
             <!-- Search Bar -->
@@ -417,14 +512,31 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock
+                    <StackPanel
                         Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="7"
                         Margin="5,20,5,0"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
-                        FontWeight="DemiBold">
-                        <Run Text="{Binding SelectedOrbitalsObject.Name, Mode=OneWay}" />
-                    </TextBlock>
+                        Orientation="Horizontal">
+                        <TextBlock VerticalAlignment="Center" FontWeight="DemiBold">
+                            <Run Text="{Binding SelectedOrbitalsObject.Name, Mode=OneWay}" />
+                        </TextBlock>
+                        <!-- Source and epoch together answer "can I trust this pointing
+                             tonight"; either alone does not. -->
+                        <Border
+                            Margin="8,0,0,0"
+                            Padding="6,2"
+                            VerticalAlignment="Center"
+                            Background="{StaticResource TertiaryBackgroundBrush}"
+                            BorderBrush="Transparent"
+                            CornerRadius="3"
+                            ToolTip="{StaticResource ElementSource_Tooltip}"
+                            Visibility="{Binding SelectedOrbitalElementsObject.HasSource, Converter={StaticResource BooleanToVisibilityCollapsedConverter}, FallbackValue=Collapsed}">
+                            <TextBlock FontSize="11" Opacity="0.75">
+                                <Run Text="{Binding SelectedOrbitalElementsObject.SourceDisplay, Mode=OneWay}" /><Run Text=" - epoch " /><Run Text="{Binding SelectedOrbitalElementsObject.EpochDisplay, Mode=OneWay}" />
+                            </TextBlock>
+                        </Border>
+                    </StackPanel>
                     <alt:AltitudeChart
                         Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="7"
                         MinWidth="400"
@@ -632,6 +744,20 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
+                    <!-- Long-form provenance. The pill by the object name is the glance;
+                         this row is the record, including how the feed was obtained. -->
+                    <TextBlock
+                        Grid.Row="8" Grid.Column="1"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        Text="Source"
+                        FontWeight="DemiBold" />
+                    <TextBlock
+                        Grid.Row="8" Grid.Column="2"
+                        Margin="5"
+                        VerticalAlignment="Center"
+                        ToolTip="{StaticResource ElementSource_Tooltip}"
+                        Text="{Binding SelectedOrbitalElementsObject.SourceDisplay, Mode=OneWay}" />
                     <TextBlock
                         Grid.Row="0" Grid.Column="1"
                         Margin="5"

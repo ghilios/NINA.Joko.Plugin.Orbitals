@@ -22,6 +22,9 @@ namespace NINA.Joko.Plugin.Orbitals.Enums {
         JPL = 0,
 
         [Description("MPC")]
-        MPC = 1
+        MPC = 1,
+
+        [Description("Both (JPL + MPC)")]
+        JPLAndMPC = 2
     }
 }

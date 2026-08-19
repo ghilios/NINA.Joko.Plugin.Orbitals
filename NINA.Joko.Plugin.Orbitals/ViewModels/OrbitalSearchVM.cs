@@ -155,7 +155,14 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 var results = this.orbitalElementsAccessor.Search(objectType, searchString, Limit).ToList();
                 var list = new List<IAutoCompleteItem>();
                 foreach (var item in results) {
-                    list.Add(new OrbitalObjectAutoCompleteItem() { Column1 = item.Name, Object = item });
+                    // Column3 shows the feed. Under the merged source this tells the user
+                    // whether they are about to load the fresher MPC entry or a JPL-only one,
+                    // before committing to it.
+                    list.Add(new OrbitalObjectAutoCompleteItem() {
+                        Column1 = item.Name,
+                        Column3 = item.Source == OrbitalElementsSourceEnum.Unknown ? string.Empty : item.Source.ToString(),
+                        Object = item
+                    });
                 }
                 return list;
             }, ct);

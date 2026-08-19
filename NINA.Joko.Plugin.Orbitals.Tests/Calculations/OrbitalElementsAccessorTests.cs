@@ -265,6 +265,7 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
             private readonly Kepler.OrbitalElements elements;
             public SyntheticOrbitalSource(Kepler.OrbitalElements elements) { this.elements = elements; }
             public string Name => elements.Name;
+            public OrbitalElementsSourceEnum Source => elements.Source;
             public Kepler.OrbitalElements ToOrbitalElements() => elements;
         }
 
