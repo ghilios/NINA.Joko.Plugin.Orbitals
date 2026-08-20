@@ -58,7 +58,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
 
             var defaultSolarSystemBody = SolarSystemBody.Moon;
             Target = new InputTarget(Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Latitude), Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Longitude), profileService.ActiveProfile.AstrometrySettings.Horizon);
-            Target.DeepSkyObject = new SolarSystemBodyObject(orbitalElementsAccessor, defaultSolarSystemBody, profileService.ActiveProfile.AstrometrySettings.Horizon);
+            Target.DeepSkyObject = new SolarSystemBodyObject(orbitalElementsAccessor, defaultSolarSystemBody, profileService.ActiveProfile.AstrometrySettings.Horizon, profileService);
             Target.DeepSkyObject.SetDateAndPosition(NighttimeCalculator.GetReferenceDate(DateTime.Now), latitude: profileService.ActiveProfile.AstrometrySettings.Latitude, longitude: profileService.ActiveProfile.AstrometrySettings.Longitude);
 
             PostConstruction();

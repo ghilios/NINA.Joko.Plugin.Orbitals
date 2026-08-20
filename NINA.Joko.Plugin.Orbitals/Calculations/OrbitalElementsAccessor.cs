@@ -112,32 +112,116 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             }
         }
 
-        private void LoadObjectType(OrbitalObjectTypeEnum objectType, CancellationToken ct) {
-            var path = GetObjectTypeSavePath(objectType);
+        /// <summary>
+        /// Which feeds contribute to an object type under the current source policy. Only
+        /// comets have a choice; asteroids are JPL-only.
+        /// </summary>
+        private OrbitalElementsSourceEnum[] GetContributingSources(OrbitalObjectTypeEnum objectType) {
+            var accessor = GetAccessor(objectType);
+            if (accessor == OrbitalElementsAccessorEnum.JPLAndMPC) {
+                return new[] { OrbitalElementsSourceEnum.JPL, OrbitalElementsSourceEnum.MPC };
+            }
+            return new[] {
+                accessor == OrbitalElementsAccessorEnum.MPC
+                    ? OrbitalElementsSourceEnum.MPC
+                    : OrbitalElementsSourceEnum.JPL
+            };
+        }
+
+        /// <summary>
+        /// Loads one feed store. Elements written before the Source field existed come back
+        /// as Unknown, so they are stamped from the feed they were read out of -- existing
+        /// caches therefore show correct provenance without needing a re-download.
+        /// Returns null when that feed has no store yet.
+        /// </summary>
+        private List<OrbitalElements> LoadFeed(
+            OrbitalObjectTypeEnum objectType, OrbitalElementsSourceEnum source, CancellationToken ct) {
+            var path = GetFeedSavePath(objectType, source);
             if (!File.Exists(path)) {
-                Logger.Info($"No {objectType} orbital elements loaded since no file was found at {path}");
-                var backend = CreateDefaultBackend(objectType);
-                UpdateBackend(objectType, backend);
-                OnUpdated(objectType, backend);
-                return;
+                return null;
             }
 
+            ct.ThrowIfCancellationRequested();
+            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var gs = new GZipStream(fs, CompressionMode.Decompress)) {
+                var loaded = new List<OrbitalElements>();
+                foreach (var element in ProtoBuf.Serializer.DeserializeItems<OrbitalElements>(gs, ProtoBuf.PrefixStyle.Base128, 1)) {
+                    ct.ThrowIfCancellationRequested();
+                    if (element.Source == OrbitalElementsSourceEnum.Unknown) {
+                        element.Source = source;
+                    }
+                    loaded.Add(element);
+                }
+                return loaded;
+            }
+        }
+
+        private void LoadObjectType(OrbitalObjectTypeEnum objectType, CancellationToken ct) {
             try {
                 ct.ThrowIfCancellationRequested();
-                var lastModified = File.GetLastWriteTime(path);
-                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
-                using (var gs = new GZipStream(fs, CompressionMode.Decompress)) {
-                    var orbitalElements = ProtoBuf.Serializer.DeserializeItems<OrbitalElements>(gs, ProtoBuf.PrefixStyle.Base128, 1);
-                    var backend = OrbitalElementsBackend.Create(objectType, lastModified, orbitalElements, ct);
-                    UpdateBackend(objectType, backend);
-                    OnUpdated(objectType, backend);
+                var sources = GetContributingSources(objectType);
+                var feeds = new Dictionary<OrbitalElementsSourceEnum, List<OrbitalElements>>();
+                var metadata = new Dictionary<OrbitalElementsSourceEnum, OrbitalElementsFeedMetadata>();
+                foreach (var source in sources) {
+                    var elements = LoadFeed(objectType, source, ct);
+                    if (elements != null) {
+                        feeds[source] = elements;
+                        metadata[source] = OrbitalElementsFeedMetadata.Load(GetFeedSavePath(objectType, source), source);
+                    }
                 }
+
+                if (feeds.Count == 0) {
+                    Logger.Info($"No {objectType} orbital elements loaded since no store was found");
+                    var empty = CreateDefaultBackend(objectType);
+                    UpdateBackend(objectType, empty);
+                    OnUpdated(objectType, empty, metadata);
+                    return;
+                }
+
+                IEnumerable<OrbitalElements> combined;
+                if (feeds.Count == 1) {
+                    combined = feeds.Values.First();
+                } else {
+                    // "Both": the merge is derived here at load time rather than persisted as
+                    // a third store, so a feed that failed to download simply contributes
+                    // older data instead of disappearing.
+                    feeds.TryGetValue(OrbitalElementsSourceEnum.JPL, out var jplFeed);
+                    feeds.TryGetValue(OrbitalElementsSourceEnum.MPC, out var mpcFeed);
+                    var result = CometElementsMerger.Merge(Wrap(jplFeed), Wrap(mpcFeed));
+                    combined = result.Elements;
+                    Logger.Info($"Merged {objectType} elements: {result}");
+                }
+
+                var lastModified = metadata.Count == 0
+                    ? DateTime.MinValue
+                    : metadata.Values.Max(x => x.AcquiredAt);
+                var backend = OrbitalElementsBackend.Create(objectType, lastModified, combined, ct);
+                UpdateBackend(objectType, backend);
+                OnUpdated(objectType, backend, metadata);
             } catch (OperationCanceledException) {
                 return;
             } catch (Exception e) {
                 Logger.Error($"Failed to load {objectType} orbital elements", e);
                 Notification.ShowError($"Failed to load {objectType} orbital elements");
             }
+        }
+
+        /// <summary>Adapts already-materialized elements back to the merger input contract.</summary>
+        private static IEnumerable<IOrbitalElementsSource> Wrap(IEnumerable<OrbitalElements> elements) {
+            return elements?.Select(e => (IOrbitalElementsSource)new MaterializedOrbitalElements(e));
+        }
+
+        private class MaterializedOrbitalElements : IOrbitalElementsSource {
+            private readonly OrbitalElements elements;
+
+            public MaterializedOrbitalElements(OrbitalElements elements) {
+                this.elements = elements;
+            }
+
+            public string Name => elements.Name;
+            public OrbitalElementsSourceEnum Source => elements.Source;
+
+            public OrbitalElements ToOrbitalElements() => elements;
         }
 
         public async Task Load(IProgress<ApplicationStatus> progress, CancellationToken ct) {
@@ -199,14 +283,55 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         }
 
         public OrbitalElements Get(OrbitalObjectTypeEnum objectType, string objectName) {
-            try {
-                var backend = GetBackend(objectType);
-                return backend.Lookup.Lookup(objectName);
-            } catch (DuplicateKeyException) {
+            var backend = GetBackend(objectType);
+            var ambiguous = false;
+
+            var found = LookupOrNull(backend, objectName, ref ambiguous);
+            if (found != null) {
+                return found;
+            }
+
+            // A merge can append "(MPC)"/"(JPL)" to disambiguate a name carried by both
+            // feeds. A sequence saved before that happened still references the bare name,
+            // so try the suffixed forms before giving up. The bare lookup will usually have
+            // reported an ambiguity on the way here, which is why nothing is surfaced until
+            // every candidate has been tried.
+            foreach (var suffix in DisambiguationSuffixes) {
+                var ignored = false;
+                found = LookupOrNull(backend, objectName + suffix, ref ignored);
+                if (found != null) {
+                    return found;
+                }
+            }
+
+            if (ambiguous) {
                 Logger.Error($"Multiple results found for {objectName}");
                 Notification.ShowError($"Multiple results found for {objectName}");
+            }
+            return null;
+        }
+
+        private static readonly string[] DisambiguationSuffixes = new[] { " (MPC)", " (JPL)" };
+
+        private static OrbitalElements LookupOrNull(
+            OrbitalElementsBackend backend, string objectName, ref bool ambiguous) {
+            try {
+                return backend.Lookup.Lookup(objectName);
+            } catch (DuplicateKeyException) {
+                ambiguous = true;
                 return null;
             }
+        }
+
+        public IReadOnlyDictionary<OrbitalElementsSourceEnum, OrbitalElementsFeedMetadata> GetFeedMetadata(OrbitalObjectTypeEnum objectType) {
+            var result = new Dictionary<OrbitalElementsSourceEnum, OrbitalElementsFeedMetadata>();
+            foreach (var source in GetContributingSources(objectType)) {
+                var metadata = OrbitalElementsFeedMetadata.Load(GetFeedSavePath(objectType, source), source);
+                if (metadata != null) {
+                    result[source] = metadata;
+                }
+            }
+            return result;
         }
 
         public DateTime GetLastUpdated(OrbitalObjectTypeEnum objectType) {
@@ -220,8 +345,25 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         }
 
         public Task Update(OrbitalObjectTypeEnum objectType, IEnumerable<IOrbitalElementsSource> elements, IProgress<ApplicationStatus> progress, CancellationToken ct) {
+            var source = GetAccessor(objectType) == OrbitalElementsAccessorEnum.MPC
+                ? OrbitalElementsSourceEnum.MPC
+                : OrbitalElementsSourceEnum.JPL;
+            return Update(objectType, source, elements, progress, ct);
+        }
+
+        /// <summary>
+        /// Writes one feed store, then rebuilds the object type from whichever feeds the
+        /// current source policy draws on. Taking the feed explicitly (rather than deriving
+        /// it from the current option, as the old overload did) is what allows a "Both"
+        /// update to write JPL and MPC independently.
+        /// </summary>
+        public Task Update(OrbitalObjectTypeEnum objectType, OrbitalElementsSourceEnum source, IEnumerable<IOrbitalElementsSource> elements, IProgress<ApplicationStatus> progress, CancellationToken ct) {
+            return Update(objectType, source, elements, importedFrom: null, progress: progress, ct: ct);
+        }
+
+        public Task Update(OrbitalObjectTypeEnum objectType, OrbitalElementsSourceEnum source, IEnumerable<IOrbitalElementsSource> elements, string importedFrom, IProgress<ApplicationStatus> progress, CancellationToken ct) {
             return Task.Run(() => {
-                var path = GetObjectTypeSavePath(objectType);
+                var path = GetFeedSavePath(objectType, source);
                 var tmpPath = path + ".temp";
                 try {
                     progress?.Report(new ApplicationStatus() {
@@ -231,20 +373,34 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                     // at plugin load, but defend against the directory being deleted at
                     // runtime (e.g. user troubleshooting) so Update doesn't silently fail.
                     Directory.CreateDirectory(Path.GetDirectoryName(tmpPath));
-                    var backend = OrbitalElementsBackend.Create(objectType, DateTime.Now, elements.Select(e => e.ToOrbitalElements()), ct);
+                    var written = 0;
                     using (var fs = new FileStream(tmpPath, FileMode.Create, FileAccess.Write, FileShare.None))
                     using (var gs = new GZipStream(fs, CompressionLevel.Optimal)) {
-                        foreach (var element in backend.Lookup) {
+                        foreach (var element in elements) {
                             ct.ThrowIfCancellationRequested();
-                            ProtoBuf.Serializer.SerializeWithLengthPrefix<OrbitalElements>(gs, element, ProtoBuf.PrefixStyle.Base128, 1);
+                            var converted = element.ToOrbitalElements();
+                            if (converted.Source == OrbitalElementsSourceEnum.Unknown) {
+                                converted.Source = source;
+                            }
+                            ProtoBuf.Serializer.SerializeWithLengthPrefix<OrbitalElements>(gs, converted, ProtoBuf.PrefixStyle.Base128, 1);
+                            written++;
                         }
                     }
                     if (File.Exists(path)) {
                         File.Delete(path);
                     }
                     File.Move(tmpPath, path);
-                    UpdateBackend(objectType, backend);
-                    OnUpdated(objectType, backend);
+                    OrbitalElementsFeedMetadata.Save(path, new OrbitalElementsFeedMetadata() {
+                        Source = source,
+                        Imported = importedFrom != null,
+                        AcquiredAt = DateTime.Now,
+                        SourceFileName = importedFrom,
+                        RecordCount = written
+                    });
+
+                    // Rebuild from disk so the in-memory view reflects the current policy --
+                    // under "Both" this feed is only half of the answer.
+                    LoadObjectType(objectType, ct);
                 } catch (OperationCanceledException) {
                     Logger.Warning($"Updating {objectType} orbital elements cancelled");
                     return;
@@ -258,10 +414,18 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         }
 
         private void OnUpdated(OrbitalObjectTypeEnum objectType, OrbitalElementsBackend backend) {
+            OnUpdated(objectType, backend, null);
+        }
+
+        private void OnUpdated(
+            OrbitalObjectTypeEnum objectType,
+            OrbitalElementsBackend backend,
+            IReadOnlyDictionary<OrbitalElementsSourceEnum, OrbitalElementsFeedMetadata> feeds) {
             this.Updated?.Invoke(this, new OrbitalElementsObjectTypeUpdatedEventArgs() {
                 ObjectType = objectType,
                 Count = backend.Lookup.Count,
-                LastUpdated = backend.LastModified
+                LastUpdated = backend.LastModified,
+                Feeds = feeds
             });
         }
 
@@ -273,19 +437,81 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             });
         }
 
-        public OrbitalPositionVelocity GetSolarSystemBodyPV(DateTime asof, SolarSystemBody solarSystemBody, TimeSpan rateDriftDelta) {
-            var jdtt = AstroUtil.GetJulianDate(asof);
-            var startPosition = NOVAS.BodyPositionAndVelocity(jdtt, solarSystemBody.ToNOVAS(), NOVAS.SolarSystemOrigin.SolarCenterOfMass);
-            var earthPosition = NOVAS.BodyPositionAndVelocity(jdtt, NOVAS.Body.Earth, NOVAS.SolarSystemOrigin.SolarCenterOfMass);
-            var earthCenteredPosition = startPosition.Position - earthPosition.Position;
-            var startCoordinates = NOVAS.PlanetApparentCoordinates(jdtt, solarSystemBody.ToNOVAS());
-            var nextCoordinates = NOVAS.PlanetApparentCoordinates(jdtt + AstrometricConstants.JD_SEC * rateDriftDelta.TotalSeconds, solarSystemBody.ToNOVAS());
-            var trackingRate = SiderealShiftTrackingRate.Create(startCoordinates, nextCoordinates, rateDriftDelta);
-            return new OrbitalPositionVelocity(asof, earthCenteredPosition, null, startCoordinates, trackingRate);
+        public OrbitalPositionVelocity GetSolarSystemBodyPV(
+            DateTime asof, SolarSystemBody solarSystemBody, Angle latitude, Angle longitude, double elevation, TimeSpan rateDriftDelta) {
+            var startResult = AstrometricTopocentric(asof, solarSystemBody, latitude, longitude, elevation);
+            var nextResult = AstrometricTopocentric(asof + rateDriftDelta, solarSystemBody, latitude, longitude, elevation);
+
+            var trackingRate = SiderealShiftTrackingRate.Create(startResult.Coords, nextResult.Coords, rateDriftDelta);
+            return new OrbitalPositionVelocity(asof, startResult.Vector, null, startResult.Coords, trackingRate);
+        }
+
+        /// <summary>
+        /// Astrometric topocentric place of a major solar system body, via NOVAS place().
+        ///
+        /// "Topocentric" is the important part: NOVAS app_planet (what
+        /// <see cref="NOVAS.PlanetApparentCoordinates"/> wraps) produces a strictly
+        /// GEOCENTRIC place, which for the Moon is wrong by up to ~1 degree of diurnal
+        /// parallax -- more than enough to put the target outside the FOV. Passing an
+        /// on-surface observer to place() applies the parallax, and also makes the
+        /// differenced tracking rate pick up the parallax rate (~240 arcsec/hr in RA for
+        /// the Moon).
+        ///
+        /// "Astrometric" (light-time corrected, but no aberration, deflection, or
+        /// precession/nutation) is chosen to match what <see cref="GetObjectPV"/> returns
+        /// for asteroids and comets, and because it is what NINA expects: NINA's
+        /// Coordinates.Transform(Epoch.JNOW) applies SOFA Atci13, which adds aberration,
+        /// light deflection, and precession/nutation on top of an ICRS/J2000 input.
+        ///
+        /// Verified against JPL Horizons "R.A.___(ICRF)___DEC" for a topocentric center:
+        /// agreement is better than 0.05 arcsec for the Moon, Sun, Venus, Mars, Jupiter
+        /// and Saturn.
+        /// </summary>
+        private (RectangularCoordinates Vector, Coordinates Coords) AstrometricTopocentric(
+            DateTime asof, SolarSystemBody solarSystemBody, Angle latitude, Angle longitude, double elevation) {
+            var celestialObject = new NOVAS.CelestialObject() {
+                Type = (short)NOVAS.ObjectType.MajorPlanetSunOrMoon,
+                Number = (short)solarSystemBody,
+                Name = solarSystemBody.ToString(),
+                Star = default
+            };
+            var observer = new NOVAS.Observer() {
+                Where = (short)NOVAS.ObserverLocation.EarthSurface,
+                OnSurf = new NOVAS.OnSurface() {
+                    Latitude = latitude.Degree,
+                    Longitude = longitude.Degree,
+                    Height = elevation
+                }
+            };
+
+            var skyPosition = default(NOVAS.SkyPosition);
+            // place() wants a TT julian date, and delta-T separately so it can recover UT1
+            // for the Earth-rotation part of the observer's geocentric position.
+            var result = NOVAS.Place(
+                AstroUtil.GetJulianDateTT(asof), celestialObject, observer, AstroUtil.DeltaT(asof),
+                NOVAS.CoordinateSystem.Astrometric, NOVAS.Accuracy.Full, ref skyPosition);
+            if (result != 0) {
+                throw new Exception($"NOVAS place failed for {solarSystemBody}. Result={result}");
+            }
+
+            var coordinates = new Coordinates(Angle.ByHours(skyPosition.RA), Angle.ByDegree(skyPosition.Dec), Epoch.J2000);
+
+            // Rebuild the topocentric vector from RA/Dec/distance rather than reading
+            // SkyPosition.RHat: RHat is a ByValArray field that is null going in, so it is
+            // not dependable across marshalling. Only Distance is consumed downstream
+            // (OrbitalsVM, OrbitalsContainerBase), and this keeps the frame consistent with
+            // the vector GetObjectPV returns for asteroids.
+            var ra = coordinates.RA * Math.PI / 12.0;
+            var dec = AstroUtil.ToRadians(coordinates.Dec);
+            var vector = new RectangularCoordinates(
+                skyPosition.Dis * Math.Cos(dec) * Math.Cos(ra),
+                skyPosition.Dis * Math.Cos(dec) * Math.Sin(ra),
+                skyPosition.Dis * Math.Sin(dec));
+            return (vector, coordinates);
         }
 
         public OrbitalPositionVelocity GetObjectPV(DateTime asof, OrbitalElements orbitalElements, Angle latitude, Angle longitude, double elevation, TimeSpan rateDriftDelta) {
-            var observerJdtt = AstroUtil.GetJulianDate(asof);
+            var observerJdtt = AstroUtil.GetJulianDateTT(asof);
             var startResult = ApparentTopocentricWithLightTime(observerJdtt, orbitalElements, latitude, longitude, elevation);
 
             var nextObserverJdtt = observerJdtt + AstrometricConstants.JD_SEC * rateDriftDelta.TotalSeconds;
@@ -324,12 +550,13 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             return (topocentric, topocentric.ToPolar());
         }
 
-        private string GetObjectTypeSavePath(OrbitalObjectTypeEnum objectType) {
-            String prefix = "";
-            if (GetAccessor(objectType) == OrbitalElementsAccessorEnum.MPC) {
-                prefix = "MPC_";
-            }
-
+        /// <summary>
+        /// Path to one feed store. The MPC_ prefix predates this change and is preserved so
+        /// existing caches keep working; JPL keeps the unprefixed name it has always used.
+        /// The two coexist, which is what lets "Both" merge them.
+        /// </summary>
+        private static string GetFeedSavePath(OrbitalObjectTypeEnum objectType, OrbitalElementsSourceEnum source) {
+            var prefix = source == OrbitalElementsSourceEnum.MPC ? "MPC_" : "";
             return Path.Combine(OrbitalsPlugin.OrbitalElementsDirectory, $"{prefix}{objectType}Elements.bin.gz");
         }
 
@@ -396,7 +623,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
             var startJd = vectorTable.Rows.First().Epoch_jd;
             var endJd = vectorTable.Rows.Last().Epoch_jd;
-            var asofJd = AstroUtil.GetJulianDate(asof);
+            var asofJd = AstroUtil.GetJulianDateTT(asof);
             if (asofJd < startJd) {
                 Logger.Trace($"No vector data available for JWST at {asof}. The earliest available is {NOVAS.JulianToDateTime(startJd)}");
                 return null;
@@ -435,14 +662,19 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         }
 
         public void Clear(OrbitalObjectTypeEnum objectType) {
-            var path = GetObjectTypeSavePath(objectType);
-            if (!File.Exists(path)) {
-                return;
-            }
-
             try {
-                File.Delete(path);
-                ClearBackend(objectType);
+                var cleared = false;
+                foreach (var source in GetContributingSources(objectType)) {
+                    var path = GetFeedSavePath(objectType, source);
+                    if (File.Exists(path)) {
+                        File.Delete(path);
+                        cleared = true;
+                    }
+                    OrbitalElementsFeedMetadata.Delete(path);
+                }
+                if (cleared) {
+                    ClearBackend(objectType);
+                }
             } catch (Exception e) {
                 Logger.Error($"Failed to clear {objectType}", e);
                 Notification.ShowError($"Failed to clear {objectType}. {e.Message}");

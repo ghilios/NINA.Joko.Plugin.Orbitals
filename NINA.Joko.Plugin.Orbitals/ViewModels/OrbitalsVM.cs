@@ -38,6 +38,7 @@ using NINA.WPF.Base.ViewModel;
 using SGPdotNET.TLE;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.ComponentModel.Composition;
 using System.Threading;
 using System.Threading.Tasks;
@@ -137,8 +138,22 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
                 }
             }, initialLoadCts.Token);
 
+            NotifyCometAccessorMigration();
+
             this.UpdateCometElementsCommand = new AsyncRelayCommand(UpdateCometElements, () => InitialLoadComplete);
             this.UpdateCometElementsCommand.RegisterPropertyChangeNotification(this, nameof(InitialLoadComplete));
+
+            this.ImportCometElementsCommand = new AsyncRelayCommand(
+                () => ImportElements(OrbitalObjectTypeEnum.Comet), () => InitialLoadComplete);
+            this.ImportCometElementsCommand.RegisterPropertyChangeNotification(this, nameof(InitialLoadComplete));
+
+            this.ImportNumberedAsteroidElementsCommand = new AsyncRelayCommand(
+                () => ImportElements(OrbitalObjectTypeEnum.NumberedAsteroids), () => InitialLoadComplete);
+            this.ImportNumberedAsteroidElementsCommand.RegisterPropertyChangeNotification(this, nameof(InitialLoadComplete));
+
+            this.ImportUnnumberedAsteroidElementsCommand = new AsyncRelayCommand(
+                () => ImportElements(OrbitalObjectTypeEnum.UnnumberedAsteroids), () => InitialLoadComplete);
+            this.ImportUnnumberedAsteroidElementsCommand.RegisterPropertyChangeNotification(this, nameof(InitialLoadComplete));
 
             this.ClearCometElementsCommand = new AsyncRelayCommand(ClearCometElements, () => InitialLoadComplete);
             this.ClearCometElementsCommand.RegisterPropertyChangeNotification(this, nameof(InitialLoadComplete));
@@ -486,6 +501,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             if (e.ObjectType == OrbitalObjectTypeEnum.Comet) {
                 CometCount = e.Count;
                 CometLastUpdated = e.LastUpdated;
+                CometSourceBreakdown = DescribeFeeds(e.Feeds);
             } else if (e.ObjectType == OrbitalObjectTypeEnum.NumberedAsteroids) {
                 NumberedAsteroidCount = e.Count;
                 NumberedAsteroidLastUpdated = e.LastUpdated;
@@ -621,7 +637,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             private set {
                 selectedOrbitalElementsObject = value;
                 if (value != null) {
-                    SelectedOrbitalPosition = Kepler.CalculateOrbitalElements(value.OrbitalElements, AstroUtil.GetJulianDate(DateTime.Now));
+                    SelectedOrbitalPosition = Kepler.CalculateOrbitalElements(value.OrbitalElements, AstroUtil.GetJulianDateTT(DateTime.Now));
                 } else {
                     SelectedOrbitalPosition = null;
                 }
@@ -726,6 +742,12 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         public AsyncRelayCommand UpdateCometElementsCommand { get; private set; }
 
         public AsyncRelayCommand ClearCometElementsCommand { get; private set; }
+
+        public AsyncRelayCommand ImportCometElementsCommand { get; private set; }
+
+        public AsyncRelayCommand ImportNumberedAsteroidElementsCommand { get; private set; }
+
+        public AsyncRelayCommand ImportUnnumberedAsteroidElementsCommand { get; private set; }
 
         public AsyncRelayCommand CancelUpdateNumberedAsteroidElementsCommand { get; private set; }
 
@@ -858,7 +880,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
         }
 
         private void LoadSolarSystemObject(SolarSystemBody solarSystemBody) {
-            var bodyObject = new SolarSystemBodyObject(orbitalElementsAccessor, solarSystemBody, profileService.ActiveProfile.AstrometrySettings.Horizon);
+            var bodyObject = new SolarSystemBodyObject(orbitalElementsAccessor, solarSystemBody, profileService.ActiveProfile.AstrometrySettings.Horizon, profileService);
             bodyObject.SetDateAndPosition(NighttimeCalculator.GetReferenceDate(DateTime.Now), latitude: profileService.ActiveProfile.AstrometrySettings.Latitude, longitude: profileService.ActiveProfile.AstrometrySettings.Longitude);
             SelectedOrbitalsObject = bodyObject;
         }
@@ -913,28 +935,15 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
 
             var task = Task.Run(async () => {
                 try {
-                    DateTime availableModifiedDate;
                     var ct = cts.Token;
-                    if (orbitalsOptions.CometAccessor == OrbitalElementsAccessorEnum.JPL) {
-                        availableModifiedDate = await jplAccessor.GetCometElementsLastModified(ct);
-                    } else {
-                        availableModifiedDate = await mpcAccessor.GetCometElementsLastModified(ct);
-                    }
+                    var accessor = orbitalsOptions.CometAccessor;
+                    var wantJpl = accessor != OrbitalElementsAccessorEnum.MPC;
+                    var wantMpc = accessor != OrbitalElementsAccessorEnum.JPL;
 
-                    var localModifiedDate = orbitalElementsAccessor.GetLastUpdated(OrbitalObjectTypeEnum.Comet);
-                    if (availableModifiedDate < localModifiedDate) {
-                        Notification.ShowInformation($"{OrbitalObjectTypeEnum.Comet.ToDescriptionString()} elements already up to date");
-                        return true;
-                    }
+                    var jplResult = wantJpl ? await UpdateCometFeed(OrbitalElementsSourceEnum.JPL, ct) : FeedUpdateOutcome.NotRequested;
+                    var mpcResult = wantMpc ? await UpdateCometFeed(OrbitalElementsSourceEnum.MPC, ct) : FeedUpdateOutcome.NotRequested;
 
-                    if (orbitalsOptions.CometAccessor == OrbitalElementsAccessorEnum.JPL) {
-                        var elements = await jplAccessor.GetCometElements(ct);
-                        await orbitalElementsAccessor.Update(OrbitalObjectTypeEnum.Comet, elements.Response, progress, cts.Token);
-                    } else {
-                        var elements = await mpcAccessor.GetCometElements(ct);
-                        await orbitalElementsAccessor.Update(OrbitalObjectTypeEnum.Comet, elements.Response, progress, cts.Token);
-                    }
-                    return true;
+                    return ReportCometUpdate(accessor, jplResult, mpcResult);
                 } catch (OperationCanceledException) {
                     return false;
                 } catch (Exception e) {
@@ -946,6 +955,220 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             updateCometElementsTask = task;
             return task;
         }
+
+        /// <summary>
+        /// Human-readable per-feed summary for the count tooltip, e.g.
+        /// "JPL: 4,072 downloaded 19/08/2026; MPC: 954 imported from CometEls.txt on 12/08/2026".
+        /// </summary>
+        private static string DescribeFeeds(IReadOnlyDictionary<OrbitalElementsSourceEnum, OrbitalElementsFeedMetadata> feeds) {
+            if (feeds == null || feeds.Count == 0) {
+                return null;
+            }
+            return string.Join("; ", feeds
+                .OrderBy(f => f.Key.ToString())
+                .Select(f => $"{f.Key}: {f.Value.RecordCount:N0} {f.Value.DescribeAcquisition()}"));
+        }
+
+        /// <summary>
+        /// Loads elements for an object type from a file the user picked, instead of
+        /// downloading. The format determines which feed the data belongs to, so an imported
+        /// MPC file still participates in the "Both" merge alongside a downloaded JPL feed.
+        /// </summary>
+        private async Task<bool> ImportElements(OrbitalObjectTypeEnum objectType) {
+            try {
+                var path = await PromptForElementsFile(objectType);
+                if (string.IsNullOrEmpty(path)) {
+                    return false;
+                }
+
+                var result = await Task.Run(() => OrbitalElementsFileImporter.Import(path, objectType));
+                await orbitalElementsAccessor.Update(
+                    objectType, result.Source, result.Elements, System.IO.Path.GetFileName(path), progress, CancellationToken.None);
+
+                if (objectType == OrbitalObjectTypeEnum.Comet) {
+                    CometFeedFailureMessage = null;
+                }
+
+                var inUse = objectType != OrbitalObjectTypeEnum.Comet
+                    || orbitalsOptions.CometAccessor == OrbitalElementsAccessorEnum.JPLAndMPC
+                    || (orbitalsOptions.CometAccessor == OrbitalElementsAccessorEnum.JPL && result.Source == OrbitalElementsSourceEnum.JPL)
+                    || (orbitalsOptions.CometAccessor == OrbitalElementsAccessorEnum.MPC && result.Source == OrbitalElementsSourceEnum.MPC);
+
+                var message = $"Imported {result.Count:N0} {objectType.ToDescriptionString().ToLowerInvariant()} from {System.IO.Path.GetFileName(path)} ({result.Source} format).";
+                if (inUse) {
+                    Notification.ShowSuccess(message);
+                } else {
+                    Notification.ShowWarning(message +
+                        $" Note: the comet source is set to {orbitalsOptions.CometAccessor.ToDescriptionString()}, so these are not in use. " +
+                        "Set the source to \"Both (JPL + MPC)\" to use them.");
+                }
+                return true;
+            } catch (OrbitalElementsImportException e) {
+                Logger.Error($"Failed to import {objectType} elements", e);
+                Notification.ShowError(e.Message);
+                return false;
+            } catch (Exception e) {
+                Logger.Error($"Failed to import {objectType} elements", e);
+                Notification.ShowError($"Failed to import {objectType.ToDescriptionString()} elements. {e.Message}");
+                return false;
+            }
+        }
+
+        private static Task<string> PromptForElementsFile(OrbitalObjectTypeEnum objectType) {
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher == null) {
+                throw new InvalidOperationException("No WPF dispatcher available to show the file picker.");
+            }
+
+            var title = objectType == OrbitalObjectTypeEnum.Comet
+                ? "Import comet elements (MPC CometEls.txt or JPL ELEMENTS.COMET)"
+                : $"Import {objectType.ToDescriptionString().ToLowerInvariant()} elements (JPL ELEMENTS file)";
+
+            return dispatcher.InvokeAsync(() => {
+                var dlg = new Microsoft.Win32.OpenFileDialog {
+                    Title = title,
+                    Filter = "Element files (*.txt;*.dat;*.gz;*.comet)|*.txt;*.dat;*.gz;*.comet|All files (*.*)|*.*",
+                    CheckFileExists = true
+                };
+                return dlg.ShowDialog() == true ? dlg.FileName : null;
+            }).Task;
+        }
+
+        /// <summary>
+        /// Explains the one-time move onto the merged comet source. Worth a notification
+        /// because the previous default silently produced badly stale elements for most
+        /// comets, and the user cannot diagnose that from the pointing alone.
+        /// </summary>
+        private void NotifyCometAccessorMigration() {
+            var migratedFrom = orbitalsOptions.CometAccessorMigratedFrom;
+            if (!migratedFrom.HasValue) {
+                return;
+            }
+            Notification.ShowInformation(
+                $"Orbitals: comet element source changed from {migratedFrom.Value.ToDescriptionString()} to " +
+                $"{OrbitalElementsAccessorEnum.JPLAndMPC.ToDescriptionString()}, which keeps the newer elements for each comet. " +
+                "You can change this back in the Orbitals panel.");
+        }
+
+        /// <summary>What happened to one feed during a comet update.</summary>
+        private enum FeedUpdateOutcome {
+            NotRequested,
+            Updated,
+            AlreadyCurrent,
+            Failed
+        }
+
+        /// <summary>
+        /// Downloads and stores one comet feed. Feeds are written independently so that a
+        /// failure on one does not discard the other -- under "Both" a stale MPC store is
+        /// still far better than falling back to JPL alone.
+        /// </summary>
+        private async Task<FeedUpdateOutcome> UpdateCometFeed(OrbitalElementsSourceEnum source, CancellationToken ct) {
+            try {
+                var availableModifiedDate = source == OrbitalElementsSourceEnum.JPL
+                    ? await jplAccessor.GetCometElementsLastModified(ct)
+                    : await mpcAccessor.GetCometElementsLastModified(ct);
+
+                var feeds = orbitalElementsAccessor.GetFeedMetadata(OrbitalObjectTypeEnum.Comet);
+                if (feeds != null && feeds.TryGetValue(source, out var existing)
+                    && existing != null && availableModifiedDate < existing.AcquiredAt) {
+                    return FeedUpdateOutcome.AlreadyCurrent;
+                }
+
+                if (source == OrbitalElementsSourceEnum.JPL) {
+                    using (var elements = await jplAccessor.GetCometElements(ct)) {
+                        await orbitalElementsAccessor.Update(OrbitalObjectTypeEnum.Comet, source, elements.Response, progress, ct);
+                    }
+                } else {
+                    using (var elements = await mpcAccessor.GetCometElements(ct)) {
+                        await orbitalElementsAccessor.Update(OrbitalObjectTypeEnum.Comet, source, elements.Response, progress, ct);
+                    }
+                }
+                return FeedUpdateOutcome.Updated;
+            } catch (OperationCanceledException) {
+                throw;
+            } catch (Exception e) {
+                Logger.Error($"Failed to update comet elements from {source}", e);
+                return FeedUpdateOutcome.Failed;
+            }
+        }
+
+        private bool ReportCometUpdate(
+            OrbitalElementsAccessorEnum accessor, FeedUpdateOutcome jpl, FeedUpdateOutcome mpc) {
+            var requested = new List<(OrbitalElementsSourceEnum Source, FeedUpdateOutcome Outcome)>();
+            if (jpl != FeedUpdateOutcome.NotRequested) { requested.Add((OrbitalElementsSourceEnum.JPL, jpl)); }
+            if (mpc != FeedUpdateOutcome.NotRequested) { requested.Add((OrbitalElementsSourceEnum.MPC, mpc)); }
+
+            var failed = requested.Where(r => r.Outcome == FeedUpdateOutcome.Failed).Select(r => r.Source).ToList();
+            var succeeded = requested.Where(r => r.Outcome != FeedUpdateOutcome.Failed).Select(r => r.Source).ToList();
+
+            CometFeedFailureMessage = BuildCometFailureMessage(failed);
+
+            if (succeeded.Count == 0) {
+                Notification.ShowError($"Failed to update comet elements from {string.Join(" and ", failed)}. Existing elements are unchanged.");
+                return false;
+            }
+
+            if (requested.All(r => r.Outcome == FeedUpdateOutcome.AlreadyCurrent)) {
+                Notification.ShowInformation($"{OrbitalObjectTypeEnum.Comet.ToDescriptionString()} elements already up to date");
+                return true;
+            }
+
+            if (failed.Count > 0) {
+                Notification.ShowWarning(CometFeedFailureMessage);
+                return true;
+            }
+
+            if (accessor == OrbitalElementsAccessorEnum.JPLAndMPC) {
+                Notification.ShowInformation($"Comet elements updated. {CometSourceBreakdown}");
+            }
+            return true;
+        }
+
+        private string BuildCometFailureMessage(IReadOnlyList<OrbitalElementsSourceEnum> failed) {
+            if (failed == null || failed.Count == 0) {
+                return null;
+            }
+
+            var feeds = orbitalElementsAccessor.GetFeedMetadata(OrbitalObjectTypeEnum.Comet);
+            var parts = new List<string>();
+            foreach (var source in failed) {
+                if (feeds != null && feeds.TryGetValue(source, out var existing) && existing != null && existing.AcquiredAt > DateTime.MinValue) {
+                    parts.Add($"{source} download failed - still using {source} data from {existing.AcquiredAt.ToString("d", OrbitalsPlugin.SystemCultureInfo)}");
+                } else {
+                    parts.Add($"{source} download failed and no {source} data is stored");
+                }
+            }
+            return string.Join("; ", parts) + ". If your network is blocked, download the file elsewhere and use Import.";
+        }
+
+        /// <summary>
+        /// Non-null when the last comet update could not reach a feed. Surfaced as a
+        /// persistent badge so a user who missed the notification still discovers Import.
+        /// </summary>
+        public string CometFeedFailureMessage {
+            get => cometFeedFailureMessage;
+            private set {
+                cometFeedFailureMessage = value;
+                RaisePropertyChanged();
+                RaisePropertyChanged(nameof(CometFeedFailed));
+            }
+        }
+
+        private string cometFeedFailureMessage;
+
+        public bool CometFeedFailed => !string.IsNullOrEmpty(cometFeedFailureMessage);
+
+        /// <summary>Per-source breakdown of the loaded comets, e.g. "920 from MPC, 3,001 from JPL".</summary>
+        public string CometSourceBreakdown {
+            get => cometSourceBreakdown;
+            private set {
+                cometSourceBreakdown = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        private string cometSourceBreakdown;
 
         public Task<bool> ClearCometElements() {
             if (updateCometElementsTask != null && !updateCometElementsTask.IsCompleted) {
