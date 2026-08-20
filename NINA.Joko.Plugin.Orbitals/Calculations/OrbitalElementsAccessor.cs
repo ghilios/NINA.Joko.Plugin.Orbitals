@@ -488,7 +488,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
             // place() wants a TT julian date, and delta-T separately so it can recover UT1
             // for the Earth-rotation part of the observer's geocentric position.
             var result = NOVAS.Place(
-                AstroUtil.GetJulianDateTT(asof), celestialObject, observer, AstroUtil.DeltaT(asof),
+                AstroUtilCompat.GetJulianDateTT(asof), celestialObject, observer, AstroUtil.DeltaT(asof),
                 NOVAS.CoordinateSystem.Astrometric, NOVAS.Accuracy.Full, ref skyPosition);
             if (result != 0) {
                 throw new Exception($"NOVAS place failed for {solarSystemBody}. Result={result}");
@@ -511,7 +511,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         }
 
         public OrbitalPositionVelocity GetObjectPV(DateTime asof, OrbitalElements orbitalElements, Angle latitude, Angle longitude, double elevation, TimeSpan rateDriftDelta) {
-            var observerJdtt = AstroUtil.GetJulianDateTT(asof);
+            var observerJdtt = AstroUtilCompat.GetJulianDateTT(asof);
             var startResult = ApparentTopocentricWithLightTime(observerJdtt, orbitalElements, latitude, longitude, elevation);
 
             var nextObserverJdtt = observerJdtt + AstrometricConstants.JD_SEC * rateDriftDelta.TotalSeconds;
@@ -623,7 +623,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
             var startJd = vectorTable.Rows.First().Epoch_jd;
             var endJd = vectorTable.Rows.Last().Epoch_jd;
-            var asofJd = AstroUtil.GetJulianDateTT(asof);
+            var asofJd = AstroUtilCompat.GetJulianDateTT(asof);
             if (asofJd < startJd) {
                 Logger.Trace($"No vector data available for JWST at {asof}. The earliest available is {NOVAS.JulianToDateTime(startJd)}");
                 return null;

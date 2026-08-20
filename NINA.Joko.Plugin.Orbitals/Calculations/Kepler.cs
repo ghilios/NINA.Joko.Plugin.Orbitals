@@ -219,7 +219,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         }
 
         public static RectangularPV GetPVFromObserver(DateTime asof, NOVAS.Observer observer) {
-            return GetPVFromObserver(AstroUtil.GetJulianDateTT(asof), observer);
+            return GetPVFromObserver(AstroUtilCompat.GetJulianDateTT(asof), observer);
         }
 
         /// <summary>

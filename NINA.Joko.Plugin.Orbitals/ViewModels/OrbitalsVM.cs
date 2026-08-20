@@ -637,7 +637,7 @@ namespace NINA.Joko.Plugin.Orbitals.ViewModels {
             private set {
                 selectedOrbitalElementsObject = value;
                 if (value != null) {
-                    SelectedOrbitalPosition = Kepler.CalculateOrbitalElements(value.OrbitalElements, AstroUtil.GetJulianDateTT(DateTime.Now));
+                    SelectedOrbitalPosition = Kepler.CalculateOrbitalElements(value.OrbitalElements, AstroUtilCompat.GetJulianDateTT(DateTime.Now));
                 } else {
                     SelectedOrbitalPosition = null;
                 }
