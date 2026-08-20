@@ -232,5 +232,45 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Calculations {
                 new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 expectedRaDeg: 222.95059, expectedDecDeg: -19.37709);
         }
+
+        // ===== NEO at close approach: 99942 Apophis at 0.0135 AU (2 million km) =====
+        // Every other case here is far enough away that diurnal parallax is only a few
+        // arcsec, so they would still pass against a geocentric implementation. At 0.0135
+        // AU the parallax is 646 arcsec, well outside the 30 arcsec tolerance -- this case
+        // is what pins GetObjectPV to a genuinely topocentric reduction. Sampled at three
+        // consecutive hours so the parallax has to track the observer's rotation, not just
+        // happen to be right once.
+        //
+        // Elements are the osculating set at the observation epoch itself, so two-body
+        // propagation error is negligible even for an orbit this perturbed.
+        // REF: JPL Horizons COMMAND='99942' EPHEM_TYPE='ELEMENTS' CENTER='@sun'
+        //      OUT_UNITS='AU-D' REF_PLANE='ECLIPTIC' REF_SYSTEM='ICRF' TP_TYPE='ABSOLUTE'
+        //      at JD 2462236.5 (2029-Apr-10 00:00 TDB).
+        [Test]
+        [TestCase(0, 212.626721318, -30.343555580)]
+        [TestCase(1, 212.578577773, -30.341818423)]
+        [TestCase(2, 212.529463755, -30.335973083)]
+        public void Apophis_NEO_CloseApproach_ApparentRaDecFromGreenwich(
+            int hourOfDay, double expectedRaDeg, double expectedDecDeg) {
+            var elements = new Kepler.OrbitalElements("99942 Apophis") {
+                PrimaryGravitationalParameter = Kepler.GravitationalParameter.Sun,
+                Epoch_jd = 2462236.5,
+                e_Eccentricity = 1.922975631562459e-01,
+                q_Perihelion_au = 7.446339381251207e-01,
+                i_Inclination_rad = 3.360113696484132e+00 * AstrometricConstants.RAD_PER_DEG,
+                node_LongitudeOfAscending_rad = 2.038149690104709e+02 * AstrometricConstants.RAD_PER_DEG,
+                w_ArgOfPerihelion_rad = 1.267406650094593e+02 * AstrometricConstants.RAD_PER_DEG,
+                tp_PeriapsisTime_jd = 2462336.955614009872,
+                M_MeanAnomalyAtEpoch = 2.481486740267171e+02 * AstrometricConstants.RAD_PER_DEG,
+                a_SemiMajorAxis_au = 9.219161713005533e-01,
+            };
+
+            // REF: Horizons OBSERVER from Greenwich, 2029-Apr-10. The geocentric places are
+            // RA 212.594208 / Dec -30.166221 at 00:00 -- 646 arcsec away from the value
+            // asserted here.
+            AssertObservedRaDec(elements,
+                new DateTime(2029, 4, 10, hourOfDay, 0, 0, DateTimeKind.Utc),
+                expectedRaDeg, expectedDecDeg);
+        }
     }
 }

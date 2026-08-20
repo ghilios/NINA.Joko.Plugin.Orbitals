@@ -12,6 +12,7 @@
 
 using NINA.Astrometry;
 using NINA.Core.Model;
+using NINA.Joko.Plugin.Orbitals.Enums;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
 using NINA.Profile.Interfaces;
 using System;
@@ -46,7 +47,32 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
                     orbitalElements = value;
                     this.UpdateHorizonAndTransit();
                     RaisePropertyChanged();
+                    RaisePropertyChanged(nameof(SourceDisplay));
+                    RaisePropertyChanged(nameof(HasSource));
+                    RaisePropertyChanged(nameof(EpochDisplay));
                 }
+            }
+        }
+
+        /// <summary>
+        /// Which dataset these elements came from. Shown next to the object name so the user
+        /// can tell at a glance whether they are looking at the fresher MPC entry or a
+        /// JPL-only one -- the two can differ by enough to miss the field entirely.
+        /// </summary>
+        public string SourceDisplay =>
+            orbitalElements == null || orbitalElements.Source == OrbitalElementsSourceEnum.Unknown
+                ? string.Empty
+                : orbitalElements.Source.ToString();
+
+        public bool HasSource => !string.IsNullOrEmpty(SourceDisplay);
+
+        /// <summary>Element epoch as a date, which is the other half of "can I trust this pointing".</summary>
+        public string EpochDisplay {
+            get {
+                if (orbitalElements == null || double.IsNaN(orbitalElements.Epoch_jd)) {
+                    return string.Empty;
+                }
+                return NOVAS.JulianToDateTime(orbitalElements.Epoch_jd).ToString("d", OrbitalsPlugin.SystemCultureInfo);
             }
         }
 

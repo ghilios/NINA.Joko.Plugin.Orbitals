@@ -12,6 +12,7 @@
 
 using NINA.Astrometry;
 using NINA.Core.Model;
+using NINA.Joko.Plugin.Orbitals.Calculations;
 using NINA.Joko.Plugin.Orbitals.Enums;
 using System;
 using System.Collections.Generic;
@@ -25,6 +26,12 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
         public OrbitalObjectTypeEnum ObjectType { get; set; }
         public int Count { get; set; }
         public DateTime LastUpdated { get; set; }
+
+        /// <summary>
+        /// How each contributing feed was obtained, keyed by source. Null when unknown
+        /// (e.g. after a Clear). Lets the UI say "920 from MPC (imported 2026-08-12)".
+        /// </summary>
+        public IReadOnlyDictionary<OrbitalElementsSourceEnum, OrbitalElementsFeedMetadata> Feeds { get; set; }
     }
 
     public class VectorTableUpdatedEventArgs : EventArgs {
@@ -83,9 +90,18 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
 
         Task Update(OrbitalObjectTypeEnum objectType, IEnumerable<IOrbitalElementsSource> elements, IProgress<ApplicationStatus> progress, CancellationToken ct);
 
+        /// <summary>Writes one feed store, then rebuilds the object type under the current source policy.</summary>
+        Task Update(OrbitalObjectTypeEnum objectType, OrbitalElementsSourceEnum source, IEnumerable<IOrbitalElementsSource> elements, IProgress<ApplicationStatus> progress, CancellationToken ct);
+
+        /// <summary>As above, recording that the data came from a user-supplied file.</summary>
+        Task Update(OrbitalObjectTypeEnum objectType, OrbitalElementsSourceEnum source, IEnumerable<IOrbitalElementsSource> elements, string importedFrom, IProgress<ApplicationStatus> progress, CancellationToken ct);
+
+        /// <summary>Per-feed provenance for an object type, keyed by source.</summary>
+        IReadOnlyDictionary<OrbitalElementsSourceEnum, OrbitalElementsFeedMetadata> GetFeedMetadata(OrbitalObjectTypeEnum objectType);
+
         void Clear(OrbitalObjectTypeEnum objectType);
 
-        OrbitalPositionVelocity GetSolarSystemBodyPV(DateTime asof, SolarSystemBody solarSystemBody, TimeSpan rateDriftDelta);
+        OrbitalPositionVelocity GetSolarSystemBodyPV(DateTime asof, SolarSystemBody solarSystemBody, Angle latitude, Angle longitude, double elevation, TimeSpan rateDriftDelta);
 
         OrbitalPositionVelocity GetObjectPV(DateTime asof, OrbitalElements orbitalElements, Angle latitude, Angle longitude, double elevation, TimeSpan rateDriftDelta);
 

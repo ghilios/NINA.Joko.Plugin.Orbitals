@@ -17,6 +17,7 @@ using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 using static NINA.Joko.Plugin.Orbitals.Calculations.Kepler;
+using NINA.Joko.Plugin.Orbitals.Enums;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
 using NINA.Astrometry;
 using System.Threading;
@@ -51,9 +52,17 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         public string name { get; set; }
         public string reference { get; set; }
         public string Name => name;
+        public OrbitalElementsSourceEnum Source => OrbitalElementsSourceEnum.MPC;
 
         public OrbitalElements ToOrbitalElements() {
-            var epochJd = epoch.HasValue ? AstroUtil.GetJulianDate(epoch.Value) : double.NaN;
+            // MPC epochs are TT at 0h. Go straight from the calendar date to a julian date
+            // the same way tp_PeriapsisTime_jd does below -- AstroUtil.GetJulianDate would
+            // call ToUniversalTime() on a DateTimeKind.Unspecified value (that's what
+            // DateTime.ParseExact yields when this record is read), silently shifting the
+            // epoch by the machine's UTC offset.
+            var epochJd = epoch.HasValue
+                ? NOVAS.JulianDate((short)epoch.Value.Year, (short)epoch.Value.Month, (short)epoch.Value.Day, 0.0)
+                : double.NaN;
             var tpDay = (int)tpDay_tt;
             var tpDayPart = tpDay_tt - tpDay;
             return new OrbitalElements(name) {

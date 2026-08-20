@@ -26,6 +26,12 @@ namespace NINA.Joko.Plugin.Orbitals.Interfaces {
 
         OrbitalElementsAccessorEnum CometAccessor { get; set; }
 
+        /// <summary>
+        /// Non-null when this session migrated the profile onto the merged comet source,
+        /// carrying the previous value so the UI can explain the change once.
+        /// </summary>
+        OrbitalElementsAccessorEnum? CometAccessorMigratedFrom { get; }
+
         void ResetDefaults();
     }
 }

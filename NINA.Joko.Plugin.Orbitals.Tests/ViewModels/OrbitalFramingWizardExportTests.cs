@@ -117,7 +117,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             accessor.Setup(a => a.WaitUntilLoaded());
             // Return a valid (zero) PV so orbital object constructors don't throw.
             accessor.Setup(a => a.GetSolarSystemBodyPV(
-                    It.IsAny<DateTime>(), It.IsAny<SolarSystemBody>(), It.IsAny<TimeSpan>()))
+                    It.IsAny<DateTime>(), It.IsAny<SolarSystemBody>(),
+                    It.IsAny<Angle>(), It.IsAny<Angle>(), It.IsAny<double>(), It.IsAny<TimeSpan>()))
                     .Returns(OrbitalPositionVelocity.NotSet);
             accessor.Setup(a => a.GetObjectPV(
                     It.IsAny<DateTime>(), It.IsAny<OrbitalElements>(),
@@ -306,7 +307,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             var ssb = new SolarSystemBodyObject(
                 MakeOrbitalElementsAccessor().Object,
                 SolarSystemBody.Mars,
-                null);
+                null,
+                MakeProfileService().Object);
             vm.Initialize(ssb);
             await vm.SlewCenterAndImageCommand.ExecuteAsync(null);
 
@@ -335,7 +337,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             var ssb = new SolarSystemBodyObject(
                 MakeOrbitalElementsAccessor().Object,
                 SolarSystemBody.Mars,
-                null);
+                null,
+                MakeProfileService().Object);
             vm.Initialize(ssb);
 
             await vm.SlewCenterAndImageCommand.ExecuteAsync(null);
@@ -363,7 +366,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             var ssb = new SolarSystemBodyObject(
                 MakeOrbitalElementsAccessor().Object,
                 SolarSystemBody.Mars,
-                null);
+                null,
+                MakeProfileService().Object);
             vm.Initialize(ssb);
 
             await vm.SlewCenterAndImageCommand.ExecuteAsync(null);
@@ -393,7 +397,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             var ssb = new SolarSystemBodyObject(
                 MakeOrbitalElementsAccessor().Object,
                 SolarSystemBody.Mars,
-                null);
+                null,
+                MakeProfileService().Object);
             vm.Initialize(ssb);
 
             await vm.SlewCenterAndImageCommand.ExecuteAsync(null);
@@ -423,7 +428,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             var ssb = new SolarSystemBodyObject(
                 MakeOrbitalElementsAccessor().Object,
                 SolarSystemBody.Saturn,
-                null);
+                null,
+                MakeProfileService().Object);
             vm.Initialize(ssb);
 
             await vm.SlewCenterAndImageCommand.ExecuteAsync(null);
@@ -447,7 +453,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             var ssb = new SolarSystemBodyObject(
                 MakeOrbitalElementsAccessor().Object,
                 SolarSystemBody.Mars,
-                null);
+                null,
+                MakeProfileService().Object);
             vm.Initialize(ssb);
 
             await vm.SlewCenterAndImageCommand.ExecuteAsync(null);
@@ -637,7 +644,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             var ssb = new SolarSystemBodyObject(
                 MakeOrbitalElementsAccessor().Object,
                 SolarSystemBody.Jupiter,
-                null);
+                null,
+                MakeProfileService().Object);
             vm.Initialize(ssb);
 
             await vm.SlewCenterAndImageCommand.ExecuteAsync(null);
@@ -672,7 +680,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             var ssb = new SolarSystemBodyObject(
                 MakeOrbitalElementsAccessor().Object,
                 SolarSystemBody.Moon,
-                null);
+                null,
+                MakeProfileService().Object);
             vm.Initialize(ssb);
 
             await vm.SlewCenterAndImageCommand.ExecuteAsync(null);
@@ -710,7 +719,8 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.ViewModels {
             var ssb = new SolarSystemBodyObject(
                 MakeOrbitalElementsAccessor().Object,
                 SolarSystemBody.Mars,
-                null);
+                null,
+                MakeProfileService().Object);
             vm.Initialize(ssb);
 
             await vm.SlewCenterAndImageCommand.ExecuteAsync(null);
