@@ -17,6 +17,7 @@ using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 using static NINA.Joko.Plugin.Orbitals.Calculations.Kepler;
+using NINA.Joko.Plugin.Orbitals.Enums;
 using NINA.Joko.Plugin.Orbitals.Interfaces;
 using NINA.Astrometry;
 using System.Threading;
@@ -51,6 +52,7 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
         public string name { get; set; }
         public string reference { get; set; }
         public string Name => name;
+        public OrbitalElementsSourceEnum Source => OrbitalElementsSourceEnum.MPC;
 
         public OrbitalElements ToOrbitalElements() {
             // MPC epochs are TT at 0h. Go straight from the calendar date to a julian date
