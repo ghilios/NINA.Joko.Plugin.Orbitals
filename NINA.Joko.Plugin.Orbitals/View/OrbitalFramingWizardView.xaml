@@ -16,7 +16,9 @@
     MinHeight="600" MinWidth="900"
     ResizeMode="CanResize"
     WindowStyle="SingleBorderWindow"
-    WindowStartupLocation="CenterOwner">
+    WindowStartupLocation="CenterOwner"
+    Background="{DynamicResource BackgroundBrush}"
+    Foreground="{DynamicResource PrimaryBrush}">
 
     <Window.Resources>
         <ResourceDictionary>
