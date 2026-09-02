@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using NINA.Astrometry;
 using NINA.Joko.Plugin.Orbitals.Calculations;
 using NINA.Joko.Plugin.Orbitals.Enums;
@@ -25,6 +25,19 @@ namespace NINA.Joko.Plugin.Orbitals.Tests.Utility {
         [Test]
         public void ToDescriptionString_WithoutDescription_FallsBackToEnumName() {
             SampleEnum.Plain.ToDescriptionString().Should().Be("Plain");
+        }
+
+        [TestCase(OrbitalObjectTypeEnum.Comet)]
+        [TestCase(OrbitalObjectTypeEnum.NumberedAsteroids)]
+        [TestCase(OrbitalObjectTypeEnum.UnnumberedAsteroids)]
+        public void MigrateLegacyObjectType_DefinedValue_IsReturnedUnchanged(OrbitalObjectTypeEnum value) {
+            value.MigrateLegacyObjectType().Should().Be(value);
+        }
+
+        [Test]
+        public void MigrateLegacyObjectType_ValueSavedBeforeAsteroidsExisted_BecomesComet() {
+            // Comet was worth 0 while it was the only member of the enum.
+            ((OrbitalObjectTypeEnum)0).MigrateLegacyObjectType().Should().Be(OrbitalObjectTypeEnum.Comet);
         }
 
         [Test]

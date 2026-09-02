@@ -109,8 +109,9 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         public OrbitalObjectTypeEnum ObjectType {
             get => OrbitalSearchVM.ObjectType;
             set {
-                if (OrbitalSearchVM.ObjectType != value) {
-                    OrbitalSearchVM.ObjectType = value;
+                var objectType = value.MigrateLegacyObjectType();
+                if (OrbitalSearchVM.ObjectType != objectType) {
+                    OrbitalSearchVM.ObjectType = objectType;
                     RaisePropertyChanged();
                 }
             }
