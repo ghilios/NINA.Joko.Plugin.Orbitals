@@ -80,6 +80,26 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
 
             WeakEventManager<IProfileService, EventArgs>.AddHandler(profileService, nameof(profileService.LocationChanged), ProfileService_LocationChanged);
             WeakEventManager<IProfileService, EventArgs>.AddHandler(profileService, nameof(profileService.HorizonChanged), ProfileService_HorizonChanged);
+            WeakEventManager<INighttimeCalculator, EventArgs>.AddHandler(nighttimeCalculator, nameof(nighttimeCalculator.OnReferenceDayChanged), NighttimeCalculator_OnReferenceDayChanged);
+        }
+
+        /// <summary>
+        /// Moves the target's altitude curve to the current night. The night shading and the "Now" marker
+        /// of the altitude chart always come from <see cref="NighttimeData"/>, which is calculated for the
+        /// current night; a target object left on an older reference date draws its curve a day (or more)
+        /// before them, and the chart axis stretches to cover both.
+        /// </summary>
+        protected void MoveTargetToCurrentNight() {
+            Target?.DeepSkyObject?.SetDateAndPosition(
+                NighttimeCalculator.GetReferenceDate(DateTime.Now),
+                latitude: profileService.ActiveProfile.AstrometrySettings.Latitude,
+                longitude: profileService.ActiveProfile.AstrometrySettings.Longitude);
+        }
+
+        private void NighttimeCalculator_OnReferenceDayChanged(object sender, EventArgs e) {
+            NighttimeData = nighttimeCalculator.Calculate();
+            RaisePropertyChanged(nameof(NighttimeData));
+            MoveTargetToCurrentNight();
         }
 
         private bool offsetExpanded = false;

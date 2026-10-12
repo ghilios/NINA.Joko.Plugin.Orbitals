@@ -79,7 +79,7 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
         }
 
         public override object Clone() {
-            var clone = new SolarSystemBodyContainer(profileService, nighttimeCalculator, applicationMediator) {
+            var clone = new SolarSystemBodyContainer(profileService, nighttimeCalculator, applicationMediator, orbitalElementsAccessor, orbitalsOptions) {
                 Icon = Icon,
                 Name = Name,
                 Category = Category,
@@ -92,6 +92,8 @@ namespace NINA.Joko.Plugin.Orbitals.SequenceItems {
             clone.Target.PositionAngle = this.Target.PositionAngle;
             clone.Target.InputCoordinates = this.Target.InputCoordinates.Clone();
             clone.Target.DeepSkyObject = (this.Target.DeepSkyObject as SolarSystemBodyObject).Clone();
+            // The template this is cloned from may have been created on an earlier night
+            clone.MoveTargetToCurrentNight();
             clone.SetOffset(this.OffsetSeparationArcsec, this.OffsetPositionAngleDeg);
 
             foreach (var item in clone.Items) {

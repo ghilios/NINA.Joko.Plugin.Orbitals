@@ -32,6 +32,11 @@ namespace NINA.Joko.Plugin.Orbitals.Calculations {
 
         public abstract MoonInfo Moon { get; protected set; }
 
+        /// <summary>
+        /// Start of the 24 hours covered by <see cref="SkyObjectBase.Altitudes"/>.
+        /// </summary>
+        public DateTime ReferenceDate => _referenceDate;
+
         public override Coordinates Coordinates {
             get => CoordinatesAt(DateTime.Now);
             set {
